@@ -1,0 +1,26 @@
+<html>
+<body>
+<pe:mcml>
+    <script refresh="false" type="text/npl" src="ProactiveEnd.lua">
+        <![CDATA[
+            ProactiveEnd = NPL.load("./ProactiveEnd.lua")
+
+            function close()
+                ProactiveEnd:ShowPage()
+            end
+        ]]>
+    </script>
+    <style type="text/scss">
+        {
+            exit_icon = {
+                background = 'Texture/Aries/Creator/keepwork/explorer_32bits.png#161 131 17 17:3 3 3 3'
+                width = 17,
+                height = 17
+            }
+        }
+    </style>
+    <div class="">
+        <input onclick="close()" class="exit_icon" type="button" />
+    </div>
+</pe:mcml>
+</body>

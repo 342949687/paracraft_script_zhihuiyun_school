@@ -1,0 +1,54 @@
+<html>
+    <body>
+        <pe:mcml>
+            <script type='text/npl'>
+                <![CDATA[
+                    local RegisterModal = NPL.load('./RegisterModal.lua')
+
+                    page = document:GetPageCtrl()
+                
+                    function close()
+                        page:CloseWindow()
+                    end
+
+                    function get_data()
+                        return RegisterModal.userAgreementData
+                    end
+                ]]>
+            </script>
+            <style type="text/mcss">
+                {
+                    user_agreement = {
+                        ["base-font-size"] = 16,
+                        ["font-size"] = 16,
+                        ["padding-right"] = 30,
+                        ["padding-left"] = 30,
+                        ["padding-top"] = 10,
+                        ["padding-bottom"] = 20,
+                        color = '#ffffff'
+                        textcolor = '#ffffff'
+                    }
+                }
+            </style>
+            <kp:window mode='lite'
+                       width='400'
+                       title='<%=L"用户许可协议" %>'
+                       onclose='close()'>
+                <div style='height: 40px;'></div>
+                <pe:treeview name='user_agreement'
+                             class='user_agreement'
+                             style='background:;'
+                             VerticalScrollBarOffsetX='10'
+                             VerticalScrollBarStep=“20”>
+                    <div style="color: #000000">
+                        <div style="height: 15px;width: 15px;"></div>
+                        <%= get_data() %>
+                        <div style="height: 300px;width: 350px;">
+                            <input type="button" DefaultButton="true" class="mc_light_grey_button_with_fillet" style="margin-top: 20px;margin-left:100px;width: 140px;height: 30px;" onclick="close()" value='<%= L"关闭"%>' />
+                        </div>
+                    </div>
+                </pe:treeview>
+            </kp:window>
+        </pe:mcml>
+    </body>
+</html>

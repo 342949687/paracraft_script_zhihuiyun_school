@@ -1,0 +1,624 @@
+<html>
+    <body>
+        <pe:mcml>
+            <script type='text/npl'>
+                <![CDATA[
+                    -- bottles
+                    local Create = NPL.load('(gl)Mod/WorldShare/cellar/Create/Create.lua')
+                    local LoginModal = NPL.load('(gl)Mod/WorldShare/cellar/LoginModal/LoginModal.lua')
+                    local RedSummerCampMainPage = NPL.load('(gl)script/apps/Aries/Creator/Game/Tasks/RedSummerCamp/RedSummerCampMainPage.lua')
+                    local RegisterModal = NPL.load('(gl)Mod/WorldShare/cellar/RegisterModal/RegisterModal.lua')
+                    local Opus = NPL.load('(gl)Mod/WorldShare/cellar/Opus/Opus.lua')
+                    local MainLogin = NPL.load('(gl)Mod/WorldShare/cellar/MainLogin/MainLogin.lua')
+
+                    -- service
+                    local KeepworkServiceSession = NPL.load('(gl)Mod/WorldShare/service/KeepworkService/KeepworkServiceSession.lua')
+                    local UserMacBindsService = NPL.load('(gl)Mod/WorldShare/service/UserMacBindsService.lua')
+                    local KeepworkServiceProject = NPL.load('(gl)Mod/WorldShare/service/KeepworkService/KeepworkServiceProject.lua')
+
+                    -- database
+                    local CacheProjectId = NPL.load('(gl)Mod/WorldShare/database/CacheProjectId.lua')
+
+                    local OfflineAccountManager = NPL.load('(gl)Mod/WorldShare/cellar/OfflineAccount/OfflineAccountManager.lua')
+
+                    local page = document:GetPageCtrl()
+                    
+                    function close()
+                        page:CloseWindow()
+                    end
+
+                    function get_offline_username()
+                        local username = string.upper(UserMacBindsService:GetUsername())
+                        if(username and username~="") then
+                            System.User.Name = string.lower(username)
+                            System.User.username = System.User.Name
+                        end
+                        return username;
+                    end
+
+                    function set_container(index)
+                        local not_bind_node = page:FindControl('not_bind')
+                        local binded_node = page:FindControl('binded')
+                        local binded_sync_node = page:FindControl('binded_sync')
+
+                        if index == 1 then -- not bind
+                            if not_bind_node then
+                                not_bind_node.visible = true
+                            end
+
+                            if binded_node then
+                                binded_node.visible = false
+                            end
+
+                            if binded_sync_node then
+                                binded_sync_node.visible = false
+                            end
+                        elseif index == 2 then -- binded
+                            if not_bind_node then
+                                not_bind_node.visible = false
+                            end
+
+                            if binded_node then
+                                binded_node.visible = true
+                            end
+
+                            if binded_sync_node then
+                                binded_sync_node.visible = true
+                            end
+
+                            local not_bind_notice_node = page:FindControl('not_bind_notice')
+                            local binded_notice_node = page:FindControl('binded_notice')
+
+                            local unbind_device_node = page:FindControl('unbind_device')
+                            local bind_device_node = page:FindControl('bind_device')
+
+                            local anonymous_login_node = page:FindControl('anonymous_login')
+
+                            if is_binded() then
+                                if not_bind_notice_node then
+                                    not_bind_notice_node.visible = false
+                                end
+
+                                if binded_notice_node then
+                                    binded_notice_node.visible = true
+                                end
+
+                                if unbind_device_node then
+                                    unbind_device_node.visible = true
+                                end
+
+                                if bind_device_node then
+                                    bind_device_node.visible = false
+                                end
+
+                                if anonymous_login_node then
+                                    anonymous_login_node.visible = true
+                                end
+                            else
+                                if not_bind_notice_node then
+                                    not_bind_notice_node.visible = true
+                                end
+
+                                if binded_notice_node then
+                                    binded_notice_node.visible = false
+                                end
+
+                                if not_bind_notice_node then
+                                    unbind_device_node.visible = false
+                                end
+
+                                if not_bind_notice_node then
+                                    bind_device_node.visible = true
+                                end
+
+                                if not_bind_notice_node then
+                                    anonymous_login_node.visible = false
+                                end
+                            end
+                        end
+                    end
+
+                    function show_bind_page()
+                        set_container(1)
+                    end
+
+                    function activate()
+                        -- login
+                        local account = page:GetValue('account')
+                        local password = page:GetValue('password')
+
+                        local login_cb = function()
+                            UserMacBindsService:BindDevice(function(bSucceed)
+                                if not bSucceed then
+                                    KeepworkServiceSession:Logout()
+                                    _guihelper.MessageBox(L'激活失败。该账号已激活2台设备，请解除之前的设置激活后再试。')
+                                    return
+                                end
+
+                                set_container(2)
+
+                                local username = get_offline_username()
+                                page:SetValue('username', username)
+
+                                KeepworkServiceSession:Logout()
+                            end)
+                        end
+                        if KeepworkServiceSession:IsSignedIn() then
+                            login_cb()
+                        else
+                            KeepworkServiceSession:LoginDirectly(
+                                account,
+                                password,
+                                function(bSucceed, reason)
+                                    if not bSucceed then
+                                        GameLogic.AddBBS(nil, reason, 3000, '255 0 0')
+                                        return
+                                    end
+
+                                    login_cb()
+                                end
+                            )
+                        end
+                    end
+
+                    function open_create()
+                        close()
+                        Opus:Show(function()
+                            GameLogic.GetFilters():remove_filter("OnKeepWorkLogin", OfflineAccountManager.OnKeepWorkLogin_Callback);
+                            MainLogin:Close()
+                            MainLogin:Show()
+                        end)
+                    end
+
+                    function start()
+                        GameLogic.GetFilters():remove_filter("OnKeepWorkLogin", OfflineAccountManager.OnKeepWorkLogin_Callback);
+                        GameLogic.GetFilters():add_filter("OnKeepWorkLogin", OfflineAccountManager.OnKeepWorkLogin_Callback);
+                        if is_binded() then
+                            close()
+                            RedSummerCampMainPage.Show()
+                        else
+                            open_create()
+                            OfflineAccountManager.SetOfflineAppCommandLine()
+                        end
+                    end
+
+                    function sync_class_world()
+                        local pid = 84481
+
+                        KeepworkServiceProject:GetProject(
+                            pid,
+                            function(data, err)
+                                if not data or
+                                   type(data) ~= 'table' or
+                                not data.name or
+                                not data.username or
+                                not data.world or
+                                not data.world.commitId then
+                                    return
+                                end
+
+                                local cacheWorldInfo = CacheProjectId:GetProjectIdInfo(pid)
+
+                                if cacheWorldInfo and
+                                   cacheWorldInfo.worldInfo.commitId ~= data.world.commitId then
+                                    local oldWorldFile = format(
+                                                            'worlds/DesignHouse/userworlds/%d_%s_r%d.zip',
+                                                            pid,
+                                                            cacheWorldInfo.worldInfo.commitId,
+                                                            cacheWorldInfo.worldInfo.revision
+                                                        )
+
+                                    local oldEncryptWorldFile = format(
+                                                            'worlds/DesignHouse/userworlds/%d_%s_r%d.pkg',
+                                                            pid,
+                                                            cacheWorldInfo.worldInfo.commitId,
+                                                            cacheWorldInfo.worldInfo.revision
+                                                        )
+
+                                    if ParaIO.DoesFileExist(oldWorldFile) or
+                                       ParaIO.DoesFileExist(oldEncryptWorldFile) then
+                                        ParaIO.DeleteFile(oldWorldFile)
+                                        ParaIO.DeleteFile(oldEncryptWorldFile)
+                                        CacheProjectId:RemoveProjectIdInfo(pid)
+                                    end
+                                end
+
+                                GameLogic.RunCommand('/loadworld -s -auto ' .. pid)
+                                UserMacBindsService:SetSyncDate()
+                            end
+                        )
+                    end
+
+                    function unbind()
+                        LoginModal:CheckSignedIn(L'登录后才能解绑', function(bSucceed)
+                            if bSucceed then
+                                UserMacBindsService:UnbindDevice(function(bSucceed)
+                                    if not bSucceed then
+                                        return
+                                    end
+
+                                    set_container(2)
+
+                                    KeepworkServiceSession:Logout()
+                                end)
+                            end
+                        end)
+                    end
+
+                    function is_binded()
+                        return UserMacBindsService:IsBindDeviceFromLocal()
+                    end
+
+                    function get_sync_date()
+                        return UserMacBindsService:GetSyncDate()
+                    end
+
+                    function open_manual()
+                        ParaGlobal.ShellExecute(
+                            'open',
+                            'https://keepwork.com/official/docs/teach/lessons/offline_guide',
+                            '',
+                            '',
+                            1
+                        )
+                    end
+
+                    function is_show_notice()
+                        local lastSync = UserMacBindsService:GetSyncTimestamp()
+
+                        if not lastSync then
+                            return true
+                        end
+
+                        local now = os.time()
+                        local day14 = 14 * 24 * 3600
+
+                        if (now - lastSync) > day14 then
+                            return true
+                        end
+
+                        return false
+                    end
+
+                    function notice_status()
+                        local lastSync = UserMacBindsService:GetSyncTimestamp()
+
+                        if not lastSync then
+                            return 1
+                        end
+
+                        local now = os.time()
+                        local day14 = 14 * 24 * 3600
+
+                        if (now - lastSync) > day14 then
+                            return 2
+                        end
+
+                        return -1
+                    end
+
+                    function register()
+                        LoginModal:Close('REGISTER')
+                        RegisterModal:ShowPage(function()
+                            page:SetValue('account', RegisterModal.account)
+                            page:SetValue('password', RegisterModal.password)
+                            activate()
+                        end,1)
+                    end
+
+                    Mod.WorldShare.Utils.SetTimeOut(function()
+                        set_container(2)
+
+                        if UserMacBindsService:IsBindDeviceFromLocal() then
+                            local username = get_offline_username()
+                            page:SetValue('username', username)
+                        else
+                            page:SetValue('username', L"匿名用户")
+                        end
+                    end, 0)
+                ]]>
+            </script>
+            <style type='type/mcss' src='Mod/WorldShare/cellar/Theme/Mcss/Theme1.mcss'></style>
+            <style type='type/mcss'>
+                {
+                    text_field = {
+                        background = 'Texture/Aries/Creator/paracraft/offline_mode_32bits.png#267 96 65 65:10 10 10 10',
+                    },
+                    start = {
+                        ['text-offset-y'] = -1
+                    }
+                }
+            </style>
+            <pe:container
+                alignment='_fi'
+                zorder='-1'
+                width='100%'
+                height='100%'
+                style='position:relative;background-color:#dcdcdc'>
+            </pe:container>
+            <pe:container
+                alignment='_fi'
+                zorder='-1'
+                width='100%'
+                height='100%'
+                class='red_summer_camp_bg'>
+            </pe:container>
+            <div>
+                <div style='height: 56px;'>
+                    <div style='background: url(Texture/Aries/Creator/keepwork/RedSummerCamp/courses/courses_32bits.png#7 249 169 56);
+                                width: 169px;
+                                height: 56px;
+                                float: left;'>
+                        <div align='center'
+                            onclick='close'
+                            style='background: url(Texture/Aries/Creator/keepwork/RedSummerCamp/works/works_32bits.png#5 67 38 33);
+                                    width: 38px;
+                                    height: 33px;
+                                    margin-top: 12px;
+                                    margin-left: -20px;'></div>
+                    </div>
+                    <div style='float: left;
+                                width: 283px;
+                                height: 56px;
+                                margin-left: -73px;
+                                background: url(Texture/Aries/Creator/keepwork/RedSummerCamp/shentongbei/shentongbei_32bits.png#17 794 283 56)'>
+                        <div align='center'
+                            style='background:;
+                                    color: #FFFFFF;
+                                    font-size: 20px;
+                                    base-font-size: 20px;
+                                    font-weight: bolder;
+                                    width: 150px;
+                                    height: 20px;
+                                    margin-top: 15px;
+                                    float: left;'>
+                            <%= L"本地模式" %>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <pe:container alignment='_ct'
+                                  name='not_bind'
+                                  visible='false'
+                                  width='700px'
+                                  height='450px'
+                                  style='background:;
+                                         margin-left: -350px;
+                                         margin-top: -206px;'>
+                        <div style='font-size: 25px;
+                                    base-font-size: 25px;
+                                    text-align: center;
+                                    margin-bottom: 40px;'>
+                            <%= L'请联网激活本地模式使用的账号，每个账号可激活2个设备' %>
+                        </div>
+                        <div width='610px'
+                             align='center'
+                             style='margin-bottom: 40px;'>
+                            <div style='font-size: 25px;
+                                        base-font-size: 25px;
+                                        margin-bottom: 20px;'>
+                                <%= L'*账号：' %>
+                                <input type='text'
+                                       name='account'
+                                       class='text_field'
+                                       CaretColor='#FFFFFFFF'
+                                       spacing='10'
+                                       style='margin-left: 20px;
+                                              height: 55px;
+                                              margin-top: -15px;
+                                              textcolor: #FFFFFF;
+                                              text-valign: center;
+                                              font-size: 25px;
+                                              base-font-size: 25px;'
+                                       value='' />
+                            </div>
+                            <div style='font-size: 25px;
+                                        base-font-size: 25px;'>
+                                <%= L'*密码：' %>
+                                <input type='text'
+                                       PasswordChar='*'
+                                       name='password'
+                                       class='text_field'
+                                       CaretColor='#FFFFFFFF'
+                                       spacing='10'
+                                       style='textcolor: #FFFFFF;
+                                              margin-left: 20px;
+                                              height: 55px;
+                                              margin-top: -15px;
+                                              font-size: 25px;
+                                              base-font-size: 25px;'
+                                       value='' />
+                            </div>
+                        </div>
+                        <div width='150px' align='center'>
+                            <input type='button'
+                                   onclick='activate'
+                                   class='theme1_yellow_button'
+                                   style='width: 150px;
+                                          height: 55px;
+                                          font-size: 25px;
+                                          base-font-size: 25px;'
+                                   value='<%= L"激活" %>' />
+                        </div>
+                        <div onclick='register' style='position: relative;color: #2956ab;margin-top: 10px;margin-left: 10px;height: 50px;'>
+                            <%= L'没有账号？立即注册' %>
+                        </div>
+                    </pe:container>
+                    <pe:container alignment='_rt'
+                                  name='binded_sync'
+                                  visible='false'
+                                  width='616px'
+                                  height='100px;'
+                                  style='background:;
+                                         padding-right: 50px;
+                                         margin-top: -30px;'>
+                        <pe:if condition='<%= is_show_notice() %>'>
+                            <div style='width: 316px;
+                                        position: relative;
+                                        margin-right: 300px;
+                                        padding: 10px;
+                                        padding-bottom:20px;
+                                        background: url(Texture/Aries/Creator/paracraft/paracraft_icon_01_32bits.png#107 9 316 97：10 70 20 20);'>
+                                <div>
+                                    <pe:if condition='<%= notice_status() == 1 %>'>
+                                        <div style='font-size: 16px;
+                                                    base-font-size: 16px;
+                                                    color: #2956ab;'><%= L'尚未进行同步' %></div>
+                                    </pe:if>
+                                    <pe:if condition='<%= notice_status() == 2 %>'>
+                                        <div style='font-size: 16px;
+                                                    base-font-size: 16px;
+                                                    color: #2956ab;'><%= L'已14天未进行同步' %></div>
+                                    </pe:if>
+                                    <div style='width: 280px;
+                                                font-size: 13px;
+                                                base-font-size: 13px;
+                                                color: #6b6b6c;'>
+                                        <%= L'为保证在无网的环境下正常上课，请在有网时同步，详情见右下角“离线版使用手册”' %>
+                                    </div>
+                                </div>
+                            </div>
+                        </pe:if>
+                        <input type="button" onclick='sync_class_world' value="<%= L'同步离线课程' %>" align="right" class="linkbutton" style='font-size: 22px;base-font-size: 22px;color: #2956ab;margin-left: 10px; ' />
+                        <div style='color: #6b6b6c;font-size: 14px;base-font-size: 14px;text-align: right;'>
+                            <div style="width: 250px; text-align: right; " align="right">
+                                <%= L'请在有网络时经常同步离线课程' %>
+                            </div>
+                            <pe:if condition='<%= get_sync_date() == L"未同步" %>'>
+                                <div align='right'
+                                     style='width: 189px;
+                                            text-align: left;'>
+                                    <%= L'上次同步时间：' %>
+                                    <div style='float: left;'>
+                                        <img style='width: 90px;
+                                                    height: 21px;'
+                                             src='Texture/Aries/Creator/paracraft/paracraft_icon_01_32bits.png#0 0 90 21' />
+                                    </div>
+                                </div>
+                            </pe:if>
+                            <pe:if condition='<%= get_sync_date() ~= L"未同步" %>'>
+                                <div>
+                                    <%= L'上次同步时间：' .. get_sync_date() %>
+                                </div>
+                            </pe:if>
+                        </div>
+                    </pe:container>
+                    <pe:container alignment='_rb' style='width: 300px;height: 50px;background: ;'>
+                        <input type="button" onclick='open_manual' align="right" class="linkbutton" style='margin-right:20px;font-size: 22px;base-font-size: 22px;color: #2956ab;height: 35px;' value="<%= L'离线版使用手册' %>" />
+                    </pe:container>
+                    <pe:container alignment='_ct'
+                                  name='binded'
+                                  visible='false'
+                                  width='800px'
+                                  height='400px'
+                                  style='background:;
+                                         margin-left: -400px;
+                                         margin-top: -206px;'>
+                        <div>
+                            <div style='width: 483px;
+                                        float: left;'>
+                                <label style='font-size: 55px;
+                                              base-font-size: 55px;
+                                              font-weight: bolder;
+                                              color: #000000;
+                                              height: 70px;
+                                              text-align: right'
+                                        name='username' />
+                            </div>
+                            <pe:container name='unbind_device'
+                                          visible='false'
+                                          style='float: left;
+                                                 width: 220px;
+                                                 padding-left: 50px;
+                                                 background:;'>
+                                <div onclick='unbind'
+                                     style='font-size: 20px;
+                                            base-font-size: 20px;
+                                            color: #2956ab;
+                                            margin-top: 20px;
+                                            margin-left: 10px;'>
+                                    <%= L'解除绑定' %>
+                                    <div width='83px'
+                                         style='background-color: #2956ab;
+                                                height: 1px;'></div>
+                                </div>
+                            </pe:container>
+                            <pe:container name='bind_device'
+                                          visible='false'
+                                          style='float: left;
+                                                 width: 220px;
+                                                 padding-left: 50px;
+                                                 margin-left: -220px;
+                                                 background:;'>
+                                <div onclick='show_bind_page'
+                                     style='font-size: 20px;
+                                            base-font-size: 20px;
+                                            color: #2956ab;
+                                            margin-top: 20px;
+                                            margin-left: 10px;'>
+                                    <%= L'绑定用户' %>
+                                    <div width='83px'
+                                         style='background-color: #2956ab;
+                                                height: 1px;'></div>
+                                </div>
+                            </pe:container>
+                        </div>
+                        <div style='height: 50px;
+                                    margin-top: 40px;'>
+                            <pe:container name='not_bind_notice'
+                                          style='position: relative;
+                                                 background:;'
+                                          visible='false'>
+                                <div style='font-size: 22px;
+                                            base-font-size: 22px;'>
+                                    <%= L'匿名用户只能访问有限资源。 如果你在使用个人设备（非学校电脑），可以点击绑定用户，激活后，你将可以在没有网络的情况下访问和编辑属于你的世界。' %>
+                                </div>
+                            </pe:container>
+                            <pe:container name='binded_notice'
+                                          style='position: relative;
+                                                 background:;'
+                                          visible='false'>
+                                <div style='font-size: 22px;
+                                            base-font-size: 22px;'>
+                                    <%= L'每个用户可以绑定2台设备，没有网络时仍然具有该用户的访问权限。有网时请正常登录，才能上传分享世界。' %>
+                                </div>
+                            </pe:container>
+                        </div>
+                        <div width='200px'
+                             align='center'
+                             style='margin-top: 120px;'>
+                            <div>
+                                <input type='button'
+                                       onclick='start'
+                                       class='theme1_yellow_button start'
+                                       style='width: 200px;
+                                              height: 55px;
+                                              font-size: 25px;
+                                              base-font-size: 25px;'
+                                       value='<%= L"开始本地模式" %>' />
+                            </div>
+                            <pe:container name='anonymous_login'
+                                          style='background:;
+                                                 width: 200px;
+                                                 margin-top: 20px;'
+                                          visible='false'>
+                                <div onclick='open_create'
+                                     align='center'
+                                     style='font-size: 20px;
+                                            base-font-size: 20px;
+                                            color: #2956ab;
+                                            width: 82px;
+                                            height: 30px;'>
+                                       <%= L'匿名登录' %>
+                                       <div width='82px'
+                                         style='background-color: #2956ab;
+                                                height: 1px;'></div>
+                                </div>
+                            </pe:container>
+                        </div>
+                    </pe:container>
+                </div>
+            </div>
+        </pe:mcml>
+    </body>
+</html>

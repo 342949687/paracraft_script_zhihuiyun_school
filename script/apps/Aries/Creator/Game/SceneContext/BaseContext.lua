@@ -1,0 +1,1705 @@
+--[[
+Title: Base Context
+Author(s): LiXizhi
+Date: 2015/7/10
+Desc: handles global scene key/mouse events. This is usually the base class to other scene context. 
+virtual functions:
+	mousePressEvent(event)
+	mouseMoveEvent
+	mouseReleaseEvent
+	mouseWheelEvent
+	keyPressEvent
+	keyReleaseEvent: not implemented
+
+	OnSelect()
+	OnUnselect()
+	OnLeftLongHoldBreakBlock()
+	OnLeftMouseHold(fDelta)
+	OnRightMouseHold(fDelta)
+
+	handleHistoryKeyEvent();
+	handlePlayerKeyEvent();
+
+	GetClickData()
+
+use the lib:
+------------------------------------------------------------
+NPL.load("(gl)script/apps/Aries/Creator/Game/SceneContext/BaseContext.lua");
+local BaseContext = commonlib.gettable("MyCompany.Aries.Game.SceneContext.BaseContext");
+------------------------------------------------------------
+]]
+NPL.load("(gl)script/ide/System/Core/SceneContext.lua");
+NPL.load("(gl)script/kids/3DMapSystemApp/mcml/pe_hotkey.lua");
+NPL.load("(gl)script/apps/Aries/Creator/Game/GUI/TouchMiniKeyboard.lua");
+local Keyboard = commonlib.gettable("System.Windows.Keyboard");
+local hotkey_manager = commonlib.gettable("System.mcml_controls.hotkey_manager");
+local GameLogic = commonlib.gettable("MyCompany.Aries.Game.GameLogic")
+local CameraController = commonlib.gettable("MyCompany.Aries.Game.CameraController")
+local Direction = commonlib.gettable("MyCompany.Aries.Game.Common.Direction")
+local BlockEngine = commonlib.gettable("MyCompany.Aries.Game.BlockEngine")
+local UndoManager = commonlib.gettable("MyCompany.Aries.Game.UndoManager");
+local EntityManager = commonlib.gettable("MyCompany.Aries.Game.EntityManager");
+local GameMode = commonlib.gettable("MyCompany.Aries.Game.GameLogic.GameMode");
+local CommandManager = commonlib.gettable("MyCompany.Aries.Game.CommandManager");
+local SelectionManager = commonlib.gettable("MyCompany.Aries.Game.SelectionManager");
+local ModManager = commonlib.gettable("Mod.ModManager");
+local block_types = commonlib.gettable("MyCompany.Aries.Game.block_types")
+local vector3d = commonlib.gettable("mathlib.vector3d");
+local TouchMiniKeyboard = commonlib.gettable("MyCompany.Aries.Game.GUI.TouchMiniKeyboard");
+
+local BaseContext = commonlib.inherit(commonlib.gettable("System.Core.SceneContext"), commonlib.gettable("MyCompany.Aries.Game.SceneContext.BaseContext"));
+
+BaseContext:Property({"Name", "BaseContext"});
+-- in ms seconds
+BaseContext:Property({"max_break_time", 500});
+-- if true, left click to delete; if false, left click to move the player to the block. 
+BaseContext:Property({"LeftClickToDelete", true});
+BaseContext:Property({"clickToMove", false, "IsClickToMoveEnabled", "EnableClickToMove", auto = true});
+BaseContext:Property({"ShowClickStrengthUI", false});
+-- the block id for the edit marker. usually 155 (ending stone). if specified,
+-- mouse block picking is only valid when there is a marker block below. 
+BaseContext:Property({"EditMarkerBlockId", nil, auto=true});
+
+-- temporary data to break a block. 
+local click_data = {
+	-- time in ms to break a block. if a block requires 500 strength to break it , then the user must keeps pressing the button for 500ms to delete it. 
+	strength = nil, 
+	last_select_block = {},
+	is_button_down = false,
+	left_holding_time = 0,
+	right_holding_time = 0,
+	last_select_entity = nil,
+	last_mouse_down_block = {},
+};
+BaseContext.click_data = click_data;
+
+function BaseContext:ctor()
+	if(not System.options.mc) then
+		-- leak events to hook chain for old haqi interfaces, such as terrain painting. 
+		self:SetAcceptAllEvents(false);
+	end
+	if(System.options.IsTouchDevice) then
+		self.pickingPointSize = 24;
+	end
+end
+
+function BaseContext:OnSelect()
+	BaseContext._super.OnSelect(self);
+end
+
+-- virtual function: 
+-- return true if we are not in the middle of any operation and fire unselected signal. 
+-- or false, if we can not unselect the scene tool context at the moment. 
+function BaseContext:OnUnselect()
+	self:EnableMouseDownTimer(false);
+	self:EnableMousePickTimer(false);
+	self:DisablePlayerTimer();
+	self:ClearPickDisplay();
+	self:UpdateClickStrength(-1);
+	click_data.selector = nil;
+	return true;
+end
+
+function BaseContext:GetClickData()
+	return click_data;
+end
+
+-- user has drag and dropped an existing file to the context
+-- @param fileType: "model", "blocktemplate"
+function BaseContext:handleDropFile(filename, fileType)
+	NPL.load("(gl)script/apps/Aries/Creator/Game/Items/ItemStack.lua");
+	local ItemStack = commonlib.gettable("MyCompany.Aries.Game.Items.ItemStack");
+	local item_stack = ItemStack:new():Init(block_types.names.BlockModel);
+	item_stack:SetTooltip(filename);
+	GameLogic.GetPlayerController():SetBlockInRightHand(item_stack);
+	GameLogic.AddBBS(nil, format(L"模型物品: %s 在你手中了", filename));
+end
+
+-- enable mouse down timer to repeatedly receive OnMouseDownTimer callback. 
+-- mouse down timer is automatically stopped when there is no mouse event. so one only need to enable it in mouse press event. 
+function BaseContext:EnableMouseDownTimer(bEnable)
+	if(bEnable) then
+		self.mouse_down_timer = self.mouse_down_timer or commonlib.Timer:new({callbackFunc = function(timer)
+			self:OnMouseDownTimer(timer);
+		end});
+		self.mouse_down_timer:Change(50, 30);
+	else
+		if(self.mouse_down_timer) then
+			self.mouse_down_timer:Change();
+		end
+	end
+end
+
+function BaseContext:EnableMousePickTimer(bEnable)
+	if(bEnable) then
+		self.mousepick_timer = self.mousepick_timer or commonlib.Timer:new({callbackFunc = function(timer)
+			local result = self:CheckMousePick();
+		end})
+		self:CheckMousePick();
+	else
+		if(self.mousepick_timer) then
+			self.mousepick_timer:Change();
+			self.mousepick_timer = nil;
+		end
+	end
+end
+
+--virtual function: called repeatedly whenever mouse button is down. 
+function BaseContext:OnMouseDownTimer(timer)
+	if(Keyboard:IsAltKeyPressed() or Keyboard:IsCtrlKeyPressed() or Keyboard:IsShiftKeyPressed()) then
+		local click_data = self:GetClickData();
+		click_data.right_holding_time = 0;
+		click_data.left_holding_time = 0;
+		self:UpdateClickStrength(-1)
+		timer:Change();
+		return
+	end
+
+	local bLeftButtonDown = ParaUI.IsMousePressed(0)
+	local bRightButtonDown = ParaUI.IsMousePressed(1)
+	
+	if(bLeftButtonDown and not bRightButtonDown) then
+		self:OnLeftMouseHold(timer:GetDelta());
+	elseif(bRightButtonDown and not bLeftButtonDown) then
+		self:OnRightMouseHold(timer:GetDelta());
+	else
+		self:UpdateClickStrength(-1)
+		timer:Change();
+	end
+end
+
+function BaseContext:handleHookedEvent(event)
+	local GI = GameLogic:GetCodeGlobal():GetGI();
+	if(GI and GI.HandleMouseKeyBoardEvent) then
+		GI:HandleMouseKeyBoardEvent(event);
+	end
+end
+
+-- return true if handled
+function BaseContext:handleHookedMouseEvent(event)
+	self:handleHookedEvent(event);
+
+	if(ModManager:handleMouseEvent(event)) then
+		return true;
+	end
+
+	if(self:handleItemMouseEvent(event)) then
+		return true;
+	end
+
+	if(event:GetType() == "mousePressEvent") then
+		if(GameLogic.GetCodeGlobal():BroadcastKeyPressedEvent("mouse_buttons", event)) then
+			-- we need to leak event to global scene, even we processed it
+			-- return true;
+		end
+	elseif(event:GetType() == "mouseReleaseEvent") then
+		if(event:button() == "left" and event:GetDragDist() < 10) then
+			if(GameLogic.GetCodeGlobal():BroadcastBlockClickEvent("BroadcastBlockClickEvent", event)) then
+				-- we need to leak event to global scene, even we processed it
+				-- return true;
+			end
+		end
+	end
+
+	return event:isAccepted();
+end
+
+-- if item accept mousePressEvent, it will also handle mouseMove and mouseRelease on its own. 
+-- if item does not accept mousePressEvent, it will not receive any mouseMove or mouseRelease event, and the default handler is used. 
+-- return true if handled
+function BaseContext:handleItemMouseEvent(event)
+	local curItem = GameLogic.GetPlayerController():GetItemInRightHand();
+	local event_type = event:GetType();
+	if(event_type == "mousePressEvent") then
+		curItem:event(event);
+		if(event:isAccepted()) then
+			self.lastMouseDownItem = curItem;	
+		else
+			self.lastMouseDownItem = nil;
+		end
+	elseif(event_type == "mouseWheelEvent") then
+		curItem:event(event);
+	else
+		-- mouse move and release event are only sent to the same last mouse down item.
+		if(self.lastMouseDownItem) then
+			self.lastMouseDownItem:event(event);
+			-- accept anyway
+			event:accept();
+			if(event_type == "mouseReleaseEvent") then
+				self.lastMouseDownItem = nil;
+			end
+		elseif(event_type == "mouseMoveEvent" and not curItem:hasMouseTracking()) then
+			-- skip mouseMoveEvent if mouse-tracking is off 
+		else
+			curItem:event(event);
+		end
+	end
+	return event:isAccepted();
+end
+
+function BaseContext:handleMouseEvent(event)
+	if(GameLogic.Macros:IsRecording()) then
+		GameLogic.Macros:SaveViewportParams();
+		local eventType = event:GetType() 
+		if(eventType == "mousePressEvent") then
+			self.is_click = false;
+		end
+	end
+
+	BaseContext._super.handleMouseEvent(self, event);
+	
+	if(GameLogic.Macros:IsRecording() and not event.recorded) then
+		local eventType = event:GetType() 
+		if(eventType == "mousePressEvent") then
+			self:BeginMouseClickCheck();
+			GameLogic.Macros:MarkMousePress(event)
+		elseif(event:isAccepted() and eventType == "mouseReleaseEvent") then
+			event.recorded = true;
+			local is_click = self.is_click or self:EndMouseClickCheck(event); 
+			if(is_click) then
+				GameLogic.Macros:AddMacro("SceneClick", GameLogic.Macros.GetButtonTextFromClickEvent(event), GameLogic.Macros.GetSceneClickParams())
+			else
+				local mousePressEvent = GameLogic.Macros:GetLastMousePressEvent()
+				local startAngleX, startAngleY = GameLogic.Macros.GetSceneClickParams(mousePressEvent.x, mousePressEvent.y)
+				local endAngleX, endAngleY = GameLogic.Macros.GetSceneClickParams()
+				GameLogic.Macros:AddMacro("SceneDrag", GameLogic.Macros.GetButtonTextFromClickEvent(event), startAngleX, startAngleY, endAngleX, endAngleY)
+			end
+		end
+	end
+
+	GameLogic.GetFilters():apply_filters("basecontext_after_handle_mouse_event", event)
+end
+
+-- this function is called repeatedly if MousePickTimer is enabled. 
+-- it can also be called independently. 
+-- @param event: nil or a mouse event invoking this method. 
+-- @return the picking result table
+function BaseContext:CheckMousePick(event)
+	if(self.mousepick_timer) then
+		self.mousepick_timer:Change(50, nil);
+	end
+
+	local result = SelectionManager:MousePickBlock(nil, nil, nil, nil, event and event.x, event and event.y);
+
+	if(self:GetEditMarkerBlockId() and result and result.block_id and result.block_id>0 and result.blockX) then
+		local y = BlockEngine:GetFirstBlock(result.blockX, result.blockY, result.blockZ, self:GetEditMarkerBlockId(), 5);
+		if(y<0) then
+			-- if there is no helper blocks below the picking position, we will return nothing. 
+			SelectionManager:ClearPickingResult();
+			self:ClearPickDisplay();
+			return;
+		end
+	end
+	CameraController.OnMousePick(result, SelectionManager:GetPickingDist());
+	
+	if(result.length and result.blockX) then
+        if(EntityManager.GetFocus())then
+            if(not EntityManager.GetFocus():CanReachBlockAt(result.blockX,result.blockY,result.blockZ)) then
+			    SelectionManager:ClearPickingResult();
+		    end
+        end
+	end
+	
+	-- highlight the block or terrain that the mouse picked
+	if(result.length and result.length<SelectionManager:GetPickingDist() and GameLogic.GameMode:CanSelect()) then
+		if (GameLogic.GameMode:IsEditor()) then
+			self:HighlightPickBlock(result);
+		end
+		self:HighlightPickEntity(result);
+		return result;
+	else
+		self:ClearPickDisplay();
+	end
+end
+
+function BaseContext:HighlightPickBlock(result)
+	if(not click_data or not click_data.last_select_block or not result) then
+		return;
+	end
+	if(click_data.last_select_block.blockX ~= result.blockX or click_data.last_select_block.blockY ~= result.blockY or click_data.last_select_block.blockZ ~= result.blockZ) then
+		if(click_data.last_select_block.blockX) then
+				
+			ParaTerrain.SelectBlock(click_data.last_select_block.blockX,click_data.last_select_block.blockY, click_data.last_select_block.blockZ,false,GameLogic.options.wire_frame_group_id);
+			GameLogic.events:DispatchEvent({type = "HighlightPickBlock",
+				x = click_data.last_select_block.blockX, y = click_data.last_select_block.blockY, z = click_data.last_select_block.blockZ, select = false});
+		end
+		if(click_data.last_select_block.group_index) then
+			ParaSelection.ClearGroup(click_data.last_select_block.group_index);
+			click_data.last_select_block.group_index = nil;
+		end
+
+		local selection_effect;
+		if(result and result.block_id and result.block_id > 0) then
+			local block = block_types.get(result.block_id);
+			if(block) then
+				selection_effect = block.selection_effect;
+				if(selection_effect == "model_highlight") then
+					if(block:AddToSelection(result.blockX,result.blockY, result.blockZ, 2)) then
+						selection_effect = "none";
+						click_data.last_select_block.group_index = 2;
+					end
+				end
+			end
+		end
+			
+		if(not selection_effect) then
+			if (result.blockX) then
+				ParaTerrain.SelectBlock(result.blockX,result.blockY, result.blockZ,true, GameLogic.options.wire_frame_group_id);	
+				GameLogic.events:DispatchEvent({type = "HighlightPickBlock" , x = result.blockX, y = result.blockY, z = result.blockZ, select = true});
+			end
+		elseif(selection_effect == "none") then
+			--  do nothing
+		else
+			-- TODO: other effect. 
+			if (result.blockX) then
+				ParaTerrain.SelectBlock(result.blockX,result.blockY, result.blockZ,true, GameLogic.options.wire_frame_group_id);	
+			end
+		end
+		click_data.last_select_block.blockX, click_data.last_select_block.blockY, click_data.last_select_block.blockZ = result.blockX,result.blockY, result.blockZ;
+	end
+end
+
+function BaseContext:HighlightPickEntity(result)
+	
+	local hasEntityPicking;
+	if(result.entity and result.entity.OnHighlightPickingEntity) then
+		if(result.entity:OnHighlightPickingEntity(result)) then
+			hasEntityPicking = true
+		end
+	end
+	if(not result.block_id and result.entity) then
+		click_data.last_select_entity = result.entity;
+
+		if(not hasEntityPicking) then
+			if(result.entity:CanHighlight()) then
+				local obj = result.entity:GetInnerObject()
+				if(obj) then
+					ParaSelection.AddObject(obj, 1);
+				end
+			else
+				ParaSelection.ClearGroup(1);
+			end
+			self:ClearBlockPickDisplay();
+		end
+	elseif(click_data.last_select_entity) then
+		click_data.last_select_entity = nil;
+		ParaSelection.ClearGroup(1);
+	end
+end
+
+function BaseContext:ClearBlockPickDisplay()
+	ParaTerrain.DeselectAllBlock(GameLogic.options.wire_frame_group_id);
+	click_data.last_select_block.blockX, click_data.last_select_block.blockY, click_data.last_select_block.blockZ = nil, nil,nil;
+	GameLogic.events:DispatchEvent({type = "ClearPickDisplay"});
+end
+
+function BaseContext:ClearPickDisplay()
+	self:ClearBlockPickDisplay();
+	if(click_data.last_select_entity) then
+		click_data.last_select_entity = nil;
+		ParaSelection.ClearGroup(1);
+	end
+end
+
+-- called every 30 milliseconds, when user is holding the left button without releasing it. 
+-- @param fDelta:
+local uiMouseX, uiMouseY 
+function BaseContext:OnLeftMouseHold(fDelta)
+	if GameLogic.Macros:IsRecording() and GameLogic.Macros.IsMouseTrack() then
+		if not uiMouseX then
+			uiMouseX, uiMouseY = ParaUI.GetMousePosition();
+			GameLogic.Macros.RecordMouseTrack(uiMouseX, uiMouseY,fDelta)
+		else
+			local curx,cury = ParaUI.GetMousePosition();
+			local dx,dy = curx - uiMouseX,cury-uiMouseY
+			local dis = math.sqrt(dx^2 + dy^2)
+			if dis < 15 then
+				GameLogic.Macros.RecordMouseTrack(uiMouseX, uiMouseY,fDelta)
+			else
+				uiMouseX, uiMouseY = ParaUI.GetMousePosition();
+				GameLogic.Macros.RecordMouseTrack(uiMouseX, uiMouseY,fDelta)
+			end
+		end
+		return 
+	end
+	local last_x, last_y, last_z = click_data.last_mouse_down_block.blockX, click_data.last_mouse_down_block.blockY, click_data.last_mouse_down_block.blockZ;
+	local result = self:CheckMousePick();
+	if(result) then
+		if(result.block_id) then
+			click_data.last_mouse_down_block.blockX, click_data.last_mouse_down_block.blockY, click_data.last_mouse_down_block.blockZ = result.blockX,result.blockY,result.blockZ;
+			local block = block_types.get(result.block_id);
+
+			if(block and (last_x~=result.blockX or last_y~=result.blockY or  last_z~=result.blockZ)) then
+				block:OnMouseDown(event, result.blockX,result.blockY,result.blockZ);
+			end
+			
+			if(block and block:CanDestroyBlockAt(result.blockX,result.blockY,result.blockZ)) then
+				self:UpdateClickStrength(fDelta, result);
+
+				click_data.left_holding_time = click_data.left_holding_time + fDelta;
+
+				if(GameMode:AllowLongHoldToDestoryBlock()) then
+					if(click_data.strength and click_data.strength > self.max_break_time) then
+						self:OnLeftLongHoldBreakBlock();
+						click_data.left_holding_time = 0;
+					end
+				end
+			end
+		elseif(GameLogic.GameMode:IsEditor() and result.blockX) then
+			self:UpdateClickStrength(fDelta, result);
+			click_data.left_holding_time = click_data.left_holding_time + fDelta;
+		end
+	end
+end
+
+-- virtual function: when user is holding the left button for long enough. 
+function BaseContext:OnLeftLongHoldBreakBlock()
+end
+
+function BaseContext:OnRightMouseHold(fDelta)
+	click_data.right_holding_time = click_data.right_holding_time + fDelta;
+end
+
+function BaseContext:UpdateClickStrength(fDelta, result)
+	if(not fDelta or fDelta<0)	then
+		click_data.strength = nil;
+		click_data.result = nil;
+	else
+		if(click_data.result == nil and result) then
+			click_data.result = result:CloneMe();
+			click_data.strength = 0;
+		elseif(result) then
+			if(click_data.result.blockX == result.blockX and click_data.result.blockY == result.blockY and click_data.result.blockZ == result.blockZ) then
+				click_data.strength = (click_data.strength or 0) + fDelta;
+				-- TODO: clicking on terrain. 
+			else
+				click_data.result = result:CloneMe();
+				-- tricky: if the user keeps pressing the button on multiple blocks, the strength does not vanish to 0 immediately, 
+				-- instead, it only decreases for a small number like 250(self.max_break_time*0.5). 
+				if(result.blockX) then
+					local block_id = ParaTerrain.GetBlockTemplateByIdx(result.blockX,result.blockY,result.blockZ);
+					if(block_id > 0) then
+						-- holding on a different block 
+						click_data.strength = 0; -- math.max(0, (click_data.strength or 0) - self.max_break_time*0.5);
+					else
+						-- holding on the terrain
+						click_data.strength = 0;
+					end
+				else
+					click_data.strength = 0;
+				end
+			end
+		else
+			click_data.result = nil;
+			click_data.strength = nil;
+		end
+	end
+
+	-- update block texture animation
+	if(click_data.strength and click_data.result and click_data.result.blockX) then
+		local damage_degree;
+		if(click_data.result.block_id) then
+			local block = block_types.get(click_data.result.block_id);
+			if(block and block.selection_effect == "model_highlight") then
+				local degree = math.min(click_data.strength/self.max_break_time,1)*0.7;
+				if(degree<0.35) then
+					damage_degree = 0;
+				end
+			end
+		end
+		ParaTerrain.SetDamagedBlock(click_data.result.blockX,click_data.result.blockY,click_data.result.blockZ);
+		ParaTerrain.SetDamagedDegree(damage_degree or math.min(click_data.strength/self.max_break_time,1)*0.7);
+	else
+		ParaTerrain.SetDamagedDegree(0.0);
+	end
+	
+	-- TODO: upadte 3d effect. 
+
+	-- update ui animation
+	if(self.ShowClickStrengthUI) then
+		local _this = ParaUI.GetUIObject("click_strength");
+		if(not _this:IsValid())then
+			local _this = ParaUI.CreateUIObject("button", "click_strength", "_lt", -32, -32, 64, 64);
+			_this.background = "Texture/Aries/Common/ThemeTeen/circle_32bits.png";
+			_this.enabled = false;
+			_guihelper.SetUIColor(_this, "#ffffffff");
+			_this:AttachToRoot();
+		end
+		if(click_data.strength) then
+			_this.visible = true;
+			local scale = math.min(1, (click_data.strength + 30)/500);
+			_this.scalingx = scale;
+			_this.scalingy = scale;
+			local mouseX, mouseY = ParaUI.GetMousePosition();
+			_this.translationx = mouseX;
+			_this.translationy = mouseY;
+		else
+			_this.visible = false;
+		end
+	end
+end
+
+local last_camera_pos = {0,0,0};
+local last_lookat_params = {0,0,0}; -- facing, height, angle
+
+-- call this function in mouse down event and then call EndMouseClickCheck() in mouse up event. 
+-- if the latter return true, it is a mouse click, otherwise the camera has moved during begin/end pair. 
+function BaseContext:BeginMouseClickCheck()
+	local att = ParaCamera.GetAttributeObject();
+	
+	last_camera_pos = vector3d:new(att:GetField("Eye position", last_camera_pos));
+	last_lookat_params = vector3d:new({att:GetField("CameraObjectDistance", 0), att:GetField("CameraLiftupAngle", 0), att:GetField("CameraRotY", 0)});
+end
+
+-- @param event: mouse release event
+-- return true if it is a mouse click
+function BaseContext:EndMouseClickCheck(event)
+	if(not GameLogic.IsFPSView) then
+		local att = ParaCamera.GetAttributeObject();
+		local eye_pos = vector3d:new(att:GetField("Eye position", {0,0,0}));
+		local lookat_params = vector3d:new({att:GetField("CameraObjectDistance", 0), att:GetField("CameraLiftupAngle", 0), att:GetField("CameraRotY", 0)});
+		local diff = last_camera_pos - eye_pos;
+		local diff2 = last_lookat_params - lookat_params;
+		if(diff:length2() < 0.2) then
+			if(math.abs(diff2[1])<0.2 and math.abs(diff2[2])<0.05 and math.abs(diff2[3])<0.05) then
+				if(event and event:GetDragDist() > 10) then
+					return;
+				end
+				return true;
+			end
+		end
+	else
+		local att = ParaCamera.GetAttributeObject();
+		local lookat_params = vector3d:new({att:GetField("CameraObjectDistance", 0), att:GetField("CameraLiftupAngle", 0), att:GetField("CameraRotY", 0)});
+		local diff2 = last_lookat_params - lookat_params;
+		if(math.abs(diff2[1])<0.2 and math.abs(diff2[2])<0.05 and math.abs(diff2[3])<0.05) then
+			if(event and event:GetDragDist() > 10) then
+				return;
+			end
+			return true;
+		end
+	end
+end
+
+-- @param event: in case event contains a touch session object, we will save mouseCaptureEntity to it, instead of on the context object.  
+function BaseContext:SetMouseCaptureEntity(mouseCaptureEntity, event)
+	if(event and event.touchSession) then
+		event.touchSession.mouseCaptureEntity = mouseCaptureEntity;
+	end
+	if(event and event.mouse_button == "left") then
+		self.mouseLeftCaptureEntity = mouseCaptureEntity;
+	else
+		self.mouseCaptureEntity = mouseCaptureEntity;
+	end
+end
+
+function BaseContext:GetMouseCaptureEntity(event)
+	if(event and event.touchSession) then
+		return event.touchSession.mouseCaptureEntity;
+	else
+		if(event and event.mouse_button == "left") then
+			return self.mouseLeftCaptureEntity;
+		else
+			return self.mouseCaptureEntity;
+		end
+	end
+end
+
+-- virtual: 
+function BaseContext:mousePressEvent(event)
+	self:SetMouseCaptureEntity(nil, event)
+	
+	if GameLogic.GetFilters():apply_filters("BaseContextMousePressEvent", false, event) then
+		return
+	end
+
+	if GameLogic.GameMode:GetMode() == "tutorial" and event.alt_pressed and event.mouse_button == "left" then
+		return
+	end
+	if(not event.isEmulated and not event.touchSession) then
+		-- if it is from touch session, we will ignore UI controls
+		local temp = ParaUI.GetUIObjectAtPoint(event.x, event.y);
+		if(temp:IsValid()) then
+			return;
+		end
+	end
+
+	if(self:handleHookedMouseEvent(event)) then
+		return;
+	end
+	-- on touch screen, mouse press is fired before the timer where CheckMousePick is called, so we need to do a real mouse pick here
+	self:CheckMousePick(event);
+	local result = SelectionManager:GetPickingResult();
+	local mouseEntity = result.entity 
+	if(mouseEntity) then
+		mouseEntity:event(event)
+		if(event:isAccepted()) then
+			if(mouseEntity:isCaptureMouse()) then
+				self:SetMouseCaptureEntity(mouseEntity, event)
+			end
+			return
+		end
+	end
+
+	self:BeginMouseClickCheck();
+	if(event.mouse_button == "left") then
+		click_data.left_holding_time = 0;
+	elseif(event.mouse_button == "right") then
+		click_data.right_holding_time = 0;
+	end
+end
+
+-- virtual: 
+function BaseContext:mouseMoveEvent(event)
+	if(self:handleHookedMouseEvent(event)) then
+		return;
+	end
+	local mouseCaptureEntity = self:GetMouseCaptureEntity(event)
+	if(mouseCaptureEntity) then
+		mouseCaptureEntity:event(event)
+	else
+		local result = SelectionManager:GetPickingResult();
+		if(result.entity) then
+			result.entity:event(event);
+		end
+	end
+end
+
+-- virtual: 
+function BaseContext:mouseReleaseEvent(event)
+	local mouseCaptureEntity = self:GetMouseCaptureEntity(event)
+	self:SetMouseCaptureEntity(nil, event);
+	
+	self.is_click = self:EndMouseClickCheck(event); 
+
+	if event.mouse_button == "left" and (System.options.isDevMode or System.os.IsTouchMode()) then
+		local mini_keyboard_instance = TouchMiniKeyboard:GetSingleton()
+		if mini_keyboard_instance:GetRMBLockState() == TouchMiniKeyboard.RMBLockStateList.LockMiddle then
+			event.mouse_button = "middle"
+		end
+	end
+
+	if GameLogic.GetFilters():apply_filters("BaseContextMouseReleaseEvent", false, event) then
+		return
+	end
+	if(self:handleHookedMouseEvent(event)) then
+		return;
+	end
+
+	if(mouseCaptureEntity) then
+		mouseCaptureEntity:event(event)
+	else
+		local result = self:CheckMousePick(event);
+		if(result and result.entity) then
+			result.entity:event(event);
+		end
+	end
+
+	self.left_holding_time = click_data.left_holding_time;
+	self.right_holding_time = click_data.right_holding_time;
+	
+	if(event.mouse_button == "left") then
+		click_data.left_holding_time = 0;
+	end
+	click_data.last_mouse_down_block.blockX, click_data.last_mouse_down_block.blockY, click_data.last_mouse_down_block.blockZ = nil, nil, nil;
+end
+
+function BaseContext:handleCameraWheelEvent(event)
+	local CameraObjectDistance = ParaCamera.GetAttributeObject():GetField("CameraObjectDistance", 8);
+	CameraObjectDistance = CameraObjectDistance - mouse_wheel * CameraObjectDistance * 0.1;
+	CameraObjectDistance = math.max(2, math.min(CameraObjectDistance, 20));
+	ParaCamera.GetAttributeObject():SetField("CameraObjectDistance", CameraObjectDistance);
+end
+
+-- virtual: 
+function BaseContext:mouseWheelEvent(event)
+	if(self:handleHookedMouseEvent(event)) then
+		return;
+	end
+
+	if(not ParaCamera.GetAttributeObject():GetField("EnableMouseWheel", false)) then
+		if(GameLogic.IsFPSView or (GameLogic.options.lock_mouse_wheel and not event.ctrl_pressed) or (not GameLogic.options.lock_mouse_wheel and event.ctrl_pressed)) then
+			-- mouse wheel to toggle item in hand
+			GameLogic.GetPlayerController():SetHandToolIndex(GameLogic.GetPlayerController():GetHandToolIndex() - mouse_wheel);
+		else
+			-- control + mouse wheel to zoom camera
+			self:handleCameraWheelEvent(event);
+		end
+	end
+
+	if(GameLogic.GetCodeGlobal():BroadcastKeyPressedEvent("mouse_wheel", mouse_wheel)) then
+		return true;
+	end
+end
+
+-- virtual: return true if handled
+function BaseContext:handleHookedKeyEvent(event)
+	self:handleHookedEvent(event);
+
+	if(ModManager:handleKeyEvent(event)) then
+		return true;
+	end
+
+	if(self:handleItemKeyEvent(event)) then
+		return true;
+	end
+
+	-- mcml based hotkey
+	if(hotkey_manager.handle_key_event(event.virtual_key)) then
+		return true;
+	end
+
+	if(GameLogic.GetCodeGlobal():BroadcastKeyPressedEvent(event.keyname)) then
+		event:accept();
+		return true;
+	end
+end
+
+function BaseContext:handleItemKeyEvent(event)
+	GameLogic.GetPlayerController():GetItemInRightHand():event(event);
+	if(event:isAccepted()) then
+		return true;
+	end
+end
+
+function BaseContext:handleKeyEvent(event)
+	BaseContext._super.handleKeyEvent(self, event);
+	
+	if(GameLogic.Macros:IsRecording()) then
+		if (event:isAccepted() or GameLogic.GetPlayer():IsMountOnRailCar()) and not event.recorded and not GameLogic.Macros.IsMouseTrack() then
+			event.recorded = true;
+			GameLogic.Macros:AddMacro("KeyPress", GameLogic.Macros.GetButtonTextFromKeyEvent(event));
+		end
+	end
+end
+
+-- virtual: actually means key stroke. 
+function BaseContext:keyPressEvent(event)
+	GameLogic.GetFilters():apply_filters("KeyPressEvent", false, event)
+	if(event:isAccepted() or self:handleHookedKeyEvent(event) or self:HandleGlobalKey(event)) then
+		return true;
+	end
+end
+
+function BaseContext:keyReleaseEvent(event)
+	self:handleHookedEvent(event);
+end
+
+-- virtual function handle escape key
+function BaseContext:HandleEscapeKey()
+	if GameLogic.GetFilters():apply_filters("HandleEscapeKey") then
+		return false
+	end
+
+	local state = System.GetState();
+	if(type(state) == "table" and state.OnEscKey~=nil) then
+		if(state.name ~= "MessageBox") then
+			System.PopState(state.name);
+		end
+		if(type(state.OnEscKey)=="function") then
+			state.OnEscKey();
+		elseif(type(state.OnEscKey)=="string") then
+			NPL.DoString(state.OnEscKey);
+		end
+		return
+	end
+		
+	if(ParaScene.IsSceneEnabled()) then
+		local ChatEdit = commonlib.gettable("MyCompany.Aries.ChatSystem.ChatEdit");
+		if(ChatEdit.HasFocus and ChatEdit.HasFocus()) then
+			if(ChatEdit.handleEscKey) then
+				ChatEdit.handleEscKey();
+			end
+		else
+			GameLogic.ToggleDesktop("esc");
+			GameLogic.GetFilters():apply_filters("esc_view_show",true);
+		end
+	end
+end
+
+
+-- try to destroy the block at picking result
+-- if the terrain block is hit, click_data.strength must be larger than max_break_time
+-- @param is_allow_delete_terrain: true 
+function BaseContext:TryDestroyBlock(result, is_allow_delete_terrain)
+	-- try to destroy block
+	if(result and result.blockX) then
+		local click_data = self:GetClickData();
+		-- removed the block
+		local block_template = BlockEngine:GetBlock(result.blockX,result.blockY,result.blockZ);
+		
+		if(block_template and block_template:CanDestroyBlockAt(result.blockX,result.blockY,result.blockZ)) then
+			if(EntityManager.GetFocus():CanReachBlockAt(result.blockX,result.blockY,result.blockZ)) then
+				local task = MyCompany.Aries.Game.Tasks.DestroyBlock:new({blockX = result.blockX,blockY = result.blockY, blockZ = result.blockZ, is_allow_delete_terrain=is_allow_delete_terrain})
+				task:Run();
+				GameLogic.GetFilters():apply_filters("user_event_stat", "block", "destroy:"..tostring(block_template.id), 1, nil);
+			end
+		elseif(result.entity) then
+			local bx, by, bz = result.entity:GetBlockPos();
+			local block_template = BlockEngine:GetBlock(bx, by, bz);
+			if(block_template and block_template:CanDestroyBlockAt(bx, by, bz)) then
+				local task = MyCompany.Aries.Game.Tasks.DestroyBlock:new({blockX = bx,blockY = by, blockZ = bz, })
+				task:Run();
+				GameLogic.GetFilters():apply_filters("user_event_stat", "block", "destroy:"..tostring(block_template.id), 1, nil);
+			end
+		else
+			-- if there is no block, we may have hit the terrain. 
+			if(is_allow_delete_terrain and click_data.strength and click_data.strength > self.max_break_time) then
+				--block.RemoveTerrainBlock(result.blockX,result.blockY,result.blockZ);
+				NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/CreateTerrainHoleTask.lua");
+				local task = MyCompany.Aries.Game.Tasks.CreateTerrainHole:new({blockX = result.blockX,blockY = result.blockY, blockZ = result.blockZ})
+				task:Run();
+			end
+		end
+	end
+end
+
+function BaseContext:OnCreateSingleBlock(x,y,z, block_id, result)
+	local side_region;
+	if(result.y) then
+		if(result.side == 4) then
+			side_region = "upper";
+		elseif(result.side == 5) then
+			side_region = "lower";
+		else
+			local _, center_y, _ = BlockEngine:real(0,result.blockY,0);
+			if(result.y > center_y) then
+				side_region = "upper";
+			elseif(result.y < center_y) then
+				side_region = "lower";
+			end
+		end
+	end
+
+	if(EntityManager.GetFocus():CanReachBlockAt(result.blockX,result.blockY,result.blockZ)) then
+		local task = MyCompany.Aries.Game.Tasks.CreateBlock:new({blockX = x,blockY = y, blockZ = z, entityPlayer = EntityManager.GetPlayer(), block_id = block_id, side = result.side, from_block_id = result.block_id, side_region=side_region })
+		task:Run();
+	end
+end
+
+-- @param event: optional event object
+function BaseContext:OnCreateBlock(result, event)
+	if result.blockX == nil or result.blockY == nil or result.blockZ == nil then
+		return;
+	end	
+	local x,y,z = BlockEngine:GetBlockIndexBySide(result.blockX,result.blockY,result.blockZ,result.side);
+	local itemStack = EntityManager.GetPlayer():GetItemInRightHand();
+	local block_id = 0;
+	local block_data = nil;
+	if(itemStack) then
+		block_id = itemStack.id;
+		local item = itemStack:GetItem();
+		if(item) then
+			block_data = item:GetBlockData(itemStack);
+		else
+			LOG.std(nil, "debug", "BaseContext", "no block definition for %d", block_id or 0);
+			return;
+		end
+	end
+	
+	local ctrl_pressed, shift_pressed, alt_pressed;
+	if(event) then
+		ctrl_pressed, shift_pressed, alt_pressed = event.ctrl_pressed, event.shift_pressed, event.alt_pressed
+	else
+		ctrl_pressed = ParaUI.IsKeyPressed(DIK_SCANCODE.DIK_LCONTROL) or ParaUI.IsKeyPressed(DIK_SCANCODE.DIK_RCONTROL);
+		shift_pressed = ParaUI.IsKeyPressed(DIK_SCANCODE.DIK_LSHIFT) or ParaUI.IsKeyPressed(DIK_SCANCODE.DIK_RSHIFT);
+		alt_pressed = ParaUI.IsKeyPressed(DIK_SCANCODE.DIK_LMENU) or ParaUI.IsKeyPressed(DIK_SCANCODE.DIK_RMENU);
+	end
+
+	if(block_id and block_id > 4096) then
+		local processed;
+		if(GameLogic.GameMode:IsEditor()) then
+			if(not alt_pressed and shift_pressed) then
+				NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/FillLineTask.lua");
+				local task = MyCompany.Aries.Game.Tasks.FillLine:new({blockX = result.blockX,blockY = result.blockY, blockZ = result.blockZ, to_data = block_data, side = result.side})
+				task:Run();
+				processed = true
+			end
+		end
+		-- for special blocks. 
+		if(not processed) then
+			local task = MyCompany.Aries.Game.Tasks.CreateBlock:new({blockX = x,blockY = y, blockZ = z, block_id = block_id, side = result.side, entityPlayer = EntityManager.GetPlayer()})
+			task:Run();
+		end
+		GameLogic.GetFilters():apply_filters("user_event_stat", "block", "create:"..tostring(block_id), 1, nil);
+	else
+		GameLogic.GetFilters():apply_filters("user_event_stat", "block", "create:"..tostring(block_id or result.block_id), 1, nil);
+
+		if(GameLogic.GameMode:IsEditor()) then
+			if(alt_pressed and shift_pressed) then
+				if(block_id or result.block_id == block_types.names.water) and block_id ~= block_types.names.PhysicsModel and block_id ~= block_types.names.BlockModel then
+					-- if ctrl key is pressed, we will replace block at the cursor with the current block in right hand. 
+					NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/ReplaceBlockTask.lua");
+					local task = MyCompany.Aries.Game.Tasks.ReplaceBlock:new({blockX = result.blockX,blockY = result.blockY, blockZ = result.blockZ, to_id = block_id or 0, to_data = block_data, max_radius = 30, preserveRotation=true})
+					task:Run();
+					GameLogic.GetFilters():apply_filters("create_block_event","ReplaceBlocks",task);
+				end
+			elseif(shift_pressed) then
+				NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/FillLineTask.lua");
+				local task = MyCompany.Aries.Game.Tasks.FillLine:new({blockX = result.blockX,blockY = result.blockY, blockZ = result.blockZ, to_data = block_data, side = result.side})
+				task:Run();
+				GameLogic.GetFilters():apply_filters("create_block_event","FillLine",task);
+			elseif(alt_pressed) then
+				if(block_id and block_id ~= block_types.names.PhysicsModel and block_id ~= block_types.names.BlockModel) then 
+					-- if alt key is pressed, we will replace block at the cursor with the current block in right hand. 
+					NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/ReplaceBlockTask.lua");
+					local task = MyCompany.Aries.Game.Tasks.ReplaceBlock:new({blockX = result.blockX,blockY = result.blockY, blockZ = result.blockZ, to_id = block_id, max_radius = 0, side = result.side, preserveRotation=true})
+					task:Run();
+					GameLogic.GetFilters():apply_filters("create_block_event","ReplaceBlock",task);
+				end
+			else
+				self:OnCreateSingleBlock(x,y,z, block_id, result)
+				GameLogic.GetFilters():apply_filters("create_block_event","CreateSingleBlock");
+			end
+		else
+			self:OnCreateSingleBlock(x,y,z, block_id, result)
+		end
+	end
+end
+
+-- for Numeric key 1-9
+function BaseContext:HandleQuickSelectKey(event)
+end
+
+function BaseContext:handleLeftClickScene(event, result)
+end
+
+function BaseContext:handleMiddleClickScene(event, result)
+	result = result or SelectionManager:GetPickingResult();
+	if(result and result.blockX) then
+		
+		if(GameMode:IsAllowGlobalEditorKey()) then
+			local x, y, z = result.blockX, result.blockY, result.blockZ;
+			local block_template = BlockEngine:GetBlock(x, y, z);
+			if(block_template and not block_template.obstruction) then
+				local block_template = BlockEngine:GetBlock(x, y-1, z);
+				if(block_template and block_template.obstruction) then
+					y = y - 1;
+				end
+			end
+			NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/TeleportPlayerTask.lua");
+			local task = MyCompany.Aries.Game.Tasks.TeleportPlayer:new({blockX = x, blockY = y, blockZ = z})
+			task:Run();	
+		end
+	end
+end
+
+function BaseContext:handleRightClickScene(event, result)
+	result = result or SelectionManager:GetPickingResult();
+	local isProcessed;
+	if(not isProcessed and result and result.blockX) then
+		if(click_data.right_holding_time<400) then
+			if(not event.shift_pressed and not event.alt_pressed and result.block_id and result.block_id>0) then
+				-- if it is a right click, first try the game logics if it is processed. such as an action neuron block.
+				if(result.entity and result.entity:IsBlockEntity() and result.entity:GetBlockId() == result.block_id) then
+					-- this fixed a bug where block entity is larger than the block like the physics block model.
+					local bx, by, bz = result.entity:GetBlockPos();
+					isProcessed = GameLogic.GetPlayerController():OnClickBlock(result.block_id, bx, by, bz, event.mouse_button, EntityManager.GetPlayer(), result.side);
+				else
+					isProcessed = GameLogic.GetPlayerController():OnClickBlock(result.block_id, result.blockX, result.blockY, result.blockZ, event.mouse_button, EntityManager.GetPlayer(), result.side);
+				end
+				
+			end
+		end
+	end
+	if(not isProcessed and click_data.right_holding_time<400) then
+		local player = EntityManager.GetPlayer();
+		if(player) then
+			local itemStack = player.inventory:GetItemInRightHand();
+			if(itemStack) then
+				local newStack, hasHandled = itemStack:OnItemRightClick(player);
+				if(hasHandled) then
+					isProcessed = hasHandled;
+				end
+			end
+		end
+	end
+	if(not isProcessed and click_data.right_holding_time<400 and result and result.blockX) then
+		if(GameMode:CanRightClickToCreateBlock()) then
+			self:OnCreateBlock(result, event);
+		end
+	end
+	return isProcessed
+end
+
+-- virtual: undo/redo related key events, such as ctrl+Z/Y
+-- return true if processed
+function BaseContext:handleHistoryKeyEvent(event)
+end
+
+-- virtual function: handle player controller key event
+-- return true if processed
+function BaseContext:handlePlayerKeyEvent(event)
+	local dik_key = event.keyname;
+	if(event.ctrl_pressed and event.alt_pressed) then
+		if(event.virtual_key == Event_Mapping.EM_KEY_PAGE_UP) then
+			local last_value = ParaCamera.GetAttributeObject():GetField("LookAtShiftY", 0);
+			ParaCamera.GetAttributeObject():SetField("LookAtShiftY", last_value+0.03);
+		elseif(event.virtual_key == Event_Mapping.EM_KEY_PAGE_DOWN) then
+			local last_value = ParaCamera.GetAttributeObject():GetField("LookAtShiftY", 0);
+			ParaCamera.GetAttributeObject():SetField("LookAtShiftY", last_value-0.03);
+		end
+		event:accept();
+	elseif(not event.ctrl_pressed and not event.alt_pressed) then
+		if(GameLogic.Macros:IsRecording()) then
+			if(dik_key == "DIK_SPACE" or dik_key == "DIK_F" or dik_key == "DIK_X") then
+				if(EntityManager.GetFocus() == EntityManager.GetPlayer()) then
+					local player = EntityManager.GetPlayer();
+					if(player) then
+						local x, y, z = player:GetPosition()
+						GameLogic.Macros:AddMacro("FocusPlayer", x, y, z);
+					end
+				end
+			end
+		end
+		if(dik_key == "DIK_SPACE") then
+			GameLogic.DoJump();
+			event:accept();
+		elseif(dik_key == "DIK_F") then
+			-- fly mode
+			if(GameMode:CanFly()) then
+				GameLogic.ToggleFly();
+			else
+				NPL.load("(gl)script/apps/Aries/Creator/WorldCommon.lua");
+				local WorldCommon = commonlib.gettable("MyCompany.Aries.Creator.WorldCommon")
+				local generatorName = WorldCommon.GetWorldTag("world_generator");
+				if (generatorName == "paraworld") then
+					GameLogic.IsVip("FlyOnParaWorld", true, function(result)
+						if result then
+							GameLogic.options:SetCanJumpInAir(true);
+							GameLogic.ToggleFly();
+						end
+					end)
+				else
+                    _guihelper.CloseMessageBox();
+					_guihelper.MessageBox(L"此世界禁止飞行哦！");
+				end
+			end
+			event:accept();
+		elseif(dik_key == "DIK_B") then
+			if System.options.ZhyChannel ~= "" and not System.options.isZhihuiyunDebug then
+				return
+			end
+
+			if(System.options.mc) then
+				GameLogic.ToggleDesktop("bag");
+				event:accept();
+			end
+		elseif(dik_key == "DIK_W" or dik_key == "DIK_UP") then
+			GameLogic.WalkForward();
+			
+		elseif(dik_key == "DIK_E") then
+			if System.options.ZhyChannel ~= "" and not System.options.isZhihuiyunDebug then
+				return
+			end
+				
+			GameLogic.ToggleDesktop("builder");
+			event:accept();
+		elseif(dik_key == "DIK_Q") then
+			GameLogic.GetPlayerController():ThrowBlockInHand();
+			event:accept();
+		elseif(dik_key == "DIK_F5") then
+			-- if user has a petObj
+			NPL.load("(gl)script/apps/Aries/Creator/Game/Entity/EntityManager.lua");
+			local EntityManager = commonlib.gettable("MyCompany.Aries.Game.EntityManager");
+			local curPlayer = EntityManager.GetPlayer();
+
+			GameLogic.ToggleCamera();
+			event:accept();
+
+			if(curPlayer and curPlayer.petObj) then
+				if(GameLogic.IsFPSView) then
+					curPlayer.petObj:SetVisible(false)
+				else
+					curPlayer.petObj:SetVisible(true)
+				end
+			end;
+		elseif(dik_key == "DIK_X") then
+			GameLogic.TalkToNearestNPC();
+			event:accept();
+		elseif(dik_key == "DIK_R") then
+			local KeepWorkMallPage = NPL.load("(gl)script/apps/Aries/Creator/Game/KeepWork/KeepWorkMallPageV2.lua");
+			local MovieClipController = commonlib.gettable("MyCompany.Aries.Game.Movie.MovieClipController");
+			if not MovieClipController.IsVisible() and not System.options.isZhihuiyunSchoolPackage then
+				if KeepWorkMallPage.isOpen then
+					KeepWorkMallPage.Close()
+				else
+					KeepWorkMallPage.Show();
+				end
+				event:accept();
+			end
+		end
+	elseif(self:HandleQuickSelectKey(event)) then
+		-- quick select key
+	end
+	return event:isAccepted();
+end
+
+-- deactivate this context and switch back to default scene context with the current game mode. 
+function BaseContext:close()
+	return GameLogic.ActivateDefaultContext();
+end
+
+-- handle all global key events that should always be available to the user regardless of whatever scene context. 
+-- return true if key is handled.
+local nKeyCapsLockPressTime = 0 
+local doubleKeyTime = 240 --比较正常的一个值
+function BaseContext:HandleGlobalKey(event)
+	local dik_key = event.keyname;
+	local ctrl_pressed = event.ctrl_pressed;
+	if System.options.ZhyChannel ~= "" and not System.options.isZhihuiyunDebug and string.find(dik_key, "DIK_F") then
+		event:accept();
+		return true
+	end
+
+	if(System.options.isAB_SDK or System.options.mc) then
+		if(dik_key == "DIK_F12" and not ctrl_pressed) then
+			System.App.Commands.Call("Help.Debug");
+			event:accept();
+		elseif(dik_key == "DIK_F3" and ctrl_pressed) then
+			System.App.Commands.Call("File.MCMLBrowser");
+			event:accept();
+		elseif(dik_key == "DIK_F4") then
+			if(ctrl_pressed) then
+				System.App.Commands.Call("Help.ToggleReportAndBoundingBox");
+			else
+				System.App.Commands.Call("Help.ToggleWireFrame");
+			end
+			event:accept();
+			GameLogic:texturePackChanged();
+		end
+		if(event:isAccepted()) then
+			return true;
+		end
+	end
+		
+	
+	if(GameMode:IsAllowGlobalEditorKey()) then
+		if(dik_key == "DIK_TAB") then
+			NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/TeleportPlayerTask.lua");
+			local task = MyCompany.Aries.Game.Tasks.TeleportPlayer:new({mode="vertical", isUpward = not event.shift_pressed, add_to_history=false});
+			task:Run();
+			event:accept();
+		elseif(dik_key == "DIK_F3") then
+			if(event.shift_pressed) then
+				NPL.load("(gl)script/ide/GUI_inspector_simple.lua");
+				-- call this function at any time to inspect UI at the current mouse position
+				CommonCtrl.GUI_inspector_simple.InspectUI(); 
+			else
+				if(not ctrl_pressed) then
+					CommandManager:RunCommand("/show info");
+				end
+			end
+			event:accept();
+		elseif(dik_key == "DIK_F11") then
+			CommandManager:RunCommand("/open npl://console");
+			event:accept();
+		elseif(ctrl_pressed and dik_key == "DIK_P" and event.shift_pressed) then
+			-- shift + ctrl + p: to stop(pause) all running code block. 
+			CommandManager:RunCommand("/stop");
+			event:accept();
+		else
+			-- ctrl + Keys
+			if(ctrl_pressed) then
+				if(dik_key == "DIK_T") then
+					if(GameLogic.Macros:IsRecording()) then
+						local angleX, angleY = GameLogic.Macros.GetSceneClickParams();
+						GameLogic.Macros:AddMacro("NextKeyPressWithMouseMove", angleX, angleY);
+					end
+					if GameLogic.Macros:IsPlaying() then
+						local mouseX, mouseY = ParaUI.GetMousePosition();
+						SelectionManager:MousePickBlock(nil, nil, nil, nil, mouseX, mouseY)
+					end
+					NPL.load("(gl)script/apps/Aries/Creator/Game/Areas/InfoWindow.lua");
+					local InfoWindow = commonlib.gettable("MyCompany.Aries.Creator.Game.Desktop.InfoWindow");
+					InfoWindow.CopyToClipboard("mousepos")
+					event:accept();
+				elseif(dik_key == "DIK_R") then
+					NPL.load("(gl)script/apps/Aries/Creator/Game/Areas/InfoWindow.lua");
+					local InfoWindow = commonlib.gettable("MyCompany.Aries.Creator.Game.Desktop.InfoWindow");
+					InfoWindow.CopyToClipboard("relativemousepos")
+					event:accept();
+				elseif(dik_key == "DIK_D") then
+					-- toggle selection
+					NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/SelectBlocksTask.lua");
+					local SelectBlocks = commonlib.gettable("MyCompany.Aries.Game.Tasks.SelectBlocks");
+					SelectBlocks.ToggleLastInstance();
+					event:accept();
+				elseif(dik_key == "DIK_M") then
+					-- show module manager
+					GameLogic.RunCommand("/show mod");
+					event:accept();
+				elseif(dik_key == "DIK_O") then
+					-- show module manager
+					GameLogic.RunCommand("/menu file.loadworld");
+					event:accept();
+				elseif(dik_key == "DIK_N") then
+					-- show module manager
+					GameLogic.RunCommand("/menu file.createworld");
+					event:accept();
+				elseif(dik_key == "DIK_P") then
+					-- find code block
+					GameLogic.RunCommand("/findfile -codeblock");
+				elseif(dik_key == "DIK_F") then
+					-- find block 
+					if(event.shift_pressed) then
+						GameLogic.RunCommand("/findfile");
+					else
+						GameLogic.RunCommand("/menu window.find");
+					end
+					event:accept();
+				elseif(dik_key == "DIK_C" or dik_key == "DIK_V") then
+					NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/SelectBlocksTask.lua");
+					local SelectBlocks = commonlib.gettable("MyCompany.Aries.Game.Tasks.SelectBlocks");
+						
+					if(dik_key == "DIK_C") then
+						-- copy current mouse cursor block to clipboard
+						local isCopyReferences = event.shift_pressed
+						SelectBlocks.CopyToClipboard(nil, nil, isCopyReferences);
+					elseif(dik_key == "DIK_V") then
+						-- paste from clipboard
+						SelectBlocks.PasteFromClipboard();
+					end
+					event:accept();
+					
+					if(GameLogic.Macros:IsRecording()) then
+						local angleX, angleY = GameLogic.Macros.GetSceneClickParams();
+						GameLogic.Macros:AddMacro("NextKeyPressWithMouseMove", angleX, angleY);
+					end
+				end
+			end
+		end
+	end
+	
+	if(dik_key == "DIK_F9") then
+		if System.options.ZhyChannel ~= "" and not System.options.isZhihuiyunDebug then
+			return
+		end
+		CommandManager:RunCommand("record");
+		event:accept();
+	elseif (dik_key == "DIK_CAPSLOCK") then
+		-- local dik_key = event.keyname;
+		if nKeyCapsLockPressTime ~= 0 then
+			local timeDis = ParaGlobal.GetGameTime() - nKeyCapsLockPressTime
+			if timeDis <= doubleKeyTime and GameLogic.Macros:IsRecording() then 
+				--GameLogic.AddBBS(nil,"键盘双击")
+				print("IsMouseTrack========",GameLogic.Macros.IsMouseTrack(),timeDis,nKeyCapsLockPressTime)
+				nKeyCapsLockPressTime = 0
+				if not GameLogic.Macros.IsMouseTrack() then
+					GameLogic.Macros:AddMacro("BeginMouseTrack");
+					GameLogic.Macros.BeginMouseTrack() 
+				else
+					GameLogic.Macros.GenerRecordMacros()
+					GameLogic.Macros:AddMacro("EndMouseTrack");
+					GameLogic.Macros.EndMouseTrack()
+				end
+			end
+		end
+
+		nKeyCapsLockPressTime = ParaGlobal.GetGameTime()
+		event:accept();
+	elseif(dik_key == "DIK_RETURN") then
+		if System.options.ZhyChannel ~= "" and not System.options.isZhihuiyunDebug then
+			return
+		end
+
+		if not GameLogic.GetFilters():apply_filters("HandleGlobalKeyByRETURN") then
+			if(GameLogic.GameMode:CanChat() and GameLogic.options:IsShowChatWnd()) then
+				if (System.User.isAnonymousWorld == false) then
+					-- System.App.Commands.Call(System.App.Commands.GetDefaultCommand("EnterChat"));
+					NPL.load("(gl)script/apps/Aries/Creator/Game/Areas/ChatSystem/ChatWindow.lua");
+					MyCompany.Aries.ChatSystem.ChatWindow.ShowAllPage(true);
+					event:accept();
+				else
+					GameLogic.CheckSignedIn(L"请先登录！", function()
+						if (System.User.isAnonymousWorld) then
+							LOG.std(nil, "info", "BaseContext:HandleGlobalKey", "User cannot use command line.");
+							return;
+						end
+						NPL.load("(gl)script/apps/Aries/Creator/Game/Areas/ChatSystem/ChatWindow.lua");
+						MyCompany.Aries.ChatSystem.ChatWindow.ShowAllPage(true);
+						event:accept();
+					end);
+				end
+			end
+		end
+	elseif(dik_key == "DIK_SLASH") then
+		if not GameLogic.GetFilters():apply_filters("HandleGlobalKeyBySLASH") then
+			if (GameLogic.GameMode:CanChat() and GameLogic.options:IsShowChatWnd()) then
+				local function HandleSlashKey_()
+					NPL.load("(gl)script/apps/Aries/Creator/Game/Areas/ChatSystem/ChatWindow.lua");
+					MyCompany.Aries.ChatSystem.ChatWindow.ShowAllPage(true);
+
+					if(event.shift_pressed) then
+						MyCompany.Aries.ChatSystem.ChatEdit.SetText("/ask ");
+					else
+						MyCompany.Aries.ChatSystem.ChatEdit.SetText("/");
+					end
+					
+					event:accept();
+				end
+				HandleSlashKey_()
+			end
+		end
+	elseif(dik_key == "DIK_GRAVE") then
+		NPL.load("(gl)script/apps/Aries/Creator/Game/World/CameraController.lua");
+		local CameraController = commonlib.gettable("MyCompany.Aries.Game.CameraController")
+		CameraController.ToggleFov(GameLogic.options.inspector_fov);
+		event:accept();
+	elseif(event.ctrl_pressed and (dik_key == "DIK_F6" or dik_key == "DIK_G")) then
+		GameLogic.ToggleGameMode();
+		event:accept();
+	elseif(dik_key == "DIK_ESCAPE") then
+		-- handle escape key
+		self:HandleEscapeKey();
+		event:accept();
+	elseif(dik_key == "DIK_LWIN") then
+		-- the menu key on andriod. 
+		if(System.options.IsMobilePlatform and ParaScene.IsSceneEnabled()) then
+			GameLogic.ToggleDesktop("esc");
+		end
+	elseif(dik_key == "DIK_S" and ctrl_pressed) then
+		event:accept();
+		GameLogic.RunCommand("/save");
+		
+	elseif(dik_key == "DIK_F12" and ctrl_pressed) then
+		System.App.Commands.Call("ScreenShot.HideAllUI");
+		event:accept();
+	elseif(dik_key == "DIK_I" and ctrl_pressed and event.shift_pressed) then
+		GameLogic.RunCommand("/open npl://debugger");
+		event:accept();
+	elseif(dik_key == "DIK_F1") then
+		GameLogic.RunCommand("/menu help.help");
+		event:accept();
+	elseif(dik_key == "DIK_F7") then
+		GameLogic.RunCommand("/menu help.creativespace");
+		event:accept();
+	end
+
+	if (ctrl_pressed and event.alt_pressed) then
+		if (dik_key == "DIK_1") then
+			CommandManager:RunCommand("share", "10");
+			event:accept();
+		elseif (dik_key == "DIK_3") then
+			CommandManager:RunCommand("share", "30");
+			event:accept();
+		end
+	end
+	return event:isAccepted();
+end
+
+function BaseContext:EnablePlayerTimer()
+	self.playerTimer = self.playerTimer or commonlib.Timer:new({callbackFunc = function(timer)
+		self:OnPlayerTimer(timer)
+	end})
+	if(not self.playerTimer:IsEnabled()) then
+		self.playerTimer:Change(30, 30)
+	end
+end
+
+function BaseContext:DisablePlayerTimer()
+	if(self.playerTimer) then
+		self.playerTimer:Change();
+	end
+	self:SetTargetBlockPosition(nil)
+	self:SetTargetFacing(nil)
+end
+
+function BaseContext:SetTargetFacing(facing)
+	self.targetFacing = facing
+	if(self.targetFacing) then
+		self:EnablePlayerTimer()
+	end
+end
+
+-- we will check if there is walkable line path from point and to point. if there is, we will return false, otherwise true. 
+-- we will assume a straight line path in xz plane, however, player can walk up or down 1 block in y direction. 
+-- @param fromX, fromY, fromZ, toX, toY, toZ: in real coordinate 
+-- @param pointHeight: default to 0.2
+-- @param jumpHeight: nil or [0, 128]. if nil, we will set to 32 if current player is not visible, otherwise 1. 
+-- @return boolean
+function BaseContext:HasLinePathFromSrcToDest(fromX, fromY, fromZ, toX, toY, toZ, pointHeight, jumpHeight)
+	pointHeight = pointHeight or 0.2;
+	if(not jumpHeight) then
+		local player = EntityManager.GetPlayer()
+		if(player and not player:IsVisible()) then
+			jumpHeight = self:GetLinePathJumpHeightWhileHidden()
+		else
+			jumpHeight = 1
+		end
+	end
+	if(pointHeight > 0) then
+		if(self:HasLinePathFromSrcToDest(fromX, fromY, fromZ, toX, toY, toZ, 0, jumpHeight) or
+			self:HasLinePathFromSrcToDest(fromX, fromY+pointHeight, fromZ, toX, toY+pointHeight, toZ, 0, jumpHeight)) then
+			return true
+		end
+		return false;
+	end
+	local bHasMarker = false;
+	
+	local dx = toX - fromX;
+	local dy = toY - fromY;
+	local dz = toZ - fromZ;
+	
+	local dist = dx^2 + dy^2 + dz^2;
+	if(dist < 2) then
+		local bx1, by1, bz1 = BlockEngine:block(fromX, fromY, fromZ)
+		local bx2, by2, bz2 = BlockEngine:block(toX, toY, toZ)
+		if(bx1==bx2 and by1 == by2 and bz1==bz2) then
+			return false;
+		end
+	end
+
+	dist = math.floor(math.sqrt(dist) + 2);
+
+	local step = 1/dist;
+	local fromBx, fromBy, fromBz = BlockEngine:block(fromX, fromY, fromZ)
+	local lastX, lastY, lastZ = fromBx, fromBy, fromBz;
+	local toBx, toBy, toBz = BlockEngine:block(toX, toY, toZ)
+	local lastBy = fromBy
+	local bBlocked;
+	
+	local function HasBlocker(bx, by, bz)
+		local block = BlockEngine:GetBlock(bx, by, bz)
+		if(block and (block.blockcamera or block.obstruction)) then
+			return true;
+		end
+	end
+
+	if(HasBlocker(fromBx, fromBy, fromBz)) then
+		lastBy = fromBy + 1;
+	end
+
+	for i = 1, math.floor(dist)+1 do
+		local percent = math.min(1, step * i);
+		local bx, by, bz = BlockEngine:block(fromX + percent * dx, fromY + percent * dy, fromZ + percent * dz);
+		if(lastX~=bx or lastZ~=bz) then
+			if(lastBy==by) then
+				if(HasBlocker(bx, by, bz)) then
+					if(jumpHeight>0) then
+						local bHasFreeSpace;
+						for dy = 1, jumpHeight do
+							if(HasBlocker(lastX, lastBy+dy, lastZ)) then
+								break
+							end
+							if(not HasBlocker(bx, lastBy+dy, bz)) then
+								lastBy = lastBy + dy
+								bHasFreeSpace = true;
+								break
+							end
+						end
+						if(not bHasFreeSpace) then
+							bBlocked = true
+							break;
+						end
+					else
+						bBlocked = true
+						break;
+					end
+				end
+			elseif(lastBy>by) then
+				if(not HasBlocker(bx, lastBy-1, bz)) then
+					lastBy = lastBy - 1
+					while(lastBy>by) do
+						if(not HasBlocker(bx, lastBy-1, bz)) then
+							lastBy = lastBy - 1
+						else
+							break;
+						end
+					end
+				elseif(not HasBlocker(bx, lastBy, bz)) then
+				else
+					if(jumpHeight>0) then
+						local bHasFreeSpace;
+						for dy = 1, jumpHeight do
+							if(HasBlocker(lastX, lastBy+dy, lastZ)) then
+								break;
+							end
+							if(not HasBlocker(bx, lastBy+dy, bz)) then
+								lastBy = lastBy + dy
+								bHasFreeSpace = true;
+								break
+							end
+						end
+						if(not bHasFreeSpace) then
+							bBlocked = true
+							break;
+						end
+					else
+						bBlocked = true
+						break;
+					end
+				end
+			elseif(lastBy<by) then
+				if(not HasBlocker(bx, lastBy+1, bz)) then
+					lastBy = lastBy + 1
+					for dy = 1, jumpHeight-1 do
+						if(not HasBlocker(bx, lastBy+1, bz) and lastBy<by) then
+							lastBy = lastBy + 1
+						else
+							break;
+						end
+					end
+				elseif(not HasBlocker(bx, lastBy, bz)) then
+				elseif(not HasBlocker(bx, lastBy-1, bz)) then
+					lastBy = lastBy - 1
+				else
+					bBlocked = true
+					break;
+				end
+			end
+		elseif(lastY~=by) then
+			if(lastBy < by and not HasBlocker(bx, lastBy + 1, bz)) then
+				lastBy = lastBy + 1
+			elseif(lastBy > by and not HasBlocker(bx, lastBy - 1, bz)) then
+				lastBy = lastBy - 1
+			end
+		end
+		lastX, lastY, lastZ = bx, by, bz;
+	end
+	if(math.abs(lastBy - toBy) > 1) then
+		bBlocked = true
+	end
+	return bBlocked;
+end
+
+function BaseContext:GetTargetPosition()
+	return self.targetX, self.targetY, self.targetZ;
+end
+
+-- @param moveTime: if nil, we will move to target location with automatic speed.
+-- if not, it will be the exact time to spend to move to the target. 
+function BaseContext:SetTargetPosition(x, y, z, moveTime)
+	local player = EntityManager.GetPlayer()
+	if(not player) then
+		return
+	end
+	local obj = player:GetInnerObject()
+	if(not obj) then
+		return
+	end
+	local attr = ParaCamera.GetAttributeObject();
+	local fromX, fromY, fromZ = player:GetPosition()
+	self.startPlayerX, self.startPlayerY, self.startPlayerZ = fromX, fromY, fromZ
+	
+	if(x and self:HasLinePathFromSrcToDest(fromX, fromY, fromZ, x, y, z)) then
+		return
+	end
+
+	self.targetX, self.targetY, self.targetZ = x, y, z;
+	self.timeUsed = 0;
+	self.targetPositionMoveTime = moveTime;
+	if(self.targetX) then
+		local distance = math.sqrt((self.startPlayerX - self.targetX)^2 + (self.startPlayerY - self.targetY) ^ 2 + (self.startPlayerZ - self.targetZ) ^ 2);
+		local eye_pos = attr:GetField("Eye position", {0,0,0});
+		local lookat_pos = attr:GetField("Lookat position", {0,0,0});
+		local camobjDist, LiftupAngle, CameraRotY = attr:GetField("CameraObjectDistance", 0), attr:GetField("CameraLiftupAngle", 0), attr:GetField("CameraRotY", 0);
+		local dist, pitch, yaw = camobjDist, LiftupAngle, CameraRotY;
+
+		local eyeX, eyeY, eyeZ = eye_pos[1], eye_pos[2], eye_pos[3]
+		local lookatX, lookatY, lookatZ = lookat_pos[1], lookat_pos[2], lookat_pos[3]
+		local cameraEyeDistance = math.sqrt((eyeX-lookatX)^2 + (eyeY-lookatY)^2 + (eyeZ-lookatZ)^2)
+		if(cameraEyeDistance+0.1 > camobjDist and distance >= 2) then
+			-- only disable camera collision if the current camera is not in collision and walk distance is big. 
+			attr:SetField("EnableBlockCollision", false);
+		end
+		-- only linear movement style. 
+		obj:SetField("MovementStyle", 3)
+		self:EnablePlayerTimer()
+		player:SetDummy(true)
+		player:SetAnimation(5);
+		
+	else
+		-- normal movement style
+		obj:SetField("MovementStyle", 0)
+		attr:SetField("EnableBlockCollision", true);
+		player:SetDummy(false)
+		player:SetAnimation(0);
+	end
+end
+
+function BaseContext:SetTargetBlockPosition(bx, by, bz, moveTime)
+	if(bx) then
+		bx, by, bz = BlockEngine:real_bottom(bx, by, bz);
+	end
+	self:SetTargetPosition(bx, by, bz, moveTime)
+end
+
+-- called on player frame move
+function BaseContext:OnPlayerTimer(timer)
+	local reachTargetTimeLeft;
+	if(self.targetX) then
+		local player = EntityManager.GetPlayer()
+		local px, py, pz = self.startPlayerX, self.startPlayerY, self.startPlayerZ;
+		local tx, ty, tz = self.targetX, self.targetY, self.targetZ;
+		
+		local dist = math.sqrt((tx - px) ^ 2 + (ty - py) ^ 2 + (tz - pz) ^ 2)
+		local deltaTime = timer:GetDelta() / 1000
+		self.timeUsed = self.timeUsed + deltaTime;
+		local moveDist;
+		-- player move speed will increase according to move distance
+		if(self.targetPositionMoveTime) then
+			moveDist = self.timeUsed / self.targetPositionMoveTime;
+		else
+			moveDist = math.min(100, (10 + (dist^2)/20)) * self.timeUsed	
+		end
+		
+		if(dist > moveDist and dist > 0.1) then
+			local ratio = moveDist / dist;
+			reachTargetTimeLeft = self.timeUsed / ratio * (1 - ratio)
+
+			local facing = Direction.GetFacingFromOffset(tx - px, 0, tz - pz)
+
+			local x = px + (tx - px) * ratio
+			local y = py + (ty - py) * ratio
+			local z = pz + (tz - pz) * ratio
+			
+			player:SetPosition(x, y, z)
+			player:SetFacing(facing)
+		else
+			-- we already reached the target position
+			player:SetPosition(tx, ty, tz)
+			self:SetTargetPosition(nil)
+		end
+	end
+	if(self.targetFacing) then
+		local player = EntityManager.GetPlayer()
+		local deltaTime = timer:GetDelta() / 1000
+		local attr = ParaCamera.GetAttributeObject();
+		local cameraRotY = attr:GetField("CameraRotY", 0);
+		local targetRotY = self.targetFacing;
+
+		local newRotY, bReached = mathlib.SmoothMoveAngle(cameraRotY, targetRotY, (30+(math.abs(mathlib.ToStandardAngle(targetRotY-cameraRotY))*100)^2/30) * deltaTime/180*math.pi)
+		attr:SetField("CameraRotY", newRotY)
+		if(bReached) then
+			self:SetTargetFacing(nil)
+		end
+	end
+	if(not self.targetX and not self.targetFacing) then
+		timer:Change();
+	end
+end
+
+function BaseContext:SetMouseDownBlock(block, event)
+	if(event and event.touchSession) then
+		event.touchSession.mousedownBlock = block;
+	end
+	self.mousedownBlock = block;
+end
+
+function BaseContext:GetMouseDownBlock(event)
+	if(event and event.touchSession) then
+		self.draggingEntity = event.touchSession.mousedownBlock;
+		return event.touchSession.mousedownBlock;
+	else
+		return self.mousedownBlock;
+	end
+end
+
+function BaseContext:SetLinePathJumpHeightWhileHidden(height)
+	self.jumpHeightWhileHidden = height
+end
+
+function BaseContext:GetLinePathJumpHeightWhileHidden()
+	return self.jumpHeightWhileHidden or 32
+end

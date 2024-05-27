@@ -1,0 +1,53 @@
+<html>
+<body> 
+<pe:mcml>
+<script type='text/npl' src='MainLoginLogin.script.lua'>
+<![CDATA[
+ZhiHuiYunLoginPage = commonlib.gettable("MyCompany.Aries.Game.ZhiHuiYun.Login.ZhiHuiYunLoginPage")
+ZhiHuiYunLoginPage.OnInitModPage(Page)
+]]>
+</script>
+
+<style type='text/mcss'>
+</style>
+<div style = "width: 466px; height: 280px;">
+    <!-- 模式标题 -->
+    <div style="width:128px;height: 22px;margin-left: 15px;margin-top: 10px;background: url(Texture/ZhiHuiYun/Login/zhanghaodenglu_88x22_32bits.png#0 0 128 22)"></div>
+    <div align="center" style = "width: 436px; height: 4px;margin-left: 0px;margin-top: 8px;background: url(Texture/ZhiHuiYun/Login/tiao_436x4_32bits.png#0 0 436 4)"></div>
+    <!-- 账号 -->
+    <div align="center" style="width: 360px;height: 57px;margin-top: 30px;">
+        <div style="width: 360px;height: 42px;background-color: #eeeeee;">
+            <!-- icon -->
+            <div style="float: left;width: 21px; height: 21px;margin-left: 10px;margin-top: 10px;background: url(Texture/ZhiHuiYun/Login/01_21x21_32bits.png#0 0 21 21)"></div>
+            <!-- 输入框 -->
+            <input type="text" EmptyText='请输入用户名' EmptyTextColor='#000000' RemoveSpaces='true' CaretColor="#FFFFFFFF" enable_ime='false' name='account_input' MoveViewWhenAttachWithIME='true'
+            onfocusout ="" style="float: left;font-size: 22px;margin-left: 5px;margin-top:4px;margin-left:2px;textcolor:#000000;width: 324px;height: 35px;background:;" onmodify="" />
+        </div>
+
+        <!-- 错误码显示 -->
+    </div>
+    <!-- 密码 -->
+    <div align="center" style="width: 360px;height: 57px;margin-top: 18px;">
+        <div style="width: 360px;height: 42px;background-color: #eeeeee;">
+            <!-- icon -->
+            <div style="float: left;width: 20px; height: 23px;margin-left: 10px;margin-top: 10px;background: url(Texture/ZhiHuiYun/Login/02_20x23_32bits.png#0 0 20 23)"></div>
+            <!-- 输入框 -->
+            <input type="text" EmptyText='请输入密码' EmptyTextColor='#000000' RemoveSpaces='true' CaretColor="#FFFFFFFF" enable_ime='false' uiname="zhihuiyun_password_input" name='password_input' MoveViewWhenAttachWithIME='true'
+            onfocusout ="" PasswordChar="*" SkipAutoBadWordFilter='true' style="float: left;font-size: 22px;margin-left: 5px;margin-top:4px;margin-left:2px;textcolor:#000000;width: 285px;height: 35px;background:;" onmodify="" />
+
+            <input type="button" uiname="zhihuiyun_password_eye" onclick="ZhiHuiYunLoginPage.ChangePasswordShow" value="" 
+                    style="float: left;width: 34px;height: 20px; margin-left: 0px;margin-top: 13px;background:url(Texture/ZhiHuiYun/Login/off_29x11_32bits.png#0 0 29 17);"/>
+        </div>
+
+        <!-- 错误码显示 -->
+        <input type="button" name="error_code" value="" enable="false" style="text-align: left;color: #a80101;font-size: 10px;margin-left: 0px;background:;"/>
+    </div>
+
+    <!-- 登录按钮 -->
+    <div align="center" style="width: 362px;height: 48px;margin-top: 20px;background:;">
+        <input type="button" DefaultButton='true' onclick="ZhiHuiYunLoginPage.Login" style="width: 362px;height: 48px;background:url(Texture/ZhiHuiYun/Login/denglu_362x48_32bits.png#0 0 362 48);"/>
+    </div>
+</div>
+</pe:mcml>
+</body>
+</html>

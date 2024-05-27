@@ -1,0 +1,46 @@
+﻿<!-- "script/apps/Aries/Creator/Game/Tasks/UserInfo/UserBagPage.html" -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title></title>
+</head>
+<body>
+<pe:mcml>
+<script refresh="false" type="text/npl" src="UserBagPage.lua"><![CDATA[
+local UserBagPage = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/User/UserBagPage.lua");
+UserBagPage.OnInit()
+function ClosePage()
+    Page:CloseWindow();
+end
+function DS_Items(index)
+    if(index == nil) then
+        return #UserBagPage.Current_Item_DS;
+    else
+        return UserBagPage.Current_Item_DS[index];
+    end
+end
+    
+function OnClickGuid(guid)
+    --_guihelper.MessageBox("guid:".. guid);
+end
+]]></script>
+    <kp:window width="600" height="500" icon="Texture/Aries/Creator/keepwork/Window/title/biaoti_beibao_32bits.png" onclose="ClosePage">
+    <div class="kp_window_container">
+        <pe:gridview style="margin-left:0px" name="slot_gridview" CellPadding="7" VerticalScrollBarStep="36" VerticalScrollBarOffsetX="8" AllowPaging="false" ItemsPerLine="4" DefaultNodeHeight = "32" 
+            DataSource='<%=DS_Items%>'>
+	        <Columns>
+                <div class="kp_item" >
+                    <kp:slot guid='<%=Eval("id")%>'class="kp_item"  />    
+                </div>
+            </Columns>
+	        <EmptyDataTemplate>
+	        </EmptyDataTemplate>
+        </pe:gridview>
+    </div>
+    
+</kp:window>
+</pe:mcml>
+</body>
+</html>
+

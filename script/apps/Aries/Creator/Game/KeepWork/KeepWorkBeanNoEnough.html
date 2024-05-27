@@ -1,0 +1,103 @@
+﻿<!-- "script/apps/Aries/Inventory/Pages/KeepWorkBeanNoEnough.html" -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>KeepWorkCoinNoEnough, by yangguiyi, 2020/8/6</title>
+</head>
+<body>
+<pe:mcml>
+<script type="text/npl" src="KeepWorkBeanNoEnough.lua" refresh="true"><![CDATA[
+local pageCtrl = document:GetPageCtrl();
+local KeepWorkBeanNoEnough = MyCompany.Aries.Creator.Game.KeepWork.KeepWorkBeanNoEnough
+local KeepworkServiceSession = NPL.load("(gl)Mod/WorldShare/service/KeepworkService/KeepworkServiceSession.lua")
+local ParacraftLearningRoomDailyPage = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/ParacraftLearningRoom/ParacraftLearningRoomDailyPage.lua");
+local LoginModal = NPL.load("(gl)Mod/WorldShare/cellar/LoginModal/LoginModal.lua")
+
+local item_data = pageCtrl:GetRequestParam("item_data");
+KeepWorkBeanNoEnough.OnInit(item_data)
+
+function OnCancel()
+    pageCtrl:CloseWindow();
+end
+
+function getLeftBean()
+    return KeepWorkBeanNoEnough.getLeftBean()
+end
+
+function OnDailyCheck()
+    if(KeepworkServiceSession:IsSignedIn())then
+        pageCtrl:CloseWindow();
+        ParacraftLearningRoomDailyPage.DoCheckin();
+        return
+    end
+    LoginModal:CheckSignedIn(L"请先登录", function(result)
+        if result == true then
+            Mod.WorldShare.Utils.SetTimeOut(function()
+                if result then
+                    local ParacraftLearningRoomDailyPage = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/ParacraftLearningRoom/ParacraftLearningRoomDailyPage.lua");
+                    ParacraftLearningRoomDailyPage.DoCheckin();
+                    pageCtrl:CloseWindow();
+                end
+            end, 500)
+        end
+    end)
+end
+
+function OnLearningLand()
+        if(KeepworkServiceSession:IsSignedIn())then
+            ParacraftLearningRoomDailyPage.OnLearningLand();
+            return
+        end
+        LoginModal:CheckSignedIn(L"请先登录", function(result)
+        if result == true then
+            Mod.WorldShare.Utils.SetTimeOut(function()
+                if result then
+                    local ParacraftLearningRoomDailyPage = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/ParacraftLearningRoom/ParacraftLearningRoomDailyPage.lua");
+                    ParacraftLearningRoomDailyPage.OnLearningLand();
+                end
+            end, 300)
+        end
+    end)
+end
+
+function ClosePage()
+    pageCtrl:CloseWindow();
+end
+
+]]></script>
+<kp:window name="iframe" mode="lite" width="400" height="216" title='<%= L"提示"%>' onclose="ClosePage">
+    <div style="color:#ffffff;padding-left:2px;padding-top:39px;padding-right:2px;padding-bottom:2px;">
+
+    <div style="margin-left:21px;margin-top:30px;color:#000000;font-size:16px;"><%="知识豆余额不足，无法购买。" %></div>
+    <div style="float:left; margin-left:21px; margin-top:13px; color:#000000; font-size:14px;"><%="你的知识豆余额: " %></div>
+    <div style="float:left;margin-top:15px;margin-left:3px;float:left;width:22;height:21;background:url(Texture/Aries/Creator/keepwork/Mall/icon_douzi_22X21_32bits.png#0 0 22 21:0 0 0 0);"></div> 
+    <div style="float:left;margin-left:5px; margin-top:13px; color:#000000; font-size:14px;"><%=getLeftBean() %></div>
+
+    <!-- <div style="margin-left:21px;margin-top:39px;color:#f0f0f0"><%="你可以前往每日签到、知识岛 赚知识豆。" %></div>
+    <div style="margin-left:21px;margin-top:10px;">
+        <div style="float:left;margin-left:0px;">
+            <input type="button" tooltip='<%=L"每日签到"%>' onclick="OnDailyCheck" style="float:left;width:70px;height:50px;background:url(Texture/Aries/Creator/keepwork/LearningDailyCheck/gray_bg_32bits.png:6 6 6 6)" />
+            <div style="position:relative;width:70px;margin-top:-45px;color:#ffffff;" >
+                <div zorder="1001" style="margin-left:26px;width:18px;height:18px;background:url(Texture/Aries/Creator/keepwork/LearningDailyCheck/check_btn_32bits.png#0 0 18 18)"></div>
+                <div style="margin-top:5px;text-align:center;"><%= L"每日签到" %></div>
+            </div>
+        </div>
+        <div style="float:left;margin-left:10px;">
+            <input type="button" tooltip='<%=L"知识岛"%>' onclick="OnLearningLand" style="float:left;width:70px;height:50px;background:url(Texture/Aries/Creator/keepwork/LearningDailyCheck/gray_bg_32bits.png:6 6 6 6);" />
+            <div style="position:relative;width:70px;margin-top:-43px;color:#ffffff;" >
+                <div zorder="1001" style="margin-left:22px;width:25px;height:25px;background:url(Texture/Aries/Creator/keepwork/LearningDailyCheck/island_btn_32bits.png#0 0 25 25)"></div>
+                <div style="margin-top:-5px;text-align:center;"><%= L"知识岛" %></div>
+            </div>
+        </div>
+        
+    </div> -->
+    <div style="width:90px;height:32px;margin-top:35px;margin-left:0px;">
+        <pe:goalpointer listen="purchase_confirm" style="position:relative;width:90px;height:32px;"></pe:goalpointer>
+        <input type="button" value="确定" style="margin-left:150px;width:100px;height:38px;background: url(Texture/Aries/Creator/keepwork/Window/button/btn_huangse_32bits.png#0 0 38 64:16 16 16 16);" onclick="OnCancel()"/>
+        <!-- <input type="button" class="button" value="<%=getBuyBtDesc()%>" style="margin-left:10px;width:154px;height:48px;" onclick="OnOK()"/> -->
+    </div>
+</kp:window>
+</pe:mcml> 
+</body>
+</html>

@@ -1,0 +1,834 @@
+--[[
+Title: Custom Char Models and Skins
+Author(s): chenjinxian, LiXizhi
+Date: 2020/12/21
+Desc: 
+use the lib:
+------------------------------------------------------------
+NPL.load("(gl)script/apps/Aries/Creator/Game/Entity/CustomCharItems.lua");
+local CustomCharItems = commonlib.gettable("MyCompany.Aries.Game.EntityManager.CustomCharItems")
+CustomCharItems:Init();
+
+function CustomCharItems:AddItemToSkin(skin, item) 
+-- geosets index-1  = ccs index
+ geosets={ 2, [3]=1, [4]=1, [5]=1, [6]=1, [9]=1, [10]=1 },
+ 2#201#301#401#501#801#901
+-----------------------------------------------------------------
+==================AddItemToSkin"
+echo:"==================item"
+echo:return {
+  category="hair",
+  geoset={ 2 },
+  icon="Texture/Aries/Creator/keepwork/Avatar/icons/2_Avatar_girl_hair_02.png",
+  id="82006",
+  name="",
+  texture="1:Texture/blocks/CustomGeoset/hair/2_Avatar_girl_hair_02.png" 
+}
+echo:"==================currentSkin"
+echo:return "80001;82132;81004;88014;87003;"
+echo:"==================currentSkin 1"
+echo:return "9#201#301#401#501#801#901#@1:Texture/blocks/CustomGeoset/hair/710_girl_toufa06.png;2:Texture/blocks/CustomGeoset/body/Avatar_boy_body_default.png;3:Texture/blocks/Paperman/eye/eye_boy_02_01.png;4:Texture/blocks/Paperman/mouth/mouth_01.png;5:Texture/blocks/CustomGeoset/leg/Avatar_boy_leg_default.png;6:Texture/blocks/CustomGeoset/main/Avatar_tsj.png;@2:character/v3/Item/ObjectComponents/WEAPON/1156_YuanXiaoTorch.x;"
+echo:"==================input skinTable"
+echo:return {
+  attachments={ [2]="character/v3/Item/ObjectComponents/WEAPON/1156_YuanXiaoTorch.x" },
+  geosets={ 9, [3]=1, [4]=1, [5]=1, [6]=1, [9]=1, [10]=1 },
+  textures={
+    "Texture/blocks/CustomGeoset/hair/710_girl_toufa06.png",
+    "Texture/blocks/CustomGeoset/body/Avatar_boy_body_default.png",
+    "Texture/blocks/Paperman/eye/eye_boy_02_01.png",
+    "Texture/blocks/Paperman/mouth/mouth_01.png",
+    "Texture/blocks/CustomGeoset/leg/Avatar_boy_leg_default.png",
+    "Texture/blocks/CustomGeoset/main/Avatar_tsj.png" 
+  } 
+}
+echo:"==================input skinTable 2"
+echo:return {
+  attachments={ [2]="character/v3/Item/ObjectComponents/WEAPON/1156_YuanXiaoTorch.x" },
+  geosets={ 2, [3]=1, [4]=1, [5]=1, [6]=1, [9]=1, [10]=1 },
+  textures={
+    "Texture/blocks/CustomGeoset/hair/2_Avatar_girl_hair_02.png",
+    "Texture/blocks/CustomGeoset/body/Avatar_boy_body_default.png",
+    "Texture/blocks/Paperman/eye/eye_boy_02_01.png",
+    "Texture/blocks/Paperman/mouth/mouth_01.png",
+    "Texture/blocks/CustomGeoset/leg/Avatar_boy_leg_default.png",
+    "Texture/blocks/CustomGeoset/main/Avatar_tsj.png" 
+  } 
+}
+echo:"==================currentSkin 2"
+echo:return "2#201#301#401#501#801#901#@1:Texture/blocks/CustomGeoset/hair/2_Avatar_girl_hair_02.png;2:Texture/blocks/CustomGeoset/body/Avatar_boy_body_default.png;3:Texture/blocks/Paperman/eye/eye_boy_02_01.png;4:Texture/blocks/Paperman/mouth/mouth_01.png;5:Texture/blocks/CustomGeoset/leg/Avatar_boy_leg_default.png;6:Texture/blocks/CustomGeoset/main/Avatar_tsj.png;@2:character/v3/Item/ObjectComponents/WEAPON/1156_YuanXiaoTorch.x;"
+echo:"==================currentSkin 3"
+echo:return "80001;82006;81004;88014;87003;"
+no such table: CreatureModelDBecho:"===================RefreshCustomGeosets input skin"
+echo:"80001;82001;84020;81018;88002;85058"
+echo:"===================RefreshCustomGeosets output skin"
+echo:"1#201#301#401#501#802#904#@1:Texture/blocks/CustomGeoset/hair/1_Avatar_boy_hair_00.png;2:Texture/blocks/CustomGeoset/body/shirt_02_Avatar_boy_body_01.png;3:Texture/blocks/Paperman/eye/eye_boy_fps10_a001.png;4:Texture/blocks/Paperman/mouth/mouth_boy_fps10_a001.png;5:Texture/blocks/CustomGeoset/leg/Avatar_boy_leg_xiangyu00.png;6:Texture/blocks/CustomGeoset/main/Avatar_tsj.png;@"
+
+
+PlayerAssetFile:RefreshCustomGeosets(player, skin)
+pe_mc_player.SetAssetFile(mcmlNode, pageInst, filename)
+-------------------------------------------------------
+]]
+NPL.load("(gl)script/apps/Aries/Creator/Game/Common/Files.lua");
+local Files = commonlib.gettable("MyCompany.Aries.Game.Common.Files");
+local CustomCharItems = commonlib.gettable("MyCompany.Aries.Game.EntityManager.CustomCharItems")
+
+CustomCharItems.defaultModelFile = "character/CC/02human/CustomGeoset/actor.x";
+CustomCharItems.ReplaceableAvatars = {};
+
+local models = {};
+local items = {};
+-- @Interface { 
+--		[key: string]: { icon:string, id: int, isVip: boolean, name: string }[]
+-- }
+CustomCharItems.category_items = {};
+CustomCharItems.itemsGsidMap = {};
+CustomCharItems.itemsIdMap = {};
+CustomCharItems.itemsInCategoryIdMap = {}
+
+-- pet id string list
+CustomCharItems.PetIds = {};
+
+-- called only once
+function CustomCharItems:Init()
+	if(self.is_inited) then
+		return;
+	end
+	self.is_inited = true;
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/Blue_Army_boss.x"] = "80001;84061;81018;88014;85080;83171";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/Red_Army_boss.x"] = "80001;82011;84060;81018;88014;85079";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/Blue_Army_xiaobing.x"] = "80001;84061;81018;88014;85080;83170";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/Red_Army_xiaobing.x"] = "80001;84060;81018;88014;85079;83172";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/Red_Army_nv1.x"] = "80001;84060;81018;88014;85079;83175";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/Red_Army_nv2.x"] = "80001;84060;81018;88014;85079;83174";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/tufei_movie.x"] = "80001;82065;84048;81018;88014;85070";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/Red_Army_master.x"] = "80001;84060;81018;88014;85079;83173";
+	
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school0.x"] = "80001;82011;84003;81018;88002;85011";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school1.x"] = "80001;82028;84003;81018;88014;85011";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school28.x"] = "80001;82148;84033;81058;88014;85049";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school34.x"] = "80001;82104;84012;81018;88014;85009";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school22.x"] = "80001;82126;84029;81018;88014;85050";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school43.x"] = "80001;82148;84012;81018;88014;85009";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school35.x"] = "80001;82004;84012;81018;88014;85009";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school10.x"] = "80001;82028;84052;81018;88002;85017";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school11.x"] = "80001;82029;84052;81018;88014;85002";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school14.x"] = "80001;82028;84010;81018;88014;85005";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school15.x"] = "80001;82011;84010;81018;88014;85005";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school17.x"] = "80001;82011;84017;81018;88014;85019";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school18.x"] = "80001;82029;84017;81018;88014;85019";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school2.x"] = "80001;82029;84003;81018;88014;85002";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school5.x"] = "80001;82029;84015;81018;88014;85017";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school6.x"] = "80001;82028;84013;81018;88014;85010";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school7.x"] = "80001;82047;84013;81018;88014;85010";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school16.x"] = "80001;82011;84010;81018;88014;85005";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school20.x"] = "80001;82001;84017;81018;88014;85019";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school21.x"] = "80001;82126;84016;81049;88020;85018";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school23.x"] = "80001;82148;84032;81049;88020;85027";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school24.x"] = "80001;82170;84032;81049;88020;85027";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school25.x"] = "80001;82104;84032;81049;88020;85027";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school26.x"] = "80001;82010;84032;81049;88020;85027";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school27.x"] = "80001;82126;84013;81049;88020;85010";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school29.x"] = "80001;82170;84013;81049;88020;85010";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school30.x"] = "80001;82104;84013;81049;88020;85010";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school31.x"] = "80001;82010;84013;81049;88020;85010";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school32.x"] = "80001;82126;84012;81049;88020;85009";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school33.x"] = "80001;82170;84012;81049;88020;85009";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school36.x"] = "80001;82170;84003;81049;88020;85018";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school37.x"] = "80001;82148;84003;81049;88020;85018";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school38.x"] = "80001;82170;84003;81049;88020;85018";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school39.x"] = "80001;82104;84003;81049;88020;85018";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school9.x"] =  "80001;82047;84013;81018;88002;85010";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school4.x"] =  "80001;82047;84003;81018;88002;85002";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school11.x"] = "80001;82047;84010;81018;88002;85005";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school12.x"] = "80001;82029;84010;81018;88002;85005";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school1.x"] =  "80001;82011;84003;81018;88002;85011";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school34.x"] = "80001;82104;84012;81049;88002;85009";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school35.x"] = "80001;82004;84012;81049;88002;85009";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school39.x"] = "80001;82104;84032;81049;88002;85028";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school40.x"] = "80001;82004;84032;81049;88002;85028";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/school3.x"] = "80001;82029;84003;81018;88002;85002";
+	
+	--CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/boy_archaeologist.x"] = "80001;82064;84015;81018;88002;85011";
+	-- TODO skin ids wrong no skin
+	--CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/girl_host.x"] = "80001;82126;84038;81049;88002;85028";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/boy_host.x"] = "80001;82028;84095;81070;88017;85112";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/boy_staff_bank.x"] = "80001;82011;84014;81005;88002;85011";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/02human/paperman/principal.x"] = "80001;82011;84014;81005;88002;85011";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/02human/paperman/bay01.x"] = "80001;82011;84014;81005;88002;85011";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/02human/paperman/Female_teacher.x"] = "80001;82011;84014;81005;88002;85011";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/02human/paperman/bay07.x"] = "80001;82011;84014;81005;88002;85011";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/02human/blockman/cunzhang.x"] = "80001;82011;84014;81005;88002;85011";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/02human/paperman/boy01.x"] = "80001;82011;84014;81005;88002;85011";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/02human/blockman/cunming.x"] = "80001;82011;84014;81005;88002;85011";
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/blockman/cunzhang.x"] = "80001;83158;84050;81018;88014;85067";
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/blockman/cunming.x"] = "80001;82001;84046;81018;88014;85040";
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/paperman/Female_teachers.x"] = "80001;82126;84107;81049;88020;85029";
+	-- TODO skin ids wrong 
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/paperman/Male_teacher.x"] = "80001;84062;81005;88014;85081;83190";
+	-- 系统默认男孩1的模型
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/paperman/boy01.x"] = "80001;82001;84020;81018;88002;85058";
+	-- TODO skin ids wrong
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/paperman/boy02.x"] = "80001;82032;84062;81018;88002;85081";
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/paperman/boy03.x"] = "80001;82067;84064;81018;88002;85082";
+	-- TODO skin ids wrong no skin
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/paperman/boy04.x"] = "80001;82028;84010;81018;88002;85005"; -- �ڹ���û�к���Ƥ����Ĭ��Ϊѧ��װ
+	-- TODO skin ids wrong
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/paperman/boy05.x"] = "80001;82049;84017;81018;88002;85019";
+	-- TODO skin ids wrong
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/paperman/boy06.x"] = "80001;82001;84082;81018;88002;85101";
+	-- TODO skin ids wrong
+	--CustomCharItems.ReplaceableAvatars["character/CC/02human/paperman/boy07.x"] = "80001;82001;84016;81018;88002;85017";
+	-- 系统默认女孩1的模型
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/paperman/girl01.x"] = "80001;82004;84028;81018;88002;85029";
+	-- TODO skin ids wrong
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/paperman/girl02.x"] = "80001;82087;84074;81049;88002;85085";
+	-- TODO skin ids wrong
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/paperman/girl03.x"] = "80001;82107;84066;81049;88002;85084";
+	-- TODO skin ids wrong 
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/paperman/girl04.x"] = "80001;82108;84073;81049;88002;85091";
+	-- TODO skin ids wrong no skin
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/paperman/girl05.x"] = "80001;82170;84012;81018;88002;85009"; --������Ϊǰ��ʱ���һ�θ����֣�û���ü��ϼܣ�Ĭ��Ϊѧ��װ
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/paperman/zaizai.x"] = "80001;82001;84022;81018;88020;85004";
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/paperman/nuannuan.x"] = "80001;82010;84022;81049;88004;85004";
+	CustomCharItems.ReplaceableAvatars["character/CC/codewar/sunbinjunshixingtai_movie.x"] = "80001;83150;84049;81018;88014;85067";
+
+	-- TODO 补充
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/thief.x"] = "80001;84053;81018;85073;83163";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/girl_cook.x"] = "80001;84106;81018;85001;83194";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/boy_ground_service.x"] = "80001;82028;84086;81018;85111";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/boy_cook.x"] = "80001;84085;81018;85111;83193";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/girl_waiter2.x"] = "80001;82126;84105;81018;85125";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/girl_waiter1.x"] = "80001;82126;84104;81018;85119";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/boy_waiter1.x"] = "80001;82028;84098;81018;85111";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/boy_breeder.x"] = "80001;84097;81018;88013;85114;83178";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/fireman.x"] = "80001;84096;81018;88013;85113;83210";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/bio_man.x"] = "80001;84084;81018;88013;85106;83195";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/doctor.x"] = "80001;82028;84083;81018;88013;85022";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/boy_traffic_police_c.x"] = "80001;84090;81070;88020;85109;83205";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/girl_police_c.x"] = "80001;84089;81049;88020;85109;83203";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/girl_police.x"] = "80001;84088;81049;88020;85109;83203";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/boy_police.x"] = "80001;84088;81005;88020;85109;83202";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/boy_police_c.x"] = "80001;84089;81005;88020;85109;83202";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/girl_traffic_police_c.x"] = "80001;84090;81005;88020;85109;83206";
+	CustomCharItems.ReplaceableAvatars["character/CC/artwar/movie/girl_traffic_police_c.x"] = "80001;84090;81005;88020;85109;83206";
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/CustomGeoset/actor_papa.x"] = {isDefault=false,skin="1#201#301#401#501#801#901#@1:Texture/blocks/CustomGeoset/hair/pa-head00.png;2:Texture/blocks/CustomGeoset/body/pa-shirt00.png;3:Texture/blocks/Paperman/eye/eye_papa_01.png;4:Texture/blocks/Paperman/mouth/mouth_papa_000.png;"}
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/CustomGeoset/actor_papa_01.x"] = {isDefault=false,skin="1#201#301#401#501#801#901#@1:Texture/blocks/CustomGeoset/hair/pa-head001.png;2:Texture/blocks/CustomGeoset/body/pa-shirt001.png;3:Texture/blocks/Paperman/eye/eye_papa_01.png;4:Texture/blocks/Paperman/mouth/mouth_papa_000.png;"}
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/CustomGeoset/actor_xuepapa.x"] = {isDefault=false,skin="1#201#301#401#501#801#901#@1:Texture/blocks/CustomGeoset/hair/pa-head01.png;2:Texture/blocks/CustomGeoset/body/pa-shirt01.png;3:Texture/blocks/Paperman/eye/eye_papa_01.png;4:Texture/blocks/Paperman/mouth/mouth_papa_004.png;"}
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/CustomGeoset/actor.x"] = "1#201#301#401#501#801#901#@1:Texture/blocks/CustomGeoset/hair/Avatar_boy_hair_01.png;2:Texture/blocks/CustomGeoset/body/Avatar_boy_body_default.png;3:Texture/blocks/Paperman/eye/eye_boy_fps10_a001.png;4:Texture/blocks/Paperman/mouth/mouth_01.png;5:Texture/blocks/CustomGeoset/leg/Avatar_boy_leg_default.png;6:Texture/blocks/CustomGeoset/main/Avatar_tsj.png"
+	CustomCharItems.ReplaceableAvatars["character/CC/02human/CustomGeoset/actor_kaka.x"] = {isDefault=false,skin="1#201#301#401#501#801#901#@1:Texture/blocks/CustomGeoset/hair/kaka-head00.png;2:Texture/blocks/CustomGeoset/body/kaka-shirt00.png;3:Texture/blocks/Paperman/eye/eye_kaka_01.png;4:Texture/blocks/Paperman/mouth/mouth_kaka_01.png;"}
+	 
+
+	local root = ParaXML.LuaXML_ParseFile("config/Aries/creator/CustomCharItems.xml");
+	if (root) then
+		local id = 0;
+		for itemNode in commonlib.XPath.eachNode(root, "/CustomCharItems/items/item") do
+			local item = {};
+			item.data = {};
+			for _, node in ipairs(itemNode) do
+				local attr = node.attr;
+				local name = node.name;
+				if (name == "geoset") then
+					local slotId = attr.category or 0;
+					local itemId = attr.id or 0;
+					if (item.data.geoset == nil) then
+						item.data.geoset = {};
+					end
+					item.data.geoset[#(item.data.geoset) + 1] = tonumber(slotId) * 100 + tonumber(itemId);
+				elseif (name == "texture") then
+					item.data.texture = string.format("%s:%s", attr.id or "0", attr.filename or "");
+				elseif (name == "attachment") then
+					item.data.attachment = string.format("%s:%s", attr.id or "11", attr.filename or "");
+				end
+				id = id + 1;
+			end
+
+			local modelPath = itemNode.attr.model;
+			local itemId = itemNode.attr.id;
+			if (modelPath and itemId) then
+				item.id = itemId;
+				item.model = {};
+				for groupName in modelPath:gmatch("[^;]+") do
+					item.model[#item.model+1] = groupName;
+				end
+			end
+			items[#items+1] = item;
+			if(item.id) then
+				CustomCharItems.itemsIdMap[item.id] = item;
+			end
+		end
+
+		-- items DS
+		-- { data={ geoset={ 201 }, texture="3:Texture/blocks/Paperman/eye/eye_02_blackman.png" }, id="81001", model={ "actor" } }
+		for modelGroup in commonlib.XPath.eachNode(root, "/CustomCharItems/models") do
+			local type = modelGroup.attr.type;
+			local groups = {};
+			for _, node in ipairs(modelGroup) do
+				groups[#groups+1] = node.attr.filename;
+			end
+			models[type] = groups;
+		end
+
+		LOG.std(nil, "info", "CustomCharItems", "%d skins loaded from %s", id or 0, filename or "");
+
+		root = ParaXML.LuaXML_ParseFile("config/Aries/creator/CustomCharList.xml");
+		if (root) then
+			for group in commonlib.XPath.eachNode(root, "/customcharlist/category") do
+				local name = group.attr.name;
+				local groups = {};
+				for _, node in ipairs(group) do
+					local item = {};
+					item.id = node.attr.id;
+					item.gsid = node.attr.gsid;
+					item.isVip = node.attr.isVip or "0";
+					item.type = node.attr.type
+					item.price = node.attr.price;
+					item.icon = node.attr.icon;
+					item.name = node.attr.name;
+					item.avatarMode = node.attr.avatarMode;
+					item.debug = node.attr.debug;
+					local data = self:GetItemById(item.id);
+					if (data) then
+						data.id = item.id;
+						data.gsid = item.gsid;
+						data.icon = item.icon;
+						data.type = node.attr.type
+						data.price = node.attr.price;
+						data.name = item.name;
+						data.category = name;
+						data.wing = node.attr.wing;
+					end
+					groups[#groups+1] = item;
+					if(item.gsid) then
+						CustomCharItems.itemsGsidMap[item.gsid] = item;
+					end
+					if(item.id) then
+						CustomCharItems.itemsInCategoryIdMap[item.id] = item;
+					end
+					-- record pet category item id
+					if name == "pet" then
+						CustomCharItems.PetIds[item.id] = 1;
+					end
+				end
+				CustomCharItems.category_items[name] = groups;
+			end
+		end
+
+	else
+		LOG.std(nil, "error", "CustomCharItems", "can not find file at %s", filename);
+	end
+end
+
+function CustomCharItems:IsCustomCharAsset(assetfile)
+	-- TODO: use a better way to check if the asset is a custom char asset
+	if(assetfile == CustomCharItems.defaultModelFile) then
+		return true;
+	end
+end
+
+function CustomCharItems:GetModelItems(filename, category, skin, avatar)
+	if (skin and not skin:match("^%d+#")) then
+		skin = CustomCharItems:ItemIdsToSkinString(skin);
+	end
+	for type, names in pairs(models) do
+		for _, name in ipairs(names) do
+			if filename and filename:find("actor_papa_01") then
+				filename = "character/CC/02human/CustomGeoset/actor_papa.x"
+			end
+			if (name == filename) then
+				return self:GetItemsByCategory(category, type, skin, avatar);
+			end
+		end
+	end
+end
+
+
+function CustomCharItems:GetItemsByCategory(category, modelType, skin, avatar)
+	local checkGeoset = {0, 0};
+	--[[
+	if (category == "shirt") then
+		if ((string.find(skin, "901#") ~= nil and string.find(skin, "Avatar_boy_leg_default") == nil) or string.find(skin, "903")) then
+			checkGeoset[1] = 801;
+			checkGeoset[2] = 801;
+		end
+	elseif (category == "pants") then
+		if (string.find(skin, "801#") ~= nil and string.find(skin, "Avatar_boy_body_default") == nil) then
+			checkGeoset[1] = 901;
+			checkGeoset[2] = 903;
+		end
+	end
+	]]
+	local checkVipAvailable = GameLogic.GetFilters():apply_filters('check_unavailable_before_open_vip',{noBoxTip=true})
+	local groups = CustomCharItems.category_items[category];
+	if (groups) then
+		local itemList = {};
+		for _, item in ipairs(groups) do
+			if ((avatar and item.avatarMode ~= "false") or (not avatar)) then
+				local debug = ParaEngine.GetAppCommandLineByParam("debug", false);
+				if (item.debug ~= "true" or (debug == "true" and item.debug == "true" and not avatar)) then
+					local data = self:GetItemById(item.id, modelType);
+					if (data and (checkGeoset[1] == 0 or checkGeoset[1] == data.geoset[1] or checkGeoset[2] == data.geoset[1])) then
+						data.id = item.id;
+						data.icon = item.icon;
+						data.name = item.name;
+						data.isVip = item.isVip;
+						if checkVipAvailable ==true and data.type=="1" then --禁用vip功能时，过滤掉vip装饰
+						else
+							itemList[#itemList+1] = data;
+						end
+					end
+				end
+			end
+		end
+
+		-- commonlib.echo("itemList, true");
+		-- itemList DS
+		-- echo:return {
+		-- 	{
+		-- 		attachment="20:character/CC/ObjectComponents/ride/tank.anim.x",
+		-- 		category="pet",
+		-- 		icon="Texture/Aries/Creator/keepwork/Avatar/icons/mouth_boy_07_01_32bits.png",
+		-- 		id="89001",
+		-- 		isVip="1",
+		-- 		name="坦克" 
+		-- 	} 
+		-- }
+		return itemList;
+	end
+end
+
+-- @param id: item id 
+-- @param modelType: can be nil
+function CustomCharItems:GetItemById(id, modelType)
+	local item = CustomCharItems.itemsIdMap[id]
+	if(item) then
+		if (modelType) then
+			for _, model in ipairs(item.model) do
+				if (model == modelType) then
+					return item.data;
+				end
+			end
+		else
+			return item.data;
+		end
+	end
+end
+
+-- this is the item in cartegory list, with price and icon, etc. 
+-- @param id: item id 
+function CustomCharItems:GetItemInCategoryById(id)
+	return CustomCharItems.itemsInCategoryIdMap[tostring(id)]
+end
+
+CustomCharItems.defaultSkinTable = {
+	geosets = {1, 0, 1, 1, 1, 1, 0, 0, 1, 1},
+	textures = {"Texture/blocks/CustomGeoset/hair/Avatar_boy_hair_01.png",
+				"Texture/blocks/CustomGeoset/body/Avatar_boy_body_default.png",
+				"Texture/blocks/Paperman/eye/eye_boy_fps10_a001.png",
+				"Texture/blocks/Paperman/mouth/mouth_01.png",
+				"Texture/blocks/CustomGeoset/leg/Avatar_boy_leg_default.png",
+				"Texture/blocks/CustomGeoset/main/Avatar_tsj.png"},
+	attachments = {}
+}
+
+CustomCharItems.defaultSkinString = "1#201#301#401#501#801#901#@1:Texture/blocks/CustomGeoset/hair/Avatar_boy_hair_01.png;2:Texture/blocks/CustomGeoset/body/Avatar_boy_body_default.png;3:Texture/blocks/Paperman/eye/eye_boy_fps10_a001.png;4:Texture/blocks/Paperman/mouth/mouth_01.png;5:Texture/blocks/CustomGeoset/leg/Avatar_boy_leg_default.png;6:Texture/blocks/CustomGeoset/main/Avatar_tsj.png";
+CustomCharItems.modelToSkinString = {
+	["character/CC/02human/CustomGeoset/actor.x"] = "1#201#301#401#501#801#901#@1:Texture/blocks/CustomGeoset/hair/Avatar_boy_hair_01.png;2:Texture/blocks/CustomGeoset/body/Avatar_boy_body_default.png;3:Texture/blocks/Paperman/eye/eye_boy_fps10_a001.png;4:Texture/blocks/Paperman/mouth/mouth_01.png;5:Texture/blocks/CustomGeoset/leg/Avatar_boy_leg_default.png;6:Texture/blocks/CustomGeoset/main/Avatar_tsj.png",
+	["character/CC/02human/CustomGeoset/actor_papa.x"] = "1#201#301#401#501#801#901#@1:Texture/blocks/CustomGeoset/hair/pa-head00.png;2:Texture/blocks/CustomGeoset/body/pa-shirt00.png;3:Texture/blocks/Paperman/eye/eye_papa_01.png;4:Texture/blocks/Paperman/mouth/mouth_papa_000.png;",
+	["character/CC/02human/CustomGeoset/actor_papa_01.x"] = "1#201#301#401#501#801#901#@1:Texture/blocks/CustomGeoset/hair/pa-head001.png;2:Texture/blocks/CustomGeoset/body/pa-shirt001.png;3:Texture/blocks/Paperman/eye/eye_papa_01.png;4:Texture/blocks/Paperman/mouth/mouth_papa_000.png;",
+	["character/CC/02human/CustomGeoset/actor_xuepapa.x"] = "1#201#301#401#501#801#901#@1:Texture/blocks/CustomGeoset/hair/pa-head01.png;2:Texture/blocks/CustomGeoset/body/pa-shirt01.png;3:Texture/blocks/Paperman/eye/eye_papa_01.png;4:Texture/blocks/Paperman/mouth/mouth_papa_004.png;",
+	["character/CC/02human/CustomGeoset/actor_kaka.x"] = "1#201#301#401#501#801#901#@1:Texture/blocks/CustomGeoset/hair/kaka-head00.png;2:Texture/blocks/CustomGeoset/body/kaka-shirt00.png;3:Texture/blocks/Paperman/eye/eye_kaka_01.png;4:Texture/blocks/Paperman/mouth/mouth_kaka_01.png;"
+}
+
+
+function CustomCharItems:SkinTableToString(skin)
+	local customGeosets = "";
+	for id, geoset in pairs(skin.geosets) do
+		customGeosets = customGeosets..format("%d#", (id-1) * 100 + geoset);
+	end
+	customGeosets = customGeosets.."@";
+	for i = 1, #skin.textures do
+		customGeosets = customGeosets..format("%d:%s;", i, skin.textures[i]);
+	end
+	customGeosets = customGeosets.."@";
+	for id, filename in pairs(skin.attachments) do
+		customGeosets = customGeosets..format("%d:%s;", id, filename);
+	end
+
+	return customGeosets;
+end
+
+function CustomCharItems:SkinStringToTable(skin)
+	local skinTable = {};
+	local geosets, textures, attachments =  string.match(skin, "([^@]+)@([^@]+)@?(.*)");
+	if (geosets) then
+		skinTable.geosets = {};
+		for geoset in string.gfind(geosets, "([^#]+)") do
+			local id = tonumber(geoset);
+			skinTable.geosets[math.floor(id/100 + 1)] = id % 100;
+		end
+	end
+
+	if (textures) then
+		skinTable.textures = {};
+		for id, filename in textures:gmatch("(%d+):([^;]+)") do
+			id = tonumber(id)
+			skinTable.textures[id] = filename;
+		end
+	end
+
+	if (attachments) then
+		skinTable.attachments = {};
+		for id, filename in attachments:gmatch("(%d+):([^;]+)") do
+			id = tonumber(id)
+			skinTable.attachments[id] = filename;
+		end
+	end
+
+	return skinTable;
+end
+
+--- @return id string: 810001;82001;
+function CustomCharItems:SkinStringToItemIds(skin,flag)
+	if (not skin) then return "" end;
+	local idString = "80001;";
+	local geosets, textures, attachments =  string.match(skin, "([^@]+)@([^@]+)@?(.*)");
+	local use_hair = false;
+	if (geosets) then
+		for geoset in string.gfind(geosets, "([^#]+)") do
+			local id = tonumber(geoset);
+			if (id > 0 and id < 100) then
+				use_hair = true;
+			end
+			if (id > 300 and id < 400) then
+				for _, item in ipairs(items) do
+					if (item.data.geoset[1] == id or item.data.geoset[2] == id) then
+						idString = item.data.id..";";
+						break;
+					end
+				end
+			end
+		end
+	end
+	if (textures) then
+		function checkItem(item, geosets)
+			for geoset in string.gfind(geosets, "([^#]+)") do
+				local id = tonumber(geoset);
+				if (item.data.geoset == nil or item.data.geoset[1] == id or item.data.geoset[2] == id or item.data.geoset[1] == nil) then
+					return true;
+				end
+			end
+			return false;
+		end
+		for tex in textures:gmatch("([^;]+)") do
+			for _, item in ipairs(items) do
+				if (item.data.texture == tex and checkItem(item, geosets) and item.data.id) then
+					if (string.find(idString, item.data.id) == nil and string.find(tex, "6:") == nil) then
+						idString = idString..item.data.id..";";
+					end
+					break;
+				end
+			end
+		end
+	end
+
+	if (attachments) then
+		for att in attachments:gmatch("([^;]+)") do
+			for _, item in ipairs(items) do
+				if (item.data.attachment == att and item.data.id) then
+					local id, filename = string.match(item.data.attachment, "(%d+):(.*)");
+					id = tonumber(id);
+					if (not use_hair or id ~= 11) then
+						if (string.find(idString, item.data.id) == nil) then
+							idString = idString..item.data.id..";";
+						end
+					end
+				end
+			end
+		end
+	end
+	return idString;
+end
+
+function CustomCharItems:ItemIdsToSkinString(idString, assetfile)
+	local defaultSkinString = CustomCharItems:GetDefaultSkinString(assetfile)
+	local skinTable = CustomCharItems:SkinStringToTable(defaultSkinString);
+	local itemIds = commonlib.split(idString, ";");
+	if (itemIds and #itemIds > 0) then
+		for _, id in ipairs(itemIds) do
+			local data = self:GetItemById(id);
+			if (data) then
+				CustomCharItems:AddItemToSkinTable(skinTable, data);
+			end
+		end
+	end
+	local skin = CustomCharItems:SkinTableToString(skinTable);
+	return skin;
+end
+
+function CustomCharItems:ChangeSkinStringToItems(skin)
+	if (skin:match("^%d+#")) then
+		skin = CustomCharItems:SkinStringToItemIds(skin);
+	end
+	return skin;
+end
+
+--- @param skin string: e.g. 80001;8291;2121;
+function CustomCharItems:RemovePetIdFromSkinIds(skin)
+	-- LOG.std(nil, 'info', 'CustomCharItems:RemovePetIdFromSkinIds', skin);
+	local newSkin = "";
+	local itemIds = commonlib.split(skin, ";");
+
+	for _, idString in ipairs(itemIds) do
+		if(not CustomCharItems.PetIds[idString]) then
+			newSkin = newSkin..idString..";";
+		end
+	end
+
+	-- LOG.std(nil, 'info', 'CustomCharItems:RemovePetIdFromSkinIds', newSkin);
+	return newSkin;
+end
+
+function CustomCharItems:IsWing(attachment)
+	for _, item in ipairs(items) do
+		if (item.data and item.data.wing == "true" and string.find(item.data.attachment, attachment)) then
+			return true;
+		end
+	end
+	return false;
+end
+
+function CustomCharItems:GetUsedItemsBySkin(skin)
+	local usedItems = {};
+	if (not skin) then return usedItems end;
+	if (skin:match("^%d+#")) then
+		local geosets, textures, attachments =  string.match(skin, "([^@]+)@([^@]+)@?(.*)");
+		if (textures) then
+			for tex in textures:gmatch("([^;]+)") do
+				if (string.find(CustomCharItems.defaultSkinString, tex) == nil) then
+					for _, item in ipairs(items) do
+						if (item.data.texture == tex) then
+							usedItems[#usedItems+1] = {id = item.data.id, name = item.data.category, icon = item.data.icon};
+							break;
+						end
+					end
+				end
+			end
+		end
+
+		if (attachments) then
+			for att in attachments:gmatch("([^;]+)") do
+				for _, item in ipairs(items) do
+					if (item.data.attachment == att) then
+						usedItems[#usedItems+1] = {id = item.data.id, name = item.data.category, icon = item.data.icon};
+					end
+				end
+			end
+		end
+	else
+		local itemIds = commonlib.split(skin, ";");
+		if (itemIds and #itemIds > 0) then
+			for _, id in ipairs(itemIds) do
+				local data = self:GetItemById(id);
+				if (data) then
+					usedItems[#usedItems+1] = {id = id, name = data.category, icon = data.icon};
+				end
+			end
+		end
+	end
+	return usedItems;
+end
+
+function CustomCharItems:AddItemToSkinTable(skinTable, item)
+	if (not skinTable or not item) then
+		return;
+	end
+	if (item.geoset) then
+		skinTable.geosets[4] = 1;
+		for _, gs in ipairs(item.geoset) do
+			skinTable.geosets[math.floor(gs/100) + 1] = gs % 100;
+		end
+	end
+	if (item.texture) then
+		local id, filename = string.match(item.texture, "(%d+):(.*)");
+		skinTable.textures[tonumber(id)] = filename;
+	end
+	if (item.attachment) then
+		local id, filename = string.match(item.attachment, "(%d+):(.*)");
+		skinTable.attachments[tonumber(id)] = filename;
+	end
+end
+
+function CustomCharItems:AddItemToSkin(skin, item)
+	local currentSkin = skin;
+	if (not skin:match("^%d+#")) then
+		currentSkin = CustomCharItems:ItemIdsToSkinString(skin);
+	end
+	local skinTable = CustomCharItems:SkinStringToTable(currentSkin);
+	CustomCharItems:AddItemToSkinTable(skinTable, item);
+	currentSkin = CustomCharItems:SkinTableToString(skinTable);
+	if (not skin:match("^%d+#")) then
+		currentSkin = CustomCharItems:SkinStringToItemIds(currentSkin);
+	end
+	return currentSkin;
+end
+
+function CustomCharItems:RemoveItemInSkin(skin, itemId)
+	local currentSkin = skin;
+	if (skin:match("^%d+#")) then
+		local item = CustomCharItems:GetItemById(itemId);
+		if (item) then
+			if (item.geoset) then
+				for _, gs in ipairs(item.geoset) do
+					local str = tostring(gs);
+					if (gs < 100) then
+						currentSkin = string.gsub(currentSkin, str.."#", "1#");
+					elseif (gs < 200) then
+					elseif (gs < 300) then
+						currentSkin = string.gsub(currentSkin, str, "201");
+					elseif (gs < 400) then
+						currentSkin = string.gsub(currentSkin, str, "301");
+					elseif (gs < 500) then
+						currentSkin = string.gsub(currentSkin, str, "401");
+					elseif (gs < 600) then
+						currentSkin = string.gsub(currentSkin, str, "501");
+					elseif (gs < 700) then
+					elseif (gs < 800) then
+					elseif (gs < 900) then
+						currentSkin = string.gsub(currentSkin, str, "801");
+					elseif (gs < 1000) then
+						currentSkin = string.gsub(currentSkin, str, "901");
+					else
+					end
+				end
+			end
+			if (item.texture) then
+				local id, tex = string.match(item.texture, "(%d+):([^;]+)");
+				id = tonumber(id);
+				currentSkin = string.gsub(currentSkin, tex, CustomCharItems.defaultSkinTable.textures[id]);
+			end
+			if (item.attachment) then
+				local id, tex = string.match(item.attachment, "(%d+):([^;]+)");
+				id = tonumber(id);
+				if (id == 11) then
+					currentSkin = string.gsub(currentSkin, "0#", "1#");
+					currentSkin = string.gsub(currentSkin, "300#", "301#");
+				end
+				currentSkin = string.gsub(currentSkin, item.attachment..";", "");
+			end
+		end
+	else
+		if (itemId) then
+			currentSkin = string.gsub(skin, itemId..";", "", 1);
+		end
+	end
+	return currentSkin;
+end
+
+CustomCharItems.ExistAvatars = {
+	"1#201#301#401#501#802#902#@1:Texture/blocks/CustomGeoset/hair/Avatar_boy_hair_01.png;2:Texture/blocks/CustomGeoset/body/Avatar_boy_body_graduation.png;3:Texture/blocks/Paperman/eye/eye_boy_fps10_a001.png;4:Texture/blocks/Paperman/mouth/mouth_01.png;5:Texture/blocks/CustomGeoset/leg/Avatar_boy_leg_graduation.png",
+	"1#201#301#401#501#802#902#@1:Texture/blocks/CustomGeoset/hair/Avatar_boy_hair_01.png;2:Texture/blocks/CustomGeoset/body/Avatar_boy_body_party.png;3:Texture/blocks/Paperman/eye/eye_boy_fps10_a001.png;4:Texture/blocks/Paperman/mouth/mouth_01.png;5:Texture/blocks/CustomGeoset/leg/Avatar_boy_leg_party.png",
+	"1#201#301#401#501#802#902#@1:Texture/blocks/CustomGeoset/hair/Avatar_boy_hair_01.png;2:Texture/blocks/CustomGeoset/body/Avatar_boy_body_activity.png;3:Texture/blocks/Paperman/eye/eye_boy_fps10_a001.png;4:Texture/blocks/Paperman/mouth/mouth_01.png;5:Texture/blocks/CustomGeoset/leg/Avatar_boy_leg_activity.png",
+	"2#201#301#401#501#803#902#@1:Texture/blocks/CustomGeoset/hair/Avatar_girl_hair_01.png;2:Texture/blocks/CustomGeoset/body/Avatar_girl_body_graduation.png;3:Texture/blocks/Paperman/eye/eye_girl_fps10_a001.png;4:Texture/blocks/Paperman/mouth/mouth_girl_01_01.png;5:Texture/blocks/CustomGeoset/leg/Avatar_girl_leg_default.png",
+	"2#201#301#401#501#803#902#@1:Texture/blocks/CustomGeoset/hair/Avatar_girl_hair_01.png;2:Texture/blocks/CustomGeoset/body/Avatar_girl_body_party.png;3:Texture/blocks/Paperman/eye/eye_girl_fps10_a001.png;4:Texture/blocks/Paperman/mouth/mouth_girl_01_01.png;5:Texture/blocks/CustomGeoset/leg/Avatar_girl_leg_default.png",
+	"2#201#301#401#501#803#902#@1:Texture/blocks/CustomGeoset/hair/Avatar_girl_hair_01.png;2:Texture/blocks/CustomGeoset/body/Avatar_girl_body_activity.png;3:Texture/blocks/Paperman/eye/eye_girl_fps10_a001.png;4:Texture/blocks/Paperman/mouth/mouth_girl_01_01.png;5:Texture/blocks/CustomGeoset/leg/Avatar_girl_leg_default.png",
+}
+
+function CustomCharItems:CheckAvatarExist(skin)
+	for i = 1, #CustomCharItems.ExistAvatars do
+		if (CustomCharItems.ExistAvatars[i] == skin) then
+			return true;
+		end
+	end
+	return false;
+end
+
+function CustomCharItems:GetSkinByAsset(assetPath)
+	local skin_data = CustomCharItems.ReplaceableAvatars[assetPath]
+	if skin_data and type(skin_data) == "string" then
+		return skin_data
+	end
+	if skin_data and type(skin_data) == "table" and not skin_data.isDefault then
+		return skin_data.skin,assetPath
+	end
+end
+
+-- @param texture: it can be in format like "id:filename;id:filename;...", which will be replaced by ids in skin. 
+function CustomCharItems:ReplaceSkinTexture(skin, texture)
+	local currentSkin = skin;
+	if (not skin or skin == "") then
+		currentSkin = CustomCharItems.defaultSkinString;
+	elseif (not skin:match("^%d+#")) then
+		currentSkin = CustomCharItems:ItemIdsToSkinString(skin);
+	end
+	local skinTable = CustomCharItems:SkinStringToTable(currentSkin);
+	for id, filename in texture:gmatch("(%d+):([^;]+)") do
+		skinTable.textures[tonumber(id)] = filename;
+	end
+	currentSkin = CustomCharItems:SkinTableToString(skinTable);
+
+	return currentSkin;
+end
+
+-- get item in category list by global store id, which is the id on the server side. 
+function CustomCharItems:GetItemByGsid(gsid)
+	local item = CustomCharItems.itemsGsidMap[gsid]
+	if(not item) then
+		for k, v in pairs(CustomCharItems.category_items) do
+			for k2, item in pairs(v) do
+				if (item.gsid == gsid) then
+					CustomCharItems.itemsGsidMap[gsid] = item;
+					return item;
+				end
+			end
+		end
+	end
+	return item;
+end
+
+-- is_replace 是否替换嘴巴 如果为false 则原本有嘴巴的情况下用原来的嘴巴皮肤
+function CustomCharItems:AddMouthSkin(skin, mouth_id, is_replace)
+	local skin_id_tab = commonlib.split(skin, ";");
+
+	if #skin_id_tab == 0 then
+		return skin
+	end
+
+	if skin_id_tab[1] and not tonumber(skin_id_tab[1]) then
+		return skin
+	end
+	
+	-- 嘴巴的id是88开头
+	local target_index
+	for index, skin_id in ipairs(skin_id_tab) do
+		if math.floor(tonumber(skin_id)/1000) == 88 then
+			if not is_replace then
+				return skin
+			end
+
+			target_index = index
+			break
+		end
+	end
+
+	if target_index then
+		skin_id_tab[target_index] = mouth_id
+	else
+		skin_id_tab[#skin_id_tab + 1] = mouth_id
+	end
+	local skin_str = ""
+	for index = 1, #skin_id_tab do
+		local skin_id = skin_id_tab[index]
+		skin_str = skin_str .. skin_id .. ";"
+	end
+	return skin_str
+end
+
+function CustomCharItems:GetDefaultSkinString(assetfile)
+	local default = CustomCharItems.defaultSkinString
+
+	if assetfile and CustomCharItems.modelToSkinString[assetfile] then
+		default = CustomCharItems.modelToSkinString[assetfile]
+	end
+
+	return default
+end

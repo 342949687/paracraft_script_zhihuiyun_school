@@ -1,0 +1,26 @@
+﻿<!-- "script/apps/Aries/Creator/Game/Code/CameraBlocklyDef/CameraViewport.html" -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title></title>
+</head>
+<body>
+    <pe:mcml>
+        <script refresh="false" type="text/npl" src="CameraViewport.lua">
+            <![CDATA[
+            CameraViewport = NPL.load("(gl)script/apps/Aries/Creator/Game/Code/CameraBlocklyDef/CameraViewport.lua");
+            CameraViewport.OnInit();
+            ]]>
+        </script>
+        <pe:container ClickThrough="true" alignment="_ct" width="400" height="300" style="margin-left:-200px;margin-top:-150px;background:url(Texture/Aries/Creator/keepwork/worldshare_32bits.png#224 475 128 128:40 40 40 40);">
+            <div style="margin-left:186px;margin-top:136px;position: relative;width:28px;height:28px;background:url(Texture/Aries/Creator/keepwork/worldshare_32bits.png#370 475 28 28);"></div>
+            <div style="margin-top:250px;">
+                <input type="button" name="OK" hotkey="DIK_RETURN" style="margin-left:145px;min-width:120px;height:36px;" class="kp_yellow_button" onclick="CameraViewport.OnOK" value='<%=string.format(L"确定%d号机位", CameraViewport.GetIndex())%>' />
+                <input type="button" name="Cancel" style="margin-left:20px;min-width:60px;height:36px;" class="kp_gray_button" onclick="CameraViewport.OnClose" value='<%=L"取消"%>' />
+            </div>
+        </pe:container>
+    </pe:mcml>
+</body>
+</html>
+

@@ -1,0 +1,33 @@
+﻿<!-- "script/apps/Aries/Creator/Game/mcml/keepwork/KpItemToolTip.html" -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title></title>
+</head>
+<body>
+<pe:mcml>
+<script refresh="false" type="text/npl" ><![CDATA[
+KeepWorkItemManager = NPL.load("(gl)script/apps/Aries/Creator/HttpAPI/KeepWorkItemManager.lua");
+local page = document:GetPageCtrl();
+local gsid,guid = page:GetRequestParam("gsid"),page:GetRequestParam("guid");
+guid = tonumber(guid)
+gsid = tonumber(gsid);
+
+itemTemplate = KeepWorkItemManager.GetItemTemplate(gsid) or {};
+function GetGsid()
+    return gsid;
+end
+]]></script>
+<div style="color:#ffffff;width:255px;padding:10px;" class="kp_tooltip_bg">
+    <div style="color:#ffffff;font-size:16px;"><%=itemTemplate.name%></div>
+    <div style="margin-top:2px;" class="kp_item" >
+        <kp:item gsid='<%=GetGsid() %>' class="kp_item" />    
+    </div>
+    <div style="margin-top:2px;color:#c7c7c7;font-size:12px;"><%=itemTemplate.desc%></div>
+</div>
+
+</pe:mcml>
+</body>
+</html>
+

@@ -1,0 +1,320 @@
+﻿<!-- "script/apps/Aries/Creator/Game/Tasks/RedSummerCamp/RedSummerCampPPtFullPage.html" -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title></title>
+</head>
+<body>
+<pe:mcml>
+<script refresh="true" type="text/npl" src="RedSummerCampPPtFullPage.lua">
+<![CDATA[
+local RedSummerCampPPtFullPage = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/RedSummerCamp/RedSummerCampPPtFullPage.lua");
+local RedSummerCampPPtPage = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/RedSummerCamp/RedSummerCampPPtPage.lua");
+RedSummerCampPPtFullPage.OnInit()
+function ClosePage()
+    local pageCtrl = document:GetPageCtrl();
+    pageCtrl:CloseWindow(true)
+    RedSummerCampPPtFullPage.IsInFullPage = false
+end
+
+function LessonsPPtData(index)
+    if(index == nil) then
+        return #RedSummerCampPPtFullPage.LessonsPPtData;
+    else
+        return RedSummerCampPPtFullPage.LessonsPPtData[index];
+    end
+end
+
+function GetPPtTitle()
+    return RedSummerCampPPtFullPage.GetPPtTitle()
+end
+
+function GetPPtStr()
+    return RedSummerCampPPtFullPage.GetPPtStr()
+end
+
+function IsPPTCover()
+    return RedSummerCampPPtPage.IsPPTCover()
+end
+
+function ToWorld(name, mcmlNode)
+	if RedSummerCampPPtPage.IsLockCourse then
+        local strTip = "你暂时没有该课程的访问权限，请联系客服或使用对应的激活码。"
+        _guihelper.MessageBox(strTip,nil,_guihelper.MessageBoxButtons.OK_CustomLabel,nil,"script/apps/Aries/Creator/Game/GUI/DefaultMessageBox.lesson.html")
+		return
+	end
+
+    local project_id = mcmlNode:GetAttribute("to_world_id")
+    RedSummerCampPPtPage.ToWorld(project_id)
+end
+
+function ClickConverBt(name, mcmlNode)
+	if RedSummerCampPPtPage.IsLockCourse then
+        local strTip = "你暂时没有该课程的访问权限，请联系客服或使用对应的激活码。"
+        _guihelper.MessageBox(strTip,nil,_guihelper.MessageBoxButtons.OK_CustomLabel,nil,"script/apps/Aries/Creator/Game/GUI/DefaultMessageBox.lesson.html")
+		return
+	end
+    
+    local param1 = mcmlNode:GetAttribute("param1")
+    if param1 then
+        if string.find(param1, "http") then
+            ParaGlobal.ShellExecute("open", param1, "", "", 1); 
+        elseif tonumber(param1) then
+            RedSummerCampPPtPage.ToWorld(param1)
+        end
+    end
+end
+
+function IsSupportVideo()
+    return RedSummerCampPPtPage.IsSupportVideo()
+end
+
+function UseMidTitle()
+    return RedSummerCampPPtPage.UseMidTitle()
+end
+
+function CreateWorld()
+    RedSummerCampPPtFullPage.ChangeVideoVisible(false)
+    RedSummerCampPPtPage.CreateWorld()
+end
+]]>
+</script>
+<style type="text/mcss">
+    {
+        left = {
+            width = 540,
+            height = 630,
+            float = "left",
+            ["margin-left"] = 0,
+            ["margin-top"] = 20,
+        },
+
+        right = {
+            width = 441,
+            height = 532,
+            float = "left",
+            ["margin-left"] = 0,
+            ["margin-top"] = -60,
+        },        
+
+        mainwork = {
+            background = "",
+            width = 600,
+            ["min-height"] = 225,
+            float = "left",
+            ["margin-left"] = 0,
+            ["margin-top"] = 0,
+            ["padding-top"] = 75,
+            ["padding-bottom"] = 15,
+            padding = 8,
+            ["text-align"] = "center",
+            ["base-font-size"] = 28,
+            ["font-size"] = 28,
+        },  
+
+        step_str = {
+            ["margin-left"] = 122,
+            ["margin-top"] = 10,
+            ["text-align"] = "left",
+        },  
+
+        F1 = {
+            background = "",
+            width = 354,
+            ["min-height"] = 55,
+            color = "#212122",
+            padding = 10,
+            ["margin-left"] = 116,
+            ["margin-top"] = 5,
+            ["text-align"] = "left",
+            ["base-font-size"] = 30,
+            ["font-size"] = 30,
+        },  
+        share = {
+            width = 312,
+            float = "left",
+            ["margin-left"] = 6,
+            ["margin-top"] = 15,
+        },  
+        ppt_cover = {
+            width = 1228,
+            height = 614,
+            ["margin-left"] = 65,
+            ["margin-top"] = 45,
+        }, 
+        bg_img = {
+            width = 1228,
+            height = 614,
+            ["margin-left"] = 65,
+            ["margin-top"] = 45,
+        }, 
+        step_img = {
+            width = 614,
+            height = 614,
+            ["margin-left"] = 65,
+            ["margin-top"] = 50,
+        }, 
+        yellon_button = {
+            background = "Texture/Aries/Creator/keepwork/SchoolCenter/btn_qiehuan_32X32_32bits.png#0 0 32 32:8 8 8 8",
+            ["base-font-size"] = 20,
+            ["font-size"] = 20,
+            ["font-weight"] = "bold",
+            ["margin-left"] = 95,
+            ["margin-top"] = -160,
+            width = 130,
+            height = 53,
+        },
+        gray_button = {
+            background = "Texture/Aries/Creator/keepwork/Window/button/btn_huise_32bits.png#0 0 38 64:16 16 16 16",
+            ["base-font-size"] = 20,
+            ["font-size"] = 20,
+            ["font-weight"] = "bold",
+            ["margin-left"] = 95,
+            ["margin-top"] = -160,
+            width = 130,
+            height = 53,
+            ["text-offset-y"] = -2,
+        },
+        step_1_title = {
+            background = "",
+            ["base-font-size"] = 28,
+            ["font-size"] = 28,
+            ["font-weight"] = "bold",
+            ["color"] = "#333333",
+            ["margin-left"] = 105,
+            ["margin-top"] = 14,
+        },        
+
+        ppt_cover_div = {
+            width = 1000,
+            height = 630,
+            ["margin-top"] = 15,
+        },  
+
+        cover_left = {
+            width = 450,
+            height = 390,
+            float = "left",
+            ["margin-left"] = 105,
+            ["margin-top"] = 80,
+            ["font-size"] = 14,
+        },
+        
+        cover_right = {
+            width = 315,
+            height = 390,
+            float = "left",
+            ["margin-left"] = 90,
+            ["margin-top"] = 100,
+        },  
+ 
+        cover_title = {
+            ["margin-top"] = 25,
+            height = 90,
+        },      
+
+        cover_title_left = {
+            width = 72,
+            height = 72,
+            float = "left",
+            background = "Texture/Aries/Creator/keepwork/RedSummerCamp/lessonppt/tubiao_72x72_32bits.png#0 0 72 72",
+        },
+        cover_title_right = {
+            width = 300,
+            height = 72,
+            ["margin-left"] = 15,
+            float = "left",
+            ["font-size"] = 12,
+        },
+        cover_title_text = {
+            ["font-size"] = 18,
+            ["font-weight"] = "bold",
+        },    
+        cover_title_text2 = {
+            ["font-size"] = 12,
+            ["margin-top"] = 5,
+        },     
+        cover_desc = {
+            ["padding-bottom"] = 60,
+        },      
+        cover_difficult = {
+            width = 408,
+            height = 122,
+            ["font-size"] = 14,
+        },   
+        cover_button = {
+            background = "Texture/Aries/Creator/keepwork/SchoolCenter/btn_qiehuan_32X32_32bits.png#0 0 32 32:8 8 8 8",
+            ["base-font-size"] = 18,
+            ["font-size"] = 18,
+            ["font-weight"] = "bold",
+            ["margin-left"] = 0,
+            ["margin-top"] = 0,
+            width = 108,
+            height = 44,
+        },
+
+        cover_right_img = {
+            width = 512,
+            height = 512,
+            position = "relative",
+            ["margin-left"] = 0,
+            ["margin-top"] = 0,
+        }, 
+
+        CreateWorldBt = {
+            background = "Texture/Aries/Creator/keepwork/SchoolCenter/btn_qiehuan_32X32_32bits.png#0 0 32 32:8 8 8 8",  
+            ["base-font-size"] = 18,
+            ["font-size"] = 18,
+            ["font-weight"] = "bold",
+            ["margin-left"] = 812,
+            ["margin-top"] = 25,
+            width = 129,
+            height = 46,
+        }, 
+
+        VideoContainer = {
+            background = "",
+            ["margin-left"] = 130,
+            ["margin-top"] = 20,
+            width = 810,
+            height = 479,
+        }, 
+    }
+</style>
+
+<pe:container ClickThrough="false" uiname="PPTFullPageRoot" alignment="_lt" width="1280" height="720" style="background: url(Texture/Aries/Creator/keepwork/RedSummerCamp/lessonppt/bj3_32bits.png#0 0 5 512:1 10 2 10);">
+    <pe:container zorder="1" visible="false" name="export_mode_container" onclick="" alignment="_fi" width="100%" height="100%" style="background:">
+    </pe:container>
+    <pe:container name="rt_container" alignment="_rt" style="background:url();">
+        <input type="button" value='' onclick="ClosePage" style="width: 112px;height: 52px; margin-right:20px;margin-top:25px;background: url(Texture/Aries/Creator/keepwork/RedSummerCamp/lessonppt/B2_112X52_32bits.png#0 0 112 52);" />
+    </pe:container>
+    <pe:container alignment="_ct" style="margin-left:-532px;margin-top:-326px;width:1050px;height:740px;background:url();">
+        <pe:if condition='<%=IsPPTCover()%>'>
+            <div style="position: relative;margin-left: 0px;base-font-size:16px;font-size: 16px;">
+                <%=GetPPtStr()%>
+            </div>   
+        </pe:if>
+        <pe:if condition='<%=not IsPPTCover()%>'>
+            <div style="position: relative;margin-left: 0px;base-font-siez:28px;font-size: 28px;">
+                <pe:if condition='<%=UseMidTitle()%>'>
+                    <div style="margin-top: 40px;margin-left: 0px; base-font-size:20px; font-size:20px;font-weight:bold;color: #212122;text-align: center; "><%=GetPPtTitle()%></div>
+                </pe:if>
+                <pe:if condition="<%=not UseMidTitle()%>">
+                    <div name="line" style="position: relative;margin-left: 526px;margin-top: 50px; background-color: #acacac;width: 1px;height: 520px;">
+                    </div>
+                    <div style="margin-top: 40px;margin-left: 0px; base-font-size:40px; font-size:40px;font-weight:bold;color: #212122; "><%=GetPPtTitle()%></div>
+                </pe:if>
+
+                <%=GetPPtStr()%>
+            </div>       
+        </pe:if>        
+
+    </pe:container>
+    
+</pe:container>
+
+</pe:mcml>
+</body>
+</html>
+

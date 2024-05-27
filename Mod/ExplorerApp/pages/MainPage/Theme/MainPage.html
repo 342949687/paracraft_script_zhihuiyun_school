@@ -1,0 +1,731 @@
+<html>
+    <body>
+        <pe:mcml>
+            <script type='text/npl'>
+                <![CDATA[
+                    -- UI
+                    local MainPage = NPL.load('(gl)Mod/ExplorerApp/pages/MainPage/MainPage.lua')
+                    local Sort = NPL.load('(gl)Mod/ExplorerApp/pages/Sort/Sort.lua')
+                    local LoginModal = NPL.load('(gl)Mod/WorldShare/cellar/LoginModal/LoginModal.lua')
+                    local VipPage = NPL.load('(gl)script/apps/Aries/Creator/Game/Tasks/User/VipPage.lua')
+
+                    -- component
+                    local MenuItemComponent = NPL.load('(gl)Mod/ExplorerApp/components/MenuItem/MenuItemComponent.lua')
+
+                    -- service
+                    local KeepworkServiceSession = NPL.load('(gl)Mod/WorldShare/service/KeepworkService/KeepworkServiceSession.lua')
+
+                    -- lib
+                    local UniString = commonlib.gettable('System.Core.UniString')
+
+                    local page = document:GetPageCtrl()
+
+                    function select_category(index)
+                        MainPage.curPage = 1
+                        MenuItemComponent:SetSelectedSubItem(0)
+
+                        MainPage:SetMenuItem(MainPage.categoryTree[index])
+
+                        local item = MainPage.categoryTree[index]
+
+                        if item and type(item) == 'table' and item.id == -3 then
+                            MainPage:SetMyClassListWorksTree(-1)
+                            return
+                        end
+
+                        MainPage:SetWorksTree()
+                    end
+
+                    function select_category_by_id(id)
+                        MainPage.curPage = 1
+                        MenuItemComponent:SetSelectedSubItem(id)
+
+                        if id and type(id) == 'string' then
+                            if string.match(id, '^c%d') then
+                                -- class id
+
+                                id = string.match(id, '^c(%d+)')
+
+                                if id == 0 then
+                                    MainPage:SetMyClassListWorksTree(-1)
+                                else
+                                    MainPage:SetMyClassListWorksTree(id)
+                                end
+
+                                page:Refresh(0)
+
+                                return
+                            end
+                        end
+
+                        MainPage:SetMenuItem({ id = id })
+                        MainPage:SetWorksTree()
+                    end
+
+                    function get_item_level()
+                        local item = MainPage.categoryTree[Eval('index')]
+
+                        return item and item.level
+                    end
+
+                    function is_show_scroll_bar()
+                        if #MainPage.categoryTree >= 13 then
+                            return true
+                        else
+                            return false
+                        end
+                    end
+
+                    function search()
+                        MainPage.curPage = 1
+                        MainPage.isSearching = false
+
+                        MainPage:Search()
+                    end
+
+                    function close()
+                        MainPage:Close()
+                    end
+
+                    local all_menubar_icon_style = {
+                        new = {
+                            width = 31,
+                            height = 19,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#248 360 31 19',
+                        },
+                        hot = {
+                            width = 23,
+                            height = 26,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#367 357 23 26',
+                        },
+                        cup = {
+                            width = 29,
+                            height = 27,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#19 357 29 27',
+                        },
+                        myschool = {
+                            width = 26,
+                            height = 26,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#366 664 26 26',
+                        },
+                        code = {
+                            width = 31,
+                            height = 27,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#250 485 31 27',
+                        },
+                        video = {
+                            width = 31,
+                            height = 24,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#138 486 31 24',
+                        },
+                        interact = {
+                            width = 31,
+                            height = 29,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#364 440 31 29',
+                        },
+                        scene = {
+                            width = 34,
+                            height = 28,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#16 483 34 28',
+                        },
+                        robot = {
+                            width = 26,
+                            height = 25,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#480 441 26 25',
+                        },
+                        computer = {
+                            width = 28,
+                            height = 23,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#479 401 28 23',
+                        },
+                        science = {
+                            width = 24,
+                            height = 26,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#141 441 24 26',
+                        },
+                        chinese = {
+                            width = 21,
+                            height = 26,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#255 441 21 26',
+                        },
+                        math = {
+                            width = 25,
+                            height = 25,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#256 400 25 25',
+                        },
+                        organisms = {
+                            width = 27,
+                            height = 28,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#143 398 27 28',
+                        },
+                        human_culture = {
+                            width = 25,
+                            height = 26,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#21 441 25 26',
+                        },
+                        art = {
+                            width = 28,
+                            height = 28,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#370 398 28 28',
+                        },
+                        desgin = {
+                            width = 28,
+                            height = 28,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#23 399 28 28',
+                        }
+                    }
+
+                    local all_menubar_button_style = {
+                        ['最新'] = {
+                            width = 34,
+                            height = 17,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#297 360 34 17',
+                            icon = all_menubar_icon_style.new,
+                        },
+                        ['热门'] = {
+                            width = 34,
+                            height = 15,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#412 363 34 15',
+                            icon = all_menubar_icon_style.hot,
+                        },
+                        ['大赛作品'] = {
+                            width = 54,
+                            height = 12,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#53 365 54 12',
+                            icon = all_menubar_icon_style.cup,
+                        },
+                        ['我的学校'] = {
+                            width = 33,
+                            height = 15,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#413 674 33 15',
+                            icon = all_menubar_icon_style.myschool,
+                        },
+                        ['编程'] = {
+                            width = 34,
+                            height = 16,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#297 490 34 16',
+                            icon = all_menubar_icon_style.code,
+                        },
+                        ['短片'] = {
+                            width = 33,
+                            height = 15,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#185 490 33 15',
+                            icon = all_menubar_icon_style.video,
+                        },
+                        ['互动'] = {
+                            width = 33,
+                            height = 15,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#411 446 33 15',
+                            icon = all_menubar_icon_style.interact,
+                        },
+                        ['场景'] = {
+                            width = 33,
+                            height = 17,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#66 489 33 17',
+                            icon = all_menubar_icon_style.scene,
+                        },
+                        ['机器人'] = {
+                            width = 52,
+                            height = 16,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#519 446 52 16',
+                            icon = all_menubar_icon_style.robot,
+                        },
+                        ['计算机'] = {
+                            width = 53,
+                            height = 16,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#518 404 53 16',
+                            icon = all_menubar_icon_style.computer,
+                        },
+                        ['科学'] = {
+                            width = 34,
+                            height = 16,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#185 446 34 16',
+                            icon = all_menubar_icon_style.science,
+                        },
+                        ['语文'] = {
+                            width = 34,
+                            height = 16,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#297 446 34 16',
+                            icon = all_menubar_icon_style.chinese,
+                        },
+                        ['数学'] = {
+                            width = 34,
+                            height = 17,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#297 403 34 17',
+                            icon = all_menubar_icon_style.math,
+                        },
+                        ['生物'] = {
+                            width = 34,
+                            height = 15,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#186 404 34 15',
+                            icon = all_menubar_icon_style.organisms,
+                        },
+                        ['人文'] = {
+                            width = 33,
+                            height = 15,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#66 446 33 15',
+                            icon = all_menubar_icon_style.human_culture,
+                        },
+                        ['艺术'] = {
+                            width = 34,
+                            height = 17,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#412 403 34 17',
+                            icon = all_menubar_icon_style.art,
+                        },
+                        ['设计'] = {
+                            width = 34,
+                            height = 16,
+                            background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#65 404 34 16',
+                            icon = all_menubar_icon_style.desgin,
+                        },
+                    }
+
+                    function get_menubar_button_value()
+                        local value = Eval('value')
+
+                        local width = 0
+                        local height = 0
+                        local margin_top = 0
+                        local background = ''
+
+                        if all_menubar_button_style[value] then
+                            width = all_menubar_button_style[value].width
+                            height = all_menubar_button_style[value].height
+                            margin_top = (40 - height) / 2
+                            background = all_menubar_button_style[value].background
+
+                            local html = ''
+
+                            local text_html = format([[
+                                <div align='center'
+                                     style='width: %dpx;
+                                            position: relative;'>
+                                    <img align='center'
+                                        style='width: %dpx;
+                                               height: %dpx;
+                                               margin-top: %dpx;
+                                               margin-left: 6px;'
+                                        src='%s' />
+                                </div>
+                            ]], width, width, height, margin_top, background)
+
+                            if all_menubar_button_style[value].icon then
+                                local icon_width = all_menubar_button_style[value].icon.width
+                                local icon_height = all_menubar_button_style[value].icon.height
+                                local icon_margin_top = (40 - icon_height) / 2
+                                local icon_margin_left = ((70 - icon_width) / 2) - 6
+                                local icon_background = all_menubar_button_style[value].icon.background
+
+                                local icon_html = format([[
+                                    <div style='position: relative;'>
+                                        <img align='center'
+                                             style='width: %dpx;
+                                                    height: %dpx;
+                                                    margin-top: %dpx;
+                                                    margin-left: %dpx;'
+                                             src='%s' />
+                                    </div>
+                                ]], icon_width, icon_height, icon_margin_top, icon_margin_left, icon_background)
+
+                                html = icon_html .. text_html
+                            else
+                                html = text_html
+                            end
+
+                            return html
+                        else
+                            return '<div style="position: relative;margin-top: 8px;text-align: center;">' ..
+                                    Mod.WorldShare.Utils.WordsLimit(value, 110, 16) ..
+                                    '</div>'
+                        end
+                    end
+
+                    function get_menubar_button_style()
+                        if Eval('color') == 'YELLOW' then
+                            if Eval('value') == MainPage.categorySelected.value then
+                                return 'menubar_button_selected'
+                            else
+                                return 'menubar_button'
+                            end
+                        elseif Eval('color') == 'BLACK' then
+                            if Eval('value') == MainPage.categorySelected.value then
+                                return 'main_page_black_button_selected'
+                            else
+                                return 'main_page_black_button'
+                            end
+                        else
+                            return 'menubar_default'
+                        end
+                    end
+
+                    function my_favorite_projects()
+                        MainPage.curPage = 1
+                        page:SetValue('search_value', '')
+                        MainPage:SetCategoryItem({})
+                        page:Refresh(0)
+                        MainPage:SetMyFavoriteWorksTree()
+                    end
+
+                    function show_my_school_list()
+                        if true then
+                            return
+                        end
+                        if my_school_popup then
+                            my_school_popup = false
+                            page:FindControl('my_school_popup').visible = false
+                        else
+                            my_school_popup = true
+                            page:FindControl('my_school_popup').visible = true
+                        end
+                    end
+
+                    function select_class(id)
+                        show_my_school_list()
+                        MainPage.curPage = 1
+                        page:SetValue('search_value', '')
+                        MainPage:SetCategoryItem({})
+                        page:Refresh(0)
+                        MainPage:SetMyClassListWorksTree(id)
+                    end
+
+                    function open_vip()
+                        GameLogic.IsVip('RedSummerCampMain', true, function(result)
+                            if result then
+                                -- force show vip page
+                                VipPage.ShowPage('red_summer_camp_main')
+                            end
+                        end)
+                    end
+
+                    function get_children()
+                        local category = MainPage.categoryTree and MainPage.categoryTree[Eval('index')]
+                        return category and category.children or {}
+                    end
+
+                    function submit_opus()
+                        local content = [[
+                            <div width='100%%'
+                                style='padding: 30px;
+                                        margin-top: -60px;
+                                        font-size: 16px;
+                                        base-font-size: 16px;
+                                        color: #FFFFFF;'>
+                                <div align='center'
+                                    style='width: 106px;
+                                            font-size: 26px;
+                                            base-font-size: 26px;
+                                            margin-bottom: 30px;'><%%= L'提交作品' %%></div>
+                                <div>
+                                    <%%= L'同学们，想让你的优秀作品被更多人看到并且给你点赞么？快来提交你的创意作品吧，我们会帮你上榜哟，期待你的作品。' %%>
+                                </div>
+                                <div style='margin-top: 20px;'>
+                                    <%%= L'作品要求：' %%>
+                                </div>
+                                <div>
+                                    <%%= L'1.作品内容积极向上，且内容完整；' %%>
+                                </div>
+                                <div>
+                                    <%%= L'2.作品有创意，在创作思路或技术上有独特表现；' %%>
+                                </div>
+                                <div>
+                                    <%%= L'3.参赛获奖作品优先采纳。' %%>
+                                </div>
+                                <div style='margin-top: 20px;'>
+                                    <%%= L'提交方式：' %%>
+                                </div>
+                                <div>
+                                    <%%= L'将作品项目ID及作品说明，通过邮件发送至' %%>
+                                    <a href='mailto:support@paracraft.cn'
+                                    style='color: #FFFFFF;'>support@paracraft.cn</a>
+                                </div>
+                                <div style='margin-top: 20px;'>
+                                    <%%= L'作品提交模板：' %%>
+                                </div>
+                                <div class='msgbox_gray_radius_background'
+                                    width='100%%'
+                                    style='height: 130px;
+                                            padding-top: 15px;
+                                            padding: 20px;
+                                            color: #FFFFFF;'>
+                                    <div align='right'
+                                        onclick='copy'
+                                        style='width: 32px;
+                                                top: 40px;
+                                                color: #0000FF;
+                                                position: relative;'>
+                                        <%%= L'复制' %%>
+                                        <div style='height: 1px;
+                                                    width: 32px;
+                                                    background-color: #0000FF;'></div>
+                                    </div>
+                                    <div><%%= L'账号：' %%></div>
+                                    <div><%%= L'作品ID：' %%></div>
+                                    <div><%%= L'参加的大赛及获奖名次：' %%></div>
+                                    <div><%%= L'作品说明：' %%></div>
+                                </div>
+                            </div>
+                        ]]
+
+                        local script = [[
+                            local Toast = NPL.load('(gl)Mod/ExplorerApp/pages/Toast/Toast.lua')
+                            local example = '账号：\n作品ID：\n参加的大赛及获奖名次：\n作品说明：'
+
+                            function copy()
+                                ParaMisc.CopyTextToClipboard(example)
+                                Toast:ShowPage(L'已复制', 3000)
+                            end
+                        ]]
+
+                        local mcss = [[
+                            <style type='type/mcss' src='Mod/WorldShare/cellar/Theme/Mcss/Theme1.mcss'></style>
+                        ]]
+
+                        Mod.WorldShare.MsgBox:ShowNotice(content, script, mcss, 2, 670, 540)
+                    end
+
+                    function get_android_flavor()
+                        return System.os.GetAndroidFlavor();
+                    end
+                ]]>
+            </script>
+            <style type='text/mcss'
+                   src='Mod/ExplorerApp/pages/MainPage/Theme/Mcss/MainPageMcss.mcss'>
+                {
+                    close = {
+                        ['margin-top'] = 8,
+                        ['margin-right'] = 10,
+                        float = 'left',
+                        width = 65,
+                        height = 28,
+                        background = 'Texture/Aries/Creator/keepwork/explorer_32bits.png#61 131 16 16:3 3 3 3',
+                        color = '#ffffff'
+                    },
+                    area = {
+                        color = 'white'
+                    },
+                    strip = {
+                        height = 40,
+                        width = 1100,
+                    },
+                    area_content = {
+                        width = 1150,
+                    },
+                    menubar = {
+                        float = 'left',
+                        width = 170,
+                        height = 600,
+                        ['margin-left'] = 25,
+                        ['margin-top'] = 10,
+                    },
+                    menubar_button = {
+                        width = 140,
+                        height = 40,
+                        background = 'Texture/Aries/Creator/keepwork/explorer_32bits.png#336 125 32 32:10 10 10 10',
+                        ['margin-left'] = 4,
+                    },
+                    menubar_button_selected = {
+                        width = 140,
+                        height = 40,
+                        background = 'Texture/Aries/Creator/keepwork/explorer_32bits.png#299 125 32 32:10 10 10 10',
+                        ['margin-left'] = 4,
+                    },
+                    menubar_default = {
+                        width = 140,
+                        height = 40,
+                        ['margin-left'] = 4,
+                        ['background-color'] = '#FFFFFF'
+                    },
+                    list = {
+                        float = 'left',
+                        width = 955,
+                    },
+                    list_search_bar = {
+                        float = 'left',
+                        ['margin-left'] = 790,
+                        ['margin-top'] = 4,
+                        textcolor = '#ffffff',
+                        width = 316,
+                        height = 30,
+                        padding = 0,
+                        background = 'Texture/Aries/Creator/keepwork/explorer_32bits.png#205 162 32 16:5 5 5 5',
+                    },
+                    list_search_textfield = {
+                        width = 266,
+                        height = 30,
+                        background = '',
+                        ['font-size'] = 15,
+                        ['base-font-size'] = 28,
+                    },
+                    list_search_button = {
+                        position = 'relative',
+                        align = 'right',
+                        color = '#000000',
+                        background = 'Texture/Aries/Creator/keepwork/explorer_32bits.png#225 127 36 28:6 5 7 6',
+                        height = 30,
+                        width = 57,
+                        ['text-align'] = 'center',
+                        ['padding-top'] = 3,
+                        ['margin-top'] = -32
+                    },
+                    list_search_button_click = {
+                        postion = 'relative',
+                        height = 30,
+                        width = 57,
+                        ['margin-top'] = -25,
+                        background = ''
+                    },
+                }
+            </style>
+            <style type='type/mcss' src='Mod/WorldShare/cellar/Opus/OpusMcss.mcss'></style>
+            <style type='type/mcss' src='Mod/WorldShare/cellar/Theme/Mcss/Theme1.mcss'></style>
+            <pe:container alignment='_ct' style='margin-left:-640px;margin-top:-360px;width:1280px;height:720px;background:url();'>
+                <!--背景水印-->
+                <div>
+                    <div style='position:relative;margin-left:24px;margin-top:104px;width:512px;height:256px;background:url(Texture/Aries/Creator/keepwork/RedSummerCamp/courses/watermark_bg_32bits.png);' />
+                    <div style='position:relative;margin-left:557px;margin-top:26px;width:512px;height:256px;background:url(Texture/Aries/Creator/keepwork/RedSummerCamp/courses/watermark_bg_32bits.png);' />
+                    <div style='position:relative;margin-left:103px;margin-top:282px;width:512px;height:256px;background:url(Texture/Aries/Creator/keepwork/RedSummerCamp/courses/watermark_bg_32bits.png);' />
+                    <div style='position:relative;margin-left:879px;margin-top:311px;width:512px;height:256px;background:url(Texture/Aries/Creator/keepwork/RedSummerCamp/courses/watermark_bg_32bits.png);' />
+                    <div style='position:relative;margin-left:438px;margin-top:477px;width:512px;height:256px;background:url(Texture/Aries/Creator/keepwork/RedSummerCamp/courses/watermark_bg_32bits.png);' />
+                </div>
+            </pe:container>
+            <pe:container
+                alignment='_fi'
+                zorder='-1'
+                width='100%'
+                height='100%'
+                style='position:relative;
+                    background-color:#dcdcdc'>
+            </pe:container>
+            <pe:container
+                alignment='_fi'
+                zorder='-1'
+                width='100%'
+                height='100%'
+                class='red_summer_camp_bg'>
+            </pe:container>
+            <div>
+                <div>
+                    <pe:container alignment="_rt" style="background:url();">
+                        <!-- <%=GameLogic.GetFilters():apply_filters('get_vip_time_icon_div', 3, "open_vip")%> -->
+                        <!-- <input type="button" value='' onclick="open_vip" class="red_summer_camp_open_vip_btn" style="margin-right:20px;margin-top:6px;" /> -->
+                        <%=GameLogic.GetFilters():apply_filters('get_vip_btn_div',"margin-right: 7px;margin-top: 13px;","RedSummerCampMain")%>
+                    </pe:container>
+                    <div style='background: url(Texture/Aries/Creator/keepwork/RedSummerCamp/courses/courses_32bits.png#7 249 169 56);
+                                width: 169px;
+                                height: 56px;
+                                float: left;'>
+                        <div align='center'
+                            onclick='close'
+                            style='background: url(Texture/Aries/Creator/keepwork/RedSummerCamp/works/works_32bits.png#5 67 38 33);
+                                    width: 38px;
+                                    height: 33px;
+                                    margin-top: 12px;
+                                    margin-left: -20px;'></div>
+                    </div>
+                    <div style='float: left;
+                                width: 283px;
+                                height: 56px;
+                                margin-left: -73px;
+                                background: url(Texture/Aries/Creator/keepwork/RedSummerCamp/shentongbei/shentongbei_32bits.png#17 794 283 56)'>
+                        <pe:if condition='<%= Mod.WorldShare.Utils.IsEnglish() %>'>
+                            <div align='center'
+                                 style='background:;
+                                        color: #FFFFFF;
+                                        font-size: 20px;
+                                        base-font-size: 30px;
+                                        font-weight: bolder;
+                                        width: 140px;
+                                        height: 20px;
+                                        margin-top: 15px;
+                                        float: left;'>
+                                Recommanded
+                            </div>
+                        </pe:if>
+                        <pe:if condition='<%= not Mod.WorldShare.Utils.IsEnglish() %>'>
+                            <div align='center'
+                                 style='background:;
+                                        color: #FFFFFF;
+                                        font-size: 20px;
+                                        base-font-size: 30px;
+                                        font-weight: bolder;
+                                        width: 85px;
+                                        height: 20px;
+                                        margin-top: 15px;
+                                        float: left;'>
+                                <pe:if condition='<%= get_android_flavor() == "huawei" %>'>
+                                    作品列表
+                                </pe:if>
+                                <pe:if condition='<%= get_android_flavor() ~= "huawei" %>'>
+                                    <%= L'推荐列表' %>
+                                </pe:if>
+                            </div>
+                        </pe:if>
+                    </div>
+                    <!-- <div style='float: left;
+                                margin-left: 10px;
+                                font-size: 16px;
+                                base-font-size: 16px;
+                                font-weight: bold;
+                                color: #1ca3d7;
+                                margin-top: 18px;'
+                        onclick='submit_opus'>
+                        <%= L'提交作品' %>
+                        <div style='height: 1px;
+                                    width: 66px;
+                                    background-color: #1ca3d7'></div>
+                    </div> -->
+                </div>
+                <div class='area'
+                    name='area'
+                    style='width: 1150px;'
+                    align='center'>
+                    <div class='strip'>
+                        <div class='list_search_bar'>
+                            <input type='text'
+                                name='search_value'
+                                class='list_search_textfield'
+                                spacing='4'
+                                EmptyText='<%= L"请输入你要搜索的内容" %>'
+                                EmptyTextColor='#FF444444'
+                                rows='1' />
+                            <div class='list_search_button'>
+                                <%=L'搜索'%>
+                                <input type='button'
+                                    class='list_search_button_click'
+                                    DefaultButton='true'
+                                    onclick='search()' />
+                            </div>
+                        </div>
+                    </div>
+                    <div class='area_content'>
+                        <div class='menubar'>
+                            <pe:gridview RememberScrollPos='true'
+                                         AllowOverflowScroll='true'
+                                         name='categoryTree'
+                                         DefaultNodeHeight='48'
+                                         pagesize='100'
+                                         ItemsPerLine='1'
+                                         AllowPaging='false'>
+                                <Columns>
+                                    <div>
+                                        <pe:menu_item
+                                            index='<%= Eval("index") %>'
+                                            level='<%= get_item_level() %>'
+                                            is_show_scroll_bar='<%= is_show_scroll_bar() %>'
+                                            full_button='true'
+                                            full_button_click='select_category()'
+                                            children='<%= get_children() %>' />
+                                    </div>
+                                </Columns>
+                            </pe:gridview>
+                        </div>
+                        <div class='list'>
+                            <iframe width='100%'
+                                    src='Mod/ExplorerApp/pages/MainPage/Theme/ExplorerEmbed.html'></iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </pe:mcml>
+    </body>
+</html>

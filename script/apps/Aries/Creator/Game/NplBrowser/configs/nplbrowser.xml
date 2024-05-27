@@ -1,0 +1,6 @@
+<configs>
+  <version>https://cdn.keepwork.com/nplbrowser/version</version>
+  <hosts>
+    <host>https://cdn.keepwork.com/nplbrowser/</host>
+  </hosts>
+</configs>

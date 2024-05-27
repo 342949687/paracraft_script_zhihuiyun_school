@@ -1,0 +1,82 @@
+﻿<!-- "script/apps/Aries/Creator/Game/Movie/SoundRecorder.html" -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title></title>
+</head>
+<body>
+<pe:mcml>
+<script refresh="false" type="text/npl" src="SoundRecorder.lua"><![CDATA[
+TeacherPPTUrlPage = commonlib.gettable("MyCompany.Aries.Game.TeacherPPT.TeacherPPTUrlPage");
+TeacherPPTUrlPage.OnInit();
+
+
+function OnclickImport()
+TeacherPPTUrlPage.OnclickImport()
+end
+
+function OnOk()
+    TeacherPPTUrlPage.OnOk()
+end
+
+function OnClickPaintCheckBox()
+end
+
+function OnClickMindCheckBox()
+end
+
+]]></script>
+<aries:window mode="thin" style="width:400px;" title='<%=L"教案设置"%>' onclose="TeacherPPTUrlPage.OnClose">
+<div style="padding:5px;margin-right:10px;">
+    <div style="color: #ffffff;margin-top: 5px;">教案引用地址</div>
+    <div style="margin-top: 5px;">
+        <input type="text" style="height:23px;width: 300px;float: left;" name='url_input' value=''/>
+        <input type="button" style="height:23px;width: 45px; float: left;color: #ffffff;margin-left: 10px;" name='import_bt' value='导入' onclick="OnclickImport"/>
+    </div>
+    <!-- <div style='margin-left: 0x; margin-top: 10px; color: #ffffff;'>
+        <div><%=L"教案类型"%></div>
+        <div style="margin-top: 5px;">
+            <div style="margin-left: 0px; margin-top: 0px;float: left;">
+                <input type='radio' name='saveas' value='allow' onclick='set_saveas'/> 
+                <div style="float: left; margin-left: 6px; margin-top:  -2px;"><%= L'课程页面' %> </div>
+            </div>
+            <div style="margin-left: 20px; margin-top: 0px;float: left;">
+                <input type='radio' name='saveas' value='forbidden' onclick='set_saveas'/>
+                <div style="float: left; margin-left: 6px; margin-top:  -2px;"><%= L'课程列表' %> </div>
+            </div>
+            <div style="margin-left: 20px; margin-top: 0px;float: left;">
+                <input type='radio' name='saveas' value='forbidden' onclick='set_saveas'/>
+                <div style="float: left; margin-left: 6px; margin-top:  -2px;"><%= L'单节课程' %> </div>
+            </div>
+        </div>
+    </div> -->
+
+    <div style='margin-left: 0x; margin-top: 10px; color: #ffffff;'>
+        <div><%=L"辅助工具"%></div>
+        <div style="margin-top: 10px;">
+            <div style="margin-left: 0px; margin-top: 0px;float: left;">
+                <input type='checkbox' name='PaintCheckBox' onclick='OnClickPaintCheckBox' />
+                <div for="encode_world" style="float: left; margin-left: 6px; margin-top:  -2px;"><%= L'板书工具' %></div>
+            </div>
+
+            <div style="margin-left: 20px; margin-top: 0px;float: left;">
+                <input type='checkbox' name='MindCheckBox' onclick='OnClickMindCheckBox' />
+                <div for="encode_world" style="float: left; margin-left: 6px; margin-top:  -2px;"><%= L'思维导图' %></div>
+            </div>
+
+            <div style="margin-left: 0px; margin-top: 5px;">
+                <input type='checkbox' name='encode_world' onclick='' />
+                <div for="encode_world" style="float: left; margin-left: 6px; margin-top:  -2px;"><%= L'自动进入教案模式' %></div>
+            </div>
+        </div>
+    </div>
+    
+     <div style="margin:10px;margin-left:150px;margin-bottom:20px;margin-top: 20px;">
+        <input style="color: #ffffff;width: 80px;" type='button' value="确定" name='BtSure' onclick='OnOk' />
+     </div>
+</div>
+</aries:window>
+</pe:mcml>
+</body>
+</html>

@@ -1,0 +1,312 @@
+--[[
+Title: EntityBlockCodeBase
+Author(s): LiXizhi
+Date: 2021/6/19
+Desc: The base class for block entity that contains code.
+use the lib:
+------------------------------------------------------------
+NPL.load("(gl)script/apps/Aries/Creator/Game/Entity/EntityBlockCodeBase.lua");
+local EntityBlockCodeBase = commonlib.gettable("MyCompany.Aries.Game.EntityManager.EntityBlockCodeBase")
+-------------------------------------------------------
+]]
+NPL.load("(gl)script/apps/Aries/Creator/Game/Entity/EntityBlockBase.lua");
+local BlockEngine = commonlib.gettable("MyCompany.Aries.Game.BlockEngine")
+local GameLogic = commonlib.gettable("MyCompany.Aries.Game.GameLogic")
+local EntityManager = commonlib.gettable("MyCompany.Aries.Game.EntityManager");
+local Packets = commonlib.gettable("MyCompany.Aries.Game.Network.Packets");
+
+local Entity = commonlib.inherit(commonlib.gettable("MyCompany.Aries.Game.EntityManager.EntityBlockBase"), commonlib.gettable("MyCompany.Aries.Game.EntityManager.EntityBlockCodeBase"));
+
+-- class name
+Entity.class_name = "EntityBlockCodeBase";
+EntityManager.RegisterEntityClass(Entity.class_name, Entity);
+
+Entity:Property("NplBlocklyToolboxXmlText");
+Entity:Property({"isAllowFastMode", false, "IsAllowFastMode", "SetAllowFastMode", auto=true})
+Entity:Property({"isStepMode", nil, "IsStepMode", "SetStepMode", auto=true})
+Entity:Property({"isGliaFile", false, "IsGliaFile", "SetGliaFile", auto=true})
+Entity:Property({"lastEditTime", false, "GetLastEditTime", "SetLastEditTime"})
+Entity:Signal("remotelyUpdated")
+
+function Entity:ctor()
+end
+
+function Entity:SetLastEditTime(edit_time)
+	self.m_EditTime = edit_time
+end
+
+function Entity:GetLastEditTime()
+	return self.m_EditTime
+end
+
+function Entity:IsUseNplBlockly()
+	return self.isUseNplBlockly;
+end
+
+function Entity:SetUseNplBlockly(bEnabled)
+	self.isUseNplBlockly = bEnabled;
+end
+
+function Entity:SetNPLBlocklyXMLCode(blockly_xmlcode)
+	self.npl_blockly_xmlcode = blockly_xmlcode;
+end
+
+function Entity:GetNPLBlocklyXMLCode()
+	return self.npl_blockly_xmlcode or "";
+end
+
+function Entity:SetNPLBlocklyNPLCode(blockly_nplcode)
+	self.npl_blockly_nplcode = blockly_nplcode;
+	self:SetCommand(blockly_nplcode);
+end
+
+function Entity:GetNPLBlocklyNPLCode()
+	return self.npl_blockly_nplcode or "";
+end
+	
+function Entity:SetBlocklyXMLCode(blockly_xmlcode)
+	if (self:IsUseNplBlockly()) then
+		self:SetNPLBlocklyXMLCode(blockly_xmlcode or "");
+	else
+		self.blockly_xmlcode = blockly_xmlcode;
+	end
+end
+
+function Entity:GetBlocklyXMLCode()
+	return self:IsUseNplBlockly() and (self.npl_blockly_xmlcode or "") or (self.blockly_xmlcode or "");
+end
+
+function Entity:SetBlocklyNPLCode(blockly_nplcode)
+	if (self:IsUseNplBlockly()) then
+		self:SetNPLBlocklyNPLCode(blockly_nplcode or "");
+	else
+		self.blockly_nplcode = blockly_nplcode;
+		self:SetCommand(blockly_nplcode);
+	end
+end
+
+function Entity:GetBlocklyNPLCode()
+	return self:IsUseNplBlockly() and (self.npl_blockly_nplcode or "") or (self.blockly_nplcode or "");
+end
+
+function Entity:SetUseCustomBlock(bEnabled)
+	self.isUseCustomBlock = bEnabled;
+end
+
+function Entity:IsUseCustomBlock()
+	return self.isUseCustomBlock;
+end
+
+function Entity:GetCustomBlockText(text)
+	return self.custom_block_text or "";
+end
+
+function Entity:SetCustomBlockText(text)
+	self.custom_block_text = text;
+end
+
+function Entity:IsBlocklyEditMode()
+	return self.isBlocklyEditMode;
+end
+
+function Entity:GetLanguageVersion()
+	if (not self.languageVersion) then
+		local LanguageConfig = NPL.load("script/ide/System/UI/Blockly/Blocks/LanguageConfig.lua");
+		return LanguageConfig:GetVersion(self.languageConfigFile);  -- 初始版本使用最新版本
+	end
+	return self.languageVersion;
+end
+
+function Entity:SetLanguageVersion(version)
+	self.languageVersion = version;
+end
+
+function Entity:SetBlocklyEditMode(bEnabled)
+	if(self.isBlocklyEditMode~=bEnabled) then
+		self.isBlocklyEditMode = bEnabled;
+		if(bEnabled)  then
+			self:SetCommand(self:IsUseNplBlockly() and self:GetNPLBlocklyNPLCode() or self:GetBlocklyNPLCode());
+		else
+			self:SetCommand(self:GetNPLCode());
+		end
+		self:editModeChanged();
+	end
+end
+
+function Entity:TextToXmlInnerNode(text)
+	if(text and commonlib.Encoding.HasXMLEscapeChar(text)) then
+		return {name="![CDATA[", [1] = string.gsub(text, "%]%]>", "%]%]%]%]><!%[CDATA%[>")};
+	else
+		return text or "";
+	end
+end
+
+function Entity:SaveBlocklyToXMLNode(node)
+	if(self:IsBlocklyEditMode()) then
+		node.attr.isBlocklyEditMode = true;
+	end
+	if(self:IsUseNplBlockly()) then
+		node.attr.isUseNplBlockly = true;
+	end
+	if(self:IsUseCustomBlock()) then
+		node.attr.isUseCustomBlock = true;
+	end
+	node.attr.languageVersion = self:GetLanguageVersion();
+
+	if(self:GetBlocklyXMLCode() ~= "" or self:GetNPLBlocklyXMLCode() ~= "" or self:GetCustomBlockText() ~= "") then
+		local blocklyNode = {name="blockly"};
+		node[#node+1] = blocklyNode;
+		blocklyNode[#blocklyNode+1] = {name="code", self:TextToXmlInnerNode(self:GetNPLCode())}
+		blocklyNode[#blocklyNode+1] = {name="xmlcode", self:TextToXmlInnerNode(self.blockly_xmlcode)}
+		blocklyNode[#blocklyNode+1] = {name="nplcode", self:TextToXmlInnerNode(self.blockly_nplcode)}
+		blocklyNode[#blocklyNode+1] = {name="npl_xmlcode", self:TextToXmlInnerNode(self.npl_blockly_xmlcode)}
+		blocklyNode[#blocklyNode+1] = {name="npl_nplcode", self:TextToXmlInnerNode(self.npl_blockly_nplcode)}
+		blocklyNode[#blocklyNode+1] = {name="npl_toolbox_xml_text", self:TextToXmlInnerNode(self:GetNplBlocklyToolboxXmlText())}
+		blocklyNode[#blocklyNode+1] = {name="custom_block_text", self:TextToXmlInnerNode(self:GetCustomBlockText())}
+	end
+
+	if(self.includedFiles) then
+		local includedFilesNode = {name="includedFiles", };
+		node[#node+1] = includedFilesNode;
+		for i, name in ipairs(self.includedFiles) do
+			includedFilesNode[i] = {name="filename", name}
+		end
+	end
+
+end
+
+function Entity:LoadBlocklyFromXMLNode(node)
+	self.isBlocklyEditMode = (node.attr.isBlocklyEditMode == "true" or node.attr.isBlocklyEditMode == true);
+	local isUseNplBlockly = (node.attr.isUseNplBlockly == "true" or node.attr.isUseNplBlockly == true); 
+    self.isUseCustomBlock = (node.attr.isUseCustomBlock == "true" or node.attr.isUseCustomBlock == true);
+
+	-- 设置当前方块使用的语言版本 若无设置则使用0.0.0(加载使用最旧版本)
+	self:SetLanguageVersion(node.attr.languageVersion or "0.0.0");
+
+	for i=1, #node do
+		if(node[i].name == "blockly") then
+			for j=1, #(node[i]) do
+				local sub_node = node[i][j];
+				local code = "";
+				for i = 1, #sub_node do
+					local sub_node_code = sub_node[i];
+					code = code .. (type(sub_node_code) == "table" and sub_node_code[1] or sub_node_code);
+				end
+				
+				-- 直接用SaveBlocklyToXMLNode生成的节点, 不经过xml解析则会无法解析之前的转换, 这里手动替换, 如果文本中含有]]]]><![CDATA[> 则会被误替换
+				code = string.gsub(code, "%]%]%]%]><!%[CDATA%[>", "%]%]>");
+
+				if(type(code) == "string") then
+					if(sub_node.name == "xmlcode") then
+						self.blockly_xmlcode = code;
+					elseif(sub_node.name == "nplcode") then
+						self.blockly_nplcode = code;
+					elseif(sub_node.name == "npl_xmlcode") then
+						self.npl_blockly_xmlcode = code;  -- 兼容已存在的代码
+					elseif(sub_node.name == "npl_nplcode") then
+						self.npl_blockly_nplcode = code;
+					elseif(sub_node.name == "code") then
+						self:SetNPLCode(code);
+					elseif(sub_node.name == "npl_toolbox_xml_text") then
+						self:SetNplBlocklyToolboxXmlText(code);
+					elseif(sub_node.name == "custom_block_text") then
+						self:SetCustomBlockText(code);
+					end
+				end
+			end
+		elseif(node[i].name == "includedFiles") then
+			self.includedFiles = {};
+			for j=1, #(node[i]) do
+				local sub_node = node[i][j];
+				local filename = sub_node[1]
+				self.includedFiles[j] = filename;
+			end
+		end
+	end
+	
+	-- npl blockly should remain default value unless self.blockly_xmlcode has code 
+	self.isUseNplBlockly = isUseNplBlockly;	
+	-- if(isUseNplBlockly or (self.blockly_xmlcode or "") ~= "") then
+		-- self.isUseNplBlockly = isUseNplBlockly;	
+	-- end
+
+	if(not self.isBlocklyEditMode and not self.nplcode) then
+		self.nplcode = self:GetCommand();
+	end
+	if(self.isBlocklyEditMode) then
+		self:SetCommand(self.isUseNplBlockly and self:GetNPLBlocklyNPLCode() or self:GetBlocklyNPLCode());
+	else
+		self:SetCommand(self:GetNPLCode());
+	end
+
+
+end
+
+function Entity:SetNPLCode(nplcode)
+	self.nplcode = nplcode;
+	self:SetCommand(nplcode);
+end
+
+function Entity:GetNPLCode()
+	return self.nplcode or self:GetCommand();
+end
+
+function Entity:IsCodeEmpty()
+	local cmd = self:GetCommand()
+	if(not cmd or cmd == "") then
+		return true;
+	end
+end
+
+function Entity:GetCodeSize()
+	local cmd = self:GetCommand()
+	if(not cmd or cmd == "") then
+		return 0;
+	else
+		return #cmd;
+	end
+end
+
+-- virtual
+function Entity:OnInventoryChanged(inventory, slot_index)
+end
+
+-- Overriden to provide the network packet for this entity.
+function Entity:GetDescriptionPacket()
+	local x,y,z = self:GetBlockPos();
+	return Packets.PacketUpdateEntityBlock:new():Init(x,y,z, self:SaveToXMLNode());
+end
+
+-- update from packet. 
+function Entity:OnUpdateFromPacket(packet_UpdateEntityBlock)
+	if(packet_UpdateEntityBlock:isa(Packets.PacketUpdateEntityBlock)) then
+		local node = packet_UpdateEntityBlock.data1;
+		if(node) then
+			self.blockly_nplcode = nil;
+			self.nplcode = nil;
+			self.npl_blockly_nplcode = nil;
+			self.blockly_nplcode = nil;
+			self:LoadFromXMLNode(node)
+			self:OnInventoryChanged();
+			self:remotelyUpdated();
+		end
+	end
+end
+
+function Entity:GetBlockName()
+	local x,y,z = self:GetBlockPos();
+	return format("%s_block(%d, %d, %d)", self:GetDisplayName() or "", x, y, z);	
+end
+
+-- whether this entity is locked.
+function Entity:IsLocked()
+	return self.bx and not GameLogic.EditableWorld:IsEditableBlock(self.bx, self.by, self.bz)
+end
+
+function Entity:SetLocked(bLocked)
+	if(not bLocked) then
+		GameLogic.EditableWorld:AddEditablePos(self.bx, self.by, self.bz)
+	else
+		GameLogic.EditableWorld:RemoveEditablePos(self.bx, self.by, self.bz)
+	end
+end

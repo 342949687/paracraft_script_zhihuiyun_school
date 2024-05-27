@@ -1,0 +1,41 @@
+<html>
+<body> 
+<pe:mcml>
+<script type='text/npl' src='MainLoginLogin.script.lua'>
+<![CDATA[
+ZhiHuiYunLoginPage = commonlib.gettable("MyCompany.Aries.Game.ZhiHuiYun.Login.ZhiHuiYunLoginPage")
+ZhiHuiYunLoginPage.OnInit()
+
+]]>
+</script>
+
+<style type='text/mcss'>
+</style>
+
+
+<pe:container alignment='_ct' style='width:466px;height: 480px;margin-left: -233px;margin-top: -225px;background: url();'>
+    <!-- 大标题 -->
+    <div style = "height:40px;margin-top:50px">
+        <div align="center" style="width:456px;height: 61px; margin-left: 0px;background: url(Texture/ZhiHuiYun/Login/wangshangkaoshixuexixitong_456x61_32bits.png#0 0 456 61);"></div>
+    </div>
+    
+    <div align="center" style = "width: 466px; height: 336px;margin-top: 60px;background: url(Texture/ZhiHuiYun/Login/ditu_466x336_32bits.png#0 0 466 336)">
+        <div style = "width: 466px; height: 280px;">
+            <iframe name="login_frame" src="<%=ZhiHuiYunLoginPage.GetModIframe()%>"></iframe>
+        </div>
+        
+        <!-- 切换模式的按钮列表 -->
+        <div style="height: 55px;">
+            <pe:repeat DataSource='<%=ZhiHuiYunLoginPage.GetModButtonList()%>'>
+                <pe:repeatitem>
+                    <input type="button" uiname='<%=Eval("node_name")%>' param1='<%=Eval("index")%>' value='<%=Eval("text")%>' onclick="ZhiHuiYunLoginPage.OnClickSelectModButton"
+                        style="float: left;font-weight: bold;font-size: 14px; width: 155px;height: 55px;font-weight: bold;background:;"/>
+                </pe:repeatitem>
+            </pe:repeat>
+        </div>
+    </div>
+    
+</pe:container>
+</pe:mcml>
+</body>
+</html>

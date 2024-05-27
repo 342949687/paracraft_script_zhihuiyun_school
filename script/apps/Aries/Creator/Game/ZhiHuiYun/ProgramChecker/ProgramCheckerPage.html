@@ -1,0 +1,238 @@
+<html>
+<body> 
+<pe:mcml>
+<script type='text/npl' src='MainLoginLogin.script.lua'>
+<![CDATA[
+ProgramCheckerPage = commonlib.gettable("MyCompany.Aries.Game.ZhiHuiYun.ProgramChecker.ProgramCheckerPage")
+ProgramCheckerPage.OnInit()
+
+function temp()
+end
+
+]]>
+</script>
+
+<style type='text/mcss'>
+</style>
+
+
+<pe:container alignment="_fi" onclick="temp" zorder="-1" width="100%" height="100%" style="position: relative;background-color: #fffffffe; background:url(Texture/ZhihuiYun/Login/kao_1280x720_32bits.png#0 0 1280 720);">
+</pe:container>
+<pe:container alignment='_ct' style='width:466px;height: 480px;margin-left: -233px;margin-top: -225px;background: url();'>
+    <!-- 大标题 -->
+    <div style = "height:40px;margin-top:50px">
+        <div align="center" style="width:456px;height: 61px; margin-left: 0px;background: url(Texture/ZhiHuiYun/Login/wangshangkaoshixuexixitong_456x61_32bits.png#0 0 456 61);"></div>
+    </div>
+    
+    <!-- 设置时间 -->
+    <div align="center" style = "width: 466px; height: 336px;margin-top: 60px;background: url(Texture/ZhiHuiYun/Login/ditu_466x336_32bits.png#0 0 466 336)">
+        <!-- 咨询建议 -->
+        <pe:container visible="false" name="advice_container" zorder="1" style="position: relative; width: 466px; height: 336px;margin-top: 0px;background: url(Texture/ZhiHuiYun/Login/ditu_466x336_32bits.png#0 0 466 336)">
+            <div style = "width: 466px; height: 280px;">
+                <iframe src="script/apps/Aries/Creator/Game/ZhiHuiYun/Login/ZhiHuiYunLoginServicePage.html"></iframe>
+            </div>
+            <div align="center" style="width: 155px;height: 55px;margin-top: 5px;background:;">
+                <input type="button" value='返回' onclick="ProgramCheckerPage.HideAdvice"
+                    style="float: left;font-weight: bold;font-size: 14px; width: 155px;height: 55px;font-weight: bold;background:;"/>
+            </div>
+        </pe:container>
+
+        <!-- 压测相关 -->
+        <div style="width:104px;height: 19px;margin-left: 10px;margin-top: 10px;background: url(Texture/ZhiHuiYun/ProgramChecker/logo_104x19_32bits.png#0 0 104 19)"></div>
+<!-- 模式标题 -->
+        <pe:if condition="<%=ProgramCheckerPage.CurMod == ProgramCheckerPage.ModList.TimeSetting%>">
+            <div align="center" style="width:177px;height: 22px;margin-left: 0px;margin-top: 10px;background: url(Texture/ZhiHuiYun/ProgramChecker/jifanghuanjingceshixitong_177x22_32bits.png#0 0 177 22)"></div>
+            <div align="center" style = "width: 436px; height: 4px;margin-left: 0px;margin-top: 5px;background: url(Texture/ZhiHuiYun/Login/tiao_436x4_32bits.png#0 0 436 4)"></div>
+            <div style="font-size: 18px;color: #000000;font-weight: bold;margin-left: 12px;">设置计划启动时间</div>
+            <div align="center" style="width: 292px;height: 42px;font-size: 26px;">
+                <div style="width: 83px;height: 42px;margin-left: 0px;margin-top: 0px;float: left;background-color: #eeeeee;">
+                    <input type="text" name="HourInput" EmptyText='小时' EmptyTextColor='#000000' style="width: 83px;height: 42px;text-align: right;background:;font-size: 24px;"/>
+                </div>
+                <div style="width: 20px;height: 42px;float: left;"><div style="margin-left: 5px;">:</div></div>
+                <div style="width: 83px;height: 42px;margin-left: 0px;margin-top: 0px;float: left;background-color: #eeeeee;">
+                    <input type="text" name="MinInput" EmptyText='分' EmptyTextColor='#000000' style="width: 83px;height: 42px;text-align: right;background:;font-size: 24px;"/>
+                </div>
+                <div style="width: 20px;height: 42px;float: left;"><div style="margin-left: 5px;">:</div></div>
+                <div style="width: 83px;height: 42px;margin-left: 0px;margin-top: 0px;float: left;background-color: #eeeeee;">
+                    <input type="text" name="SecInput" EmptyText='秒' EmptyTextColor='#000000' style="width: 83px;height: 42px;text-align: right;background:;font-size: 24px;"/>
+                </div>
+            </div>
+
+            <div style="font-size: 8px;color:#a80101;margin-left: 5px;">*为机房计算机设置统一的计划启动时间,以便测试整体机房在同一时间段的运行情况</div>
+            <div style="font-size: 18px;color: #000000;font-weight: bold;margin-left: 12px;">请输入测试计划名称</div>
+            <div align="center" style="width: 436px;height: 42px;margin-left: 0px;margin-top: 0px;float: left;background-color: #eeeeee;">
+                <input type="text" name="PlanName" EmptyText='***市***考场**年**月**日**时考场测试' EmptyTextColor='#000000' style="margin-top: 2px; width: 436px;height: 38px;text-align: left;background:;font-size: 22px;"/>
+            </div>
+            <div style="font-size: 8px;color:#a80101;margin-left: 42px;">*同一机房,同一测试计划,请使用一致的名称,以便获得更精准的测试效果</div>
+
+            <!-- 启动 -->
+            <div align="center" style="width: 362px;height: 48px;margin-top: 3px;background:;">
+                <input type="button" name="PlanStartBt" DefaultButton='true' value="启 动" onclick="ProgramCheckerPage.OnStart" 
+                    style="font-family:Source Han Sans Heavy;font-size: 20px; color: #ffffff; width: 362px;height: 48px;background:url(Texture/ZhiHuiYun/ProgramChecker/di_362x48_32bits.png#0 0 362 48);"/>
+            </div>
+            <input type="button" name="error_code" value="" enabled="false" style="text-align: left;height: 10px; color: #a80101;font-size: 10px;margin-left: 55px;margin-top: 3px;background:;"/>
+            <div align="center" style="width: 155px;height: 20px;margin-top: 0px;background:;">
+                <input type="button" value='咨询建议' onclick="ProgramCheckerPage.ShowAdvice"
+                    style="float: left;font-weight: bold;font-size: 14px; width: 155px;height: 20px;font-weight: bold;background:;"/>
+            </div>
+        </pe:if>
+
+        <!-- 步骤一 -->
+        <pe:if condition="<%=ProgramCheckerPage.CurMod == ProgramCheckerPage.ModList.CheckerStep1%>">
+            <div align="center" style="width:277px;height: 22px;margin-left: 0px;margin-top: 10px;background: url(Texture/ZhiHuiYun/ProgramChecker/buzhou1_227x22_32bits.png#0 0 277 22)"></div>
+            <div align="center" style = "width: 436px; height: 4px;margin-left: 0px;margin-top: 5px;background: url(Texture/ZhiHuiYun/Login/tiao_436x4_32bits.png#0 0 436 4)"></div>
+
+            <div style="height: 173px;">
+                <div style="height: 30px;margin-top: 5px;">
+                    <div style="font-size: 18px;float: left;margin-left: 25px;">当前用时</div>
+                    <input type="button" name="cur_use_time" value="00:00" enabled="false" style="text-align: right;width: 120px;height: 30px; color: #000000;font-size: 18px;margin-left: 0px;margin-top: 0px;background:;"/>
+                </div>
+    
+                <div style="height: 30px;margin-top: 5px;">
+                    <div style="font-size: 18px;float: left;margin-left: 25px;">平均速度</div>
+                    <input type="button" name="avg_dow_speed" value="0Kb/s" enabled="false" style="text-align: right;width: 120px;height: 30px; color: #000000;font-size: 18px;margin-left: 0px;margin-top: 0px;background:;"/>
+                </div>
+    
+                <div style="height: 30px;margin-top: 5px;">
+                    <div style="font-size: 18px;float: left;margin-left: 25px;">最低速度</div>
+                    <input type="button" name="min_dow_speed" value="0Kb/s" enabled="false" style="text-align: right;width: 120px;height: 30px; color: #000000;font-size: 18px;margin-left: 0px;margin-top: 0px;background:;"/>
+                </div>
+    
+                <div style="height: 30px;margin-top: 5px;">
+                    <div style="font-size: 18px;float: left;margin-left: 25px;">最高速度</div>
+                    <input type="button" name="max_dow_speed" value="0Kb/s" enabled="false" style="text-align: right;width: 120px;height: 30px; color: #000000;font-size: 18px;margin-left: 0px;margin-top: 0px;background:;"/>
+                </div>    
+
+                <div align="center" style="margin-top: 10px; width: 417px;height: 12px;background: url(Texture/ZhiHuiYun/ProgramChecker/jindutiaodi_417x12_32bits.png#0 0 417 12);">
+                    <input type="button" name="pro_loading_world" value="" enabled="false" style="width: 417px;height: 12px;background: url(Texture/ZhiHuiYun/ProgramChecker/jindutiao_417x12_32bits.png#0 0 417 12);"/>
+                </div>
+            </div>
+
+            <div align="center" style="width: 362px;height: 48px;margin-top: 3px;background:;">
+                <input type="button"  name="ResetBt" visible="false" onclick="ProgramCheckerPage.OnReset" style="width: 362px;height: 48px;background:url(Texture/ZhiHuiYun/ProgramChecker/zhongzhiceshi_362x48_32bits.png#0 0 362 48);"/>
+            </div>
+        </pe:if>
+
+        <pe:if condition="<%=ProgramCheckerPage.CurMod == ProgramCheckerPage.ModList.CheckerStep2 or ProgramCheckerPage.CurMod == ProgramCheckerPage.ModList.CheckerStep3%>">
+            <pe:if condition="<%=ProgramCheckerPage.CurMod == ProgramCheckerPage.ModList.CheckerStep2%>">
+                <div align="center" style="width:277px;height: 22px;margin-left: 0px;margin-top: 10px;background: url(Texture/ZhiHuiYun/ProgramChecker/buzhou2_204x22_32bits.png#0 0 277 22)"></div>
+            </pe:if>
+            <pe:if condition="<%=ProgramCheckerPage.CurMod == ProgramCheckerPage.ModList.CheckerStep3%>">
+                <div align="center" style="width:160px;height: 22px;margin-left: 0px;margin-top: 10px;background: url(Texture/ZhiHuiYun/ProgramChecker/buzhou3_160x22_32bits.png#0 0 160 22)"></div>
+            </pe:if> 
+            <div align="center" style = "width: 436px; height: 4px;margin-left: 0px;margin-top: 5px;background: url(Texture/ZhiHuiYun/Login/tiao_436x4_32bits.png#0 0 436 4)"></div>
+            <div style="height: 173px;">
+                <div style="height: 30px;margin-top: 5px;">
+                    <div style="font-size: 18px;float: left;margin-left: 25px;">当前用时</div>
+                    <input type="button" name="cur_use_time2" value="00:00" enabled="false" style="text-align: right;width: 120px;height: 30px; color: #000000;font-size: 18px;margin-left: 0px;margin-top: 0px;background:;"/>
+                </div>
+    
+                <div style="height: 30px;margin-top: 5px;">
+                    <div style="font-size: 18px;float: left;margin-left: 25px;">平均FPS</div>
+                    <input type="button" name="avg_fps_speed" value="0Kb/s" enabled="false" style="text-align: right;width: 120px;height: 30px; color: #000000;font-size: 18px;margin-left: 0px;margin-top: 0px;background:;"/>
+                </div>
+    
+                <div style="height: 30px;margin-top: 5px;">
+                    <div style="font-size: 18px;float: left;margin-left: 25px;">最低FPS</div>
+                    <input type="button" name="min_fps_speed" value="0Kb/s" enabled="false" style="text-align: right;width: 120px;height: 30px; color: #000000;font-size: 18px;margin-left: 0px;margin-top: 0px;background:;"/>
+                </div>
+    
+                <div style="height: 30px;margin-top: 5px;">
+                    <div style="font-size: 18px;float: left;margin-left: 25px;">最高FPS</div>
+                    <input type="button" name="max_fps_speed" value="0Kb/s" enabled="false" style="text-align: right;width: 120px;height: 30px; color: #000000;font-size: 18px;margin-left: 0px;margin-top: 0px;background:;"/>
+                </div>    
+
+                <div align="center" style="margin-top: 10px; width: 417px;height: 12px;background: url(Texture/ZhiHuiYun/ProgramChecker/jindutiaodi_417x12_32bits.png#0 0 417 12);">
+                    <input type="button" name="pro_step2" value="" enabled="false" style="width: 417px;height: 12px;background: url(Texture/ZhiHuiYun/ProgramChecker/jindutiao_417x12_32bits.png#0 0 417 12);"/>
+                </div>
+            </div>
+
+            <div align="center" style="width: 362px;height: 48px;margin-top: 3px;background:;">
+                <input type="button"  name="ResetBt2" visible="false" onclick="ProgramCheckerPage.OnReset" style="width: 362px;height: 48px;background:url(Texture/ZhiHuiYun/ProgramChecker/zhongzhiceshi_362x48_32bits.png#0 0 362 48);"/>
+            </div>
+        </pe:if>
+
+        <pe:if condition="<%=ProgramCheckerPage.CurMod == ProgramCheckerPage.ModList.CheckerStep4%>">
+            <div align="center" style="width:160px;height: 22px;margin-left: 0px;margin-top: 10px;background: url(Texture/ZhiHuiYun/ProgramChecker/buzhou4_160x22_32bits.png#0 0 160 22)"></div>
+            <div align="center" style = "width: 436px; height: 4px;margin-left: 0px;margin-top: 5px;background: url(Texture/ZhiHuiYun/Login/tiao_436x4_32bits.png#0 0 436 4)"></div>
+            <div style="height: 173px;">
+                <div style="height: 30px;margin-top: 5px;">
+                    <div style="font-size: 18px;float: left;margin-left: 25px;width: 75px;">当前用时</div>
+                    <input type="button" name="cur_use_time3" value="00:00" enabled="false" style="text-align: right;width: 120px;height: 30px; color: #000000;font-size: 18px;margin-left: 0px;margin-top: 0px;background:;"/>
+                </div>
+    
+                <div style="height: 30px;margin-top: 5px;">
+                    <div style="font-size: 18px;float: left;margin-left: 25px;width: 75px;">自动保存</div>
+                    <input type="button" name="auto_save" value="进行中..." enabled="false" style="text-align: right;width: 120px;height: 30px; color: #000000;font-size: 18px;margin-left: 0px;margin-top: 0px;background:;"/>
+                </div>
+    
+                <div style="height: 30px;margin-top: 5px;">
+                    <div style="font-size: 18px;float: left;margin-left: 25px;width: 75px;">手动保存</div>
+                    <input type="button" name="manul_save" value="进行中..." enabled="false" style="text-align: right;width: 120px;height: 30px; color: #000000;font-size: 18px;margin-left: 0px;margin-top: 0px;background:;"/>
+                </div>
+    
+                <div style="height: 30px;margin-top: 5px;">
+                    <div style="font-size: 18px;float: left;margin-left: 25px;width: 75px;">交卷</div>
+                    <input type="button" name="commit" value="" enabled="false" style="text-align: right;width: 120px;height: 30px; color: #000000;font-size: 18px;margin-left: 0px;margin-top: 0px;background:;"/>
+                </div>    
+
+                <div align="center" style="margin-top: 10px; width: 417px;height: 12px;background: url(Texture/ZhiHuiYun/ProgramChecker/jindutiaodi_417x12_32bits.png#0 0 417 12);">
+                    <input type="button" name="pro_commit" value="" enabled="false" style="width: 417px;height: 12px;background: url(Texture/ZhiHuiYun/ProgramChecker/jindutiao_417x12_32bits.png#0 0 417 12);"/>
+                </div>
+            </div>
+
+            <div align="center" style="width: 362px;height: 48px;margin-top: 3px;background:;">
+                <input type="button"  name="next_step_bt" value="下一步" visible="false" onclick="ProgramCheckerPage.Next" style="width: 362px;height: 48px;"/>
+            </div>
+        </pe:if>
+
+        <pe:if condition="<%=ProgramCheckerPage.CurMod == ProgramCheckerPage.ModList.CheckerResult%>">
+            <div align="center" style="width:89px;height: 22px;margin-left: 0px;margin-top: 10px;background: url(Texture/ZhiHuiYun/ProgramChecker/ceshijieguo_89x21_32bits.png#0 0 89 22)"></div>
+            <div align="center" style = "width: 436px; height: 4px;margin-left: 0px;margin-top: 5px;background: url(Texture/ZhiHuiYun/Login/tiao_436x4_32bits.png#0 0 436 4)"></div>
+            <div style="height: 173px;">
+                <div style="height: 28px;margin-top: 0px;">
+                    <div style="font-size: 18px;float: left;margin-left: 25px;width: 200px;">下载测试包用时</div>
+                    <input type="button" name="step_1_time" value="" enabled="false" style="text-align: right;width: 120px;height: 30px; color: #000000;font-size: 18px;margin-left: 0px;margin-top: 0px;background:;"/>
+                </div>
+    
+                <div style="height: 28px;margin-top: 0px;">
+                    <div style="font-size: 18px;float: left;margin-left: 25px;width: 200px;">运行性能测试用时</div>
+                    <input type="button" name="step_2_time" value="" enabled="false" style="text-align: right;width: 120px;height: 30px; color: #000000;font-size: 18px;margin-left: 0px;margin-top: 0px;background:;"/>
+                </div>
+    
+                <div style="height: 28px;margin-top: 0px;">
+                    <div style="font-size: 18px;float: left;margin-left: 25px;width: 200px;">写入测试用时</div>
+                    <input type="button" name="step_3_time" value="" enabled="false" style="text-align: right;width: 120px;height: 30px; color: #000000;font-size: 18px;margin-left: 0px;margin-top: 0px;background:;"/>
+                </div>
+    
+                <div style="height: 28px;margin-top: 0px;">
+                    <div style="font-size: 18px;float: left;margin-left: 25px;width: 200px;">提交测试用时</div>
+                    <input type="button" name="step_4_time" value="" enabled="false" style="text-align: right;width: 120px;height: 30px; color: #000000;font-size: 18px;margin-left: 0px;margin-top: 0px;background:;"/>
+                </div>      
+
+                <div style="height: 28px;margin-top: 0px;">
+                    <div style="font-size: 18px;float: left;margin-left: 25px;width: 200px;">平均下行速度</div>
+                    <input type="button" name="avg_dow_speed_all" value="" enabled="false" style="text-align: right;width: 120px;height: 30px; color: #000000;font-size: 18px;margin-left: 0px;margin-top: 0px;background:;"/>
+                </div>    
+
+                <div style="height: 28px;margin-top: 0px;">
+                    <div style="font-size: 18px;float: left;margin-left: 25px;width: 200px;">平均FPS</div>
+                    <input type="button" name="avg_fps_all" value="" enabled="false" style="text-align: right;width: 120px;height: 30px; color: #000000;font-size: 18px;margin-left: 0px;margin-top: 0px;background:;"/>
+                </div>
+
+                <div style="height: 28px;margin-top: 0px;">
+                    <div style="font-size: 18px;float: left;margin-left: 25px;width: 200px;">存档是否完整</div>
+                    <input type="button" name="all_result" value="" enabled="false" style="text-align: right;width: 120px;height: 30px; color: #000000;font-size: 18px;margin-left: 0px;margin-top: 0px;background:;"/>
+                </div>
+                
+                <div align="center" style="width: 362px;height: 48px;margin-top: 10px;background:;">
+                    <input type="button"  name="OnEndBt" enabled="false" onclick="ProgramCheckerPage.OnEnd" style="width: 362px;height: 48px;background:url(Texture/ZhiHuiYun/ProgramChecker/guanbi_362x48_32bits.png#0 0 362 48);"/>
+                </div>
+            </div>
+        </pe:if>
+    </div>
+    
+</pe:container>
+</pe:mcml>
+</body>
+</html>

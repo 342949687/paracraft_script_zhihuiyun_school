@@ -1,0 +1,85 @@
+﻿<body>
+    <pe:mcml>
+        <script type='text/npl' refresh='false'>
+            <![CDATA[
+                local MsgBox = NPL.load('../MsgBox.lua')
+
+                local page = document:GetPageCtrl()
+                local msgId = page:GetRequestParam('msgId')
+                width = tonumber(page:GetRequestParam('width'))
+                height = tonumber(page:GetRequestParam('height'))
+                is_wait = page:GetRequestParam('is_wait') == 'true' and true or false
+
+                UIAnimManager.LoadUIAnimationFile('script/UIAnimation/CommonProgress.lua.table')
+
+                if width == 0 then
+                    width = 300
+                end
+
+                if height == 0 then
+                    height = 150
+                end
+
+                MsgBox.SetPage(msgId)
+
+                function get_window_style()
+                    return 'width: ' .. width .. 'px;' ..
+                           'height: ' .. height .. 'px;' ..
+                           'margin-left: ' .. -(width / 2) .. 'px;' ..
+                           'margin-top: ' .. -(height / 2) .. 'px;' ..
+                           'background: url();'
+                end
+
+                function get_msg()
+                    return MsgBox.GetMsg(tonumber(msgId))
+                end
+            ]]>
+        </script>
+        <div width='100%'
+             height='100%'>
+            <pe:container
+                alignment='_ct'
+                style='<%= get_window_style() %>'>
+                <kp:window
+                    mode='lite'
+                    width='100%'
+                    height='100%'
+                    icon='Texture/Aries/Creator/keepwork/Window/title/biaoti_tishi_32bits.png'
+                    title='<%=L"提示" %>'>
+                    <div style='height: 38px;'></div>
+                    <pe:if condition='<%= is_wait %>'>
+                        <div style='min-width: 60px;
+                                    height: 60px;
+                                    margin-left: 10px;
+                                    margin-top: 10px;
+                                    position: relative;
+                                    background:url(Texture/Aries/Creator/keepwork/worldshare_32bits.png#500 15 104 109);
+                                    background-animation:url(script/UIAnimation/CommonProgress.lua.table#WaitingSpin)'></div>
+                        <div style='<%= "padding: 20px;\
+                                         font-size: 18px;\
+                                         base-font-size: 18px;\
+                                         margin-top: 10px;\
+                                         margin-left: 60px;\
+                                         height: " .. height .. "px;" %>'>
+                            <div style='margin-right:10px;'>
+                                <%= get_msg() %>
+                            </div>
+                        </div>
+                    </pe:if>
+                    <pe:if condition='<%= not is_wait %>'>
+                        <div style='<%= "padding: 20px;\
+                                        font-size: 18px;\
+                                        base-font-size: 18px;\
+                                        margin-top: 10px;\
+                                        height: " .. height .. "px;" %>'>
+                            <div style='margin-right:10px;'>
+                                <%= get_msg() %>
+                            </div>
+                        </div>
+                    </pe:if>
+                </kp:window>
+            </pe:container>
+        </div>
+    </pe:mcml>
+</body>
+</html>

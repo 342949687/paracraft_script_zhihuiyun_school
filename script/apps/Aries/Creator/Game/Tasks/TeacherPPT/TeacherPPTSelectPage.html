@@ -1,0 +1,71 @@
+﻿<!-- "script/apps/Aries/Creator/Game/Movie/SoundRecorder.html" -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title></title>
+</head>
+<body>
+<pe:mcml>
+<script refresh="false" type="text/npl" src="SoundRecorder.lua"><![CDATA[
+TeacherPPTSelectPage = commonlib.gettable("MyCompany.Aries.Game.TeacherPPT.TeacherPPTSelectPage");
+TeacherPPTSelectPage.OnInit();
+
+function GetCourseList()
+    return TeacherPPTSelectPage.GetCourseList()
+end
+
+function GetLessonList()
+    return TeacherPPTSelectPage.GetLessonList()
+end
+
+function GetClassList()
+    return TeacherPPTSelectPage.GetClassList()
+end
+
+function OnSelectCourse(name, value)
+    TeacherPPTSelectPage.OnSelectCourse(name, value)
+end
+
+function OnSelectLesson(name, value)
+    TeacherPPTSelectPage.OnSelectLesson(name, value)
+end
+
+function OnSelectClass(name, value)
+    TeacherPPTSelectPage.OnSelectClass(name, value)
+end
+]]></script>
+<aries:window mode="thin" style="width:370px;" title='<%=L"教案引用"%>' onclose="TeacherPPTSelectPage.OnClose">
+<div style="padding:5px;margin-right:10px;">
+    <div style="margin-top: 20px;margin-left: 5px;">
+        <input style="margin-left: 0px;margin-top: 4px;" type='radio' name='course_radio' value='course' onclick='set_saveas'/> 
+        <div style="font-size: 16px;margin-left: 3px;margin-top: 0px;float: left;color: #ffffff;">课本</div>
+        <div style="float: left;margin-left: 15px;">
+            <select name="course_select" style="width:270px;height: 22px;" DataSource="<%=GetCourseList() %>" onselect="OnSelectCourse"></select>
+        </div>
+    </div>
+    <div style="margin-top: 10px;margin-left: 5px;">
+        <input style="margin-left: 0px;margin-top: 4px;" type='radio' name='course_radio' value='lesson' onclick='set_saveas'/> 
+        <div style="font-size: 16px;margin-left: 3px;margin-top: 0px;float: left;color: #ffffff;">课程</div>
+        <div style="float: left;margin-left: 15px;">
+            <select name="lesson_select" style="width:270px;height: 22px;" DataSource="<%=GetLessonList() %>" onselect="OnSelectLesson"></select>
+        </div>
+    </div>
+
+    <div style="margin-top: 10px;margin-left: 5px;">
+        <input style="margin-left: 0px;margin-top: 4px;" type='radio' name='course_radio' value='class' onclick='set_saveas'/> 
+        <div style="font-size: 16px;margin-left: 3px;margin-top: 0px;float: left;color: #ffffff;">页面</div>
+        <div style="float: left;margin-left: 15px;">
+            <select name="class_select" style="width:270px;height: 22px;" DataSource="<%=GetClassList() %>" onselect="OnSelectClass"></select>
+        </div>
+    </div>
+
+    <div style="margin:10px;margin-left:47px;margin-bottom:20px;margin-top: 50px;">
+        <input style="color: #ffffff;width: 80px;" type='button' value="取消" name='cancel_bt' onclick='TeacherPPTSelectPage.OnClose' />
+        <input style="color: #ffffff;width: 80px;margin-left: 100px;" type='button' value="导入" name='import_bt' onclick='TeacherPPTSelectPage.OnImport' />
+     </div>
+</div>
+</aries:window>
+</pe:mcml>
+</body>
+</html>

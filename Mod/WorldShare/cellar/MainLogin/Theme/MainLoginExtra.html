@@ -1,0 +1,271 @@
+<html>
+    <body> 
+        <pe:mcml>
+            <script type="text/npl">
+                <![CDATA[
+                    -- bottles
+                    local MainLogin = NPL.load('(gl)Mod/WorldShare/cellar/MainLogin/MainLogin.lua')
+                    NPL.load("(gl)script/apps/Aries/Creator/Game/Login/MainLogin.lua")
+                    local GameMainLogin = commonlib.gettable('MyCompany.Aries.Game.MainLogin')
+                    -- libs
+                    local Desktop = commonlib.gettable("MyCompany.Aries.Creator.Game.Desktop")
+                    local is_setting_menu_show = false
+                    local page = document:GetPageCtrl()
+
+                    page.OnCreate = function()
+                        local menu_bg_node = page:FindControl("menu_bg")
+                        local setting_menu_container = page:FindControl("setting_menu")
+                        setting_menu_container.height = menu_bg_node.height
+
+                        local setting_bt = page:FindControl("setting_button")
+
+                        if setting_bt then
+                            setting_menu_container.y = setting_bt.y - setting_menu_container.height + 15
+                            setting_menu_container.x = setting_bt.x
+                        end
+                    end
+
+                    function GetModCountAsString()
+                        NPL.load('(gl)script/apps/Aries/Creator/Game/Mod/ModManager.lua')
+                        local ModManager = commonlib.gettable('Mod.ModManager')
+                        local pluginloader = ModManager:GetLoader()
+                        local nCount = pluginloader:GetActiveModCount()
+
+                        if nCount > 0 then
+                            return format('(%d)', nCount)
+                        else
+                            return ''
+                        end
+                    end
+
+                    function OnOpenModulePage()
+                        ShowSettingMenu()
+                        NPL.load('(gl)script/apps/Aries/Creator/Game/Login/SelectModulePage.lua');
+                        local SelectModulePage = commonlib.gettable('MyCompany.Aries.Game.MainLogin.SelectModulePage')
+                        SelectModulePage.ShowPage()
+                    end
+
+                    function OnChangeLanguagePage()
+                        NPL.load('(gl)script/apps/Aries/Creator/Game/Common/Translation.lua')
+
+                        local Translation = commonlib.gettable('MyCompany.Aries.Game.Common.Translation')
+                        Translation.ShowPage(function()
+                            Mod.WorldShare.Store:Set('user/isSettingLanguage', true)
+                        end)
+                    end
+
+                    function OnClickCustomerService()
+                        if System.os.GetPlatform() == 'android' then
+                            GameLogic.RunCommand('/open -e https://work.weixin.qq.com/kfid/kfcf794bf130083e719')
+                        else
+                            ParaGlobal.ShellExecute('open', 'https://work.weixin.qq.com/kfid/kfcf794bf130083e719', '', '', 1)
+                        end
+                    end
+
+                    function on_click_exit()
+                        Desktop.ForceExit()
+                    end
+
+                    function ShowSettingMenu()
+                        is_setting_menu_show = not is_setting_menu_show
+
+                        local setting_menu = page:FindControl('setting_menu')
+                        setting_menu.visible = is_setting_menu_show
+                    end
+
+                    function OnOpenLocalServer()
+                        ShowSettingMenu()
+                        GameLogic.RunCommand("/lan -server_setting=true")
+                    end
+
+                    function OnSwitchTo430Channel()
+                        ShowSettingMenu()
+                        NPL.load("(gl)script/apps/Aries/Creator/Game/Login/SwitchTo430ChannelPage.lua");
+                        local SwitchTo430ChannelPage = commonlib.gettable("MyCompany.Aries.Game.MainLogin.SwitchTo430ChannelPage")
+                        SwitchTo430ChannelPage.ShowPage(function()
+                            page:Refresh(0)
+                        end)
+                    end
+
+                    function IsShowUpdate()
+                        local platform = System.os.GetPlatform();                        
+                        return GameMainLogin.m_bNeedUpdate == true and platform == "win32"
+                    end
+
+                    function OnClickUpdateBtn()
+                        local bNeedUpdate = GameMainLogin.m_bNeedUpdate;
+                        local latestVersion = GameMainLogin.m_latestVersion;
+                        local curVersion = GameMainLogin.m_curVersion;
+                        local bAllowSkip = GameMainLogin.m_bAllowSkip;
+                        local _updater =  GameMainLogin._updater 
+                        local UpdatePage = NPL.load("(gl)script/apps/Aries/Creator/Game/Login/ClientUpdate/UpdatePage.lua");
+        				UpdatePage.ShowPage(latestVersion,
+						curVersion,
+						"paracraft",
+						function()
+							_updater:Download(true);
+						end,
+						bAllowSkip,true)
+                    end
+                ]]>
+            </script>
+            <style type="text/mcss" src='Mod/WorldShare/cellar/Theme/Mcss/MainLoginMcss.mcss'>
+                {
+                   
+                }
+            </style>
+            <div>
+                <pe:container name="setting_menu" visible="false" style="position: relative; width: 120px;height: 120px;background:;">
+                    <div name="menu_bg" style="padding: 5px;padding-bottom: 20px; width: 120px;min-height: 44px;background: url(Texture/Aries/Creator/paracraft/login/menu_bg_36X36_32bits.png#0 0 36 36:9 9 9 9);">
+                        <pe:if condition='<%= System.options.channelId ~= "430" and System.os.GetPlatform() == "win32"%>'>
+                            <input type="button"
+                                   value='<%=L"校园版"%>'
+                                   icon="Texture/Aries/Creator/paracraft/login/xiaoyuanban_15x15_32bits.png#0 0 15 15"
+                                   icon_width=15
+                                   icon_height=15
+                                   icon_off_y=0
+                                   icon_off_x=-49
+                                   style="width: 110px;
+                                          height: 32px;
+                                          margin-left: 5px; 
+                                          color: #ffffff;
+                                          text-align: left;
+                                          text-offset-x: 20;
+                                          text-offset-y: 1;
+                                          font-size: 13px;
+                                          background: url()"
+                                   onclick="OnSwitchTo430Channel" /> 
+                        </pe:if>
+                        <pe:if condition='<%= System.options.isDevEnv == false %>'>
+                            <pe:if  condition='<%= System.os.GetPlatform() ~= "ios" and System.os.GetPlatform() ~= "android" %>'>
+                                <input type="button"
+                                    value='<%= L"插件" %>'
+                                    icon="Texture/Aries/Creator/paracraft/login/plug_16x16_32bits.png#0 0 16 16"
+                                    icon_width=16
+                                    icon_height=16
+                                    icon_off_y=0
+                                    icon_off_x=-48
+                                    style='width: 110px;
+                                           height: 32px;
+                                           margin-left: 5px; 
+                                           color: #ffffff;
+                                           text-offset-x: -20;
+                                           text-offset-y: 1;
+                                           font-size: 13px;
+                                           background: url()'
+                                    onclick='OnOpenModulePage' />
+                                <div style='width: 110px; 
+                                            height: 1px;
+                                            background-color: #9b9b9b;
+                                            margin-top: 4px;
+                                            margin-bottom: 4px;'></div> 
+                            </pe:if>        
+                        </pe:if>
+                        <input type="button"
+                                value='<%=L"教师服务器"%>'
+                                icon="Texture/Aries/Creator/paracraft/login/server_16x16_32bits.png#0 0 16 16"
+                                icon_width=16
+                                icon_height=16
+                                icon_off_y=0
+                                icon_off_x=-48
+                                style="width: 110px;
+                                        height: 32px;
+                                        margin-left: 5px; 
+                                        color: #ffffff;
+                                        text-offset-x: 3;
+                                        text-offset-y: 1;
+                                        font-size: 13px;
+                                        background: url()"
+                                onclick="OnOpenLocalServer" /> 
+                    </div>
+                </pe:container>
+                <pe:if condition="<%=Mod.WorldShare.Utils.IsEnglish()%>">
+                    <div style="float: left; 
+                            margin-top: 100px;
+                            margin-left: -50px;
+                            width: 10px; 
+                            height: 44px; ">
+                    </div>
+                </pe:if>
+                <pe:if condition="<%=IsShowUpdate()%>">
+                    <div style="float: left; 
+                            margin-top: 100px;
+                            margin-left: 140px;
+                            width: 75px; 
+                            height: 44px; ">
+                        <pe:if condition="<%=not Mod.WorldShare.Utils.IsEnglish()%>">
+                            <input type='button'
+                            value="<%=L'更新'%>"
+                            icon="Texture/Aries/Creator/paracraft/arrow_16x16_32bits.png#0 0 16 16"
+                            icon_width="16"
+                            icon_height="16"
+                            icon_off_y="-2"
+                            icon_off_x="-18"
+                            style='position: relative;
+                                font-size: 16px;
+                                base-font-size: 16px;
+                                font-weight: bold;
+                                text-offset-x:12;
+                                text-offset-y:-2;
+                                width: 80px;
+                                height: 44px;
+                                background: url(Texture/Aries/Creator/paracraft/update_75x36_32bits.png#0 0 80 44)'
+                            onclick='OnClickUpdateBtn' />
+                            <kp:redtip style="position:relative;margin-left:68px;margin-top:-1px;" value="true" ></kp:redtip>
+                        </pe:if>
+                        <pe:if condition="<%=Mod.WorldShare.Utils.IsEnglish()%>">
+                            <input type='button'
+                            value="<%=L'更新'%>"
+                            icon="Texture/Aries/Creator/paracraft/arrow_16x16_32bits.png#0 0 16 16"
+                            icon_width="16"
+                            icon_height="16"
+                            icon_off_y="-2"
+                            icon_off_x="-26"
+                            style='position: relative;
+                                font-size: 16px;
+                                base-font-size: 16px;
+                                text-offset-x:12;
+                                text-offset-y:-2;
+                                width: 90px;
+                                height: 44px;
+                                background: url(Texture/Aries/Creator/paracraft/update_75x36_32bits.png#0 0 80 44)'
+                            onclick='OnClickUpdateBtn' />
+                            <kp:redtip style="position:relative;margin-left:84px;margin-top:-1px;" value="true" ></kp:redtip>
+                        </pe:if>
+                        
+                    </div>
+                    
+                </pe:if>
+                <pe:if condition="<%=not IsShowUpdate()%>">
+                    <div style="float: left; 
+                            margin-top: 100px;
+                            margin-left: 140px;
+                            width: 75px; 
+                            height: 44px; ">
+                    </div> 
+                </pe:if>
+                <pe:if condition="<%= not Mod.WorldShare.Utils.IsEnglish()%>">
+                    <input type='button'
+                        style='float: left;
+                                margin-top: 100px;
+                                margin-left: 20px;
+                                width: 81px;
+                                height: 44px;
+                                background: url(Texture/Aries/Creator/paracraft/paracraft_login_32bits.png#281 575 81 44)'
+                        onclick='OnChangeLanguagePage' />
+                </pe:if>
+                <pe:if condition="<%= Mod.WorldShare.Utils.IsEnglish() %>">
+                    <input type='button'
+                        style='float: left;
+                                margin-top: 100px;
+                                margin-left: 20px;
+                                width: 131px;
+                                height: 44px;
+                                background: url(Texture/Aries/Creator/paracraft/paracraft_login_32bits.png#281 831 131 44)'
+                        onclick='OnChangeLanguagePage' />
+                </pe:if>
+                
+            </div>
+        </pe:mcml>
+    </body>
+</html>

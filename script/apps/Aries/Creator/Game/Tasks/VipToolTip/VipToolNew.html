@@ -1,0 +1,87 @@
+<!-- "script/apps/Aries/Creator/Game/Tasks/VipToolNew/VipToolNew.html" -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title></title>
+</head>
+<body>
+<pe:mcml>
+<script refresh="true" type="text/npl" src="VipToolNew.lua"><![CDATA[
+local VipToolNew = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/VipToolTip/VipToolNew.lua")
+VipToolNew.OnInit()
+function ClosePage()
+    Page:CloseWindow(0)
+end
+
+function GetDesc1()
+    return VipToolNew.GetDesc1()
+end
+
+function GetDesc2()
+    return VipToolNew.GetDesc2()
+end
+
+
+function ShowVipCodePage()
+    Page:CloseWindow()
+    local VipCodeExchange = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/VipToolTip/VipCodeExchange.lua") 
+    VipCodeExchange.ShowView()
+end
+
+function OnClickBuy()
+    VipToolNew.OnClickbuy()
+end
+
+function GetIsMobileMode()
+    return System.os.IsTouchMode()
+end
+
+function GetBgStyle()
+    if GetIsMobileMode() then
+        return "width:739px;height:482px;margin-left: 4px;margin-top: 42px; background: url(Texture/Aries/Creator/keepwork/vip/xinjiamobile_739X482_32bits.png#0 0 739 482);"
+    else
+        return "width:739px;height:482px;margin-left: 4px;margin-top: 40px; background: url(Texture/Aries/Creator/keepwork/vip/xinjia_739X482_32bits.png#0 0 739 482);"
+    end
+end
+
+function OnClickHelp()
+    GameLogic.AddBBS(nil,"敬请期待")
+end
+
+function GetVipDesc()
+    return VipToolNew.GetVipDesc()
+end
+
+]]></script>
+
+<kp:window class="default" mode="lite" width="746" height="570"  icon="Texture/Aries/Creator/keepwork/Window/title/biaoti_vip_32bits.png" onclose="ClosePage">
+    <div style="height: 40px;color: #000000;">
+        <div style="margin-left: 50px;margin-top: 50px;font-weight: bold;font-size: 16px;"><%=GetVipDesc()%></div>
+        
+    </div>
+    <div type ="box" style="<%=GetBgStyle()%>">
+        <pe:if condition="<%=GetIsMobileMode()%>">
+            <div style="position: relative; width: 184px;height: 30px;margin-top: 75px; margin-left: 530px">
+                <div style="margin-top: -66px;">方法一：微信扫码购买或续费</div>
+                <input type="button" value="点击加入会员" onclick="OnClickBuy" style="color: #111616;font-size: 16px; base-font-size: 16px; margin-top: 130px;  width: 200px; height: 40px; background: url(Texture/Aries/Creator/keepwork/macro/btn_1_32X32_32bits.png#0 0 32 32:14 14 14 14);" />
+                <div style="margin-top: 8px;">
+                    <div style="color: #ffffff;">方法二：</div>
+                    <input type="button" onclick="ShowVipCodePage" style=" margin-left: 50px; margin-top: -24px;  width: 96px; height: 29px; background: url(Texture/Aries/Creator/keepwork/vip/btn_96x29_32bits.png#0 0 96 29);" />
+                </div>
+                <input type="button" value="如何获得激活码？" onclick="OnClickHelp" style="color: #ffffff;font-size: 14px; base-font-size: 14px;margin-left: 20px;  margin-top: 2px;  width: 96px; height: 29px; background: url();" />
+            </div>
+        </pe:if>  
+        
+        <pe:if condition="<%=not GetIsMobileMode()%>">
+            <input type="button" onclick="ShowVipCodePage" style=" margin-left: 574px; margin-top: 273px;  width: 96px; height: 29px; background: url(Texture/Aries/Creator/keepwork/vip/btn_96x29_32bits.png#0 0 96 29);" />
+        </pe:if>  
+
+    </div>
+</kp:window>
+
+    
+</pe:mcml>
+</body>
+</html>
+

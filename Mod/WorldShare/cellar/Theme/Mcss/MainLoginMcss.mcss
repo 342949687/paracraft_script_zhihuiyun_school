@@ -1,0 +1,104 @@
+--[[
+Title: Main Login Mcss
+Author(s): big
+CreateDate: 2021.02.25
+ModifyDate: 2021.09.23
+Desc: 
+use the lib:
+------------------------------------------------------------
+<style type='type/mcss' src='Mod/WorldShare/cellar/Theme/Mcss/MainLoginMcss.mcss'></style>
+------------------------------------------------------------
+]]
+
+{
+    main_login_mobile_gray_button = {
+        background = 'Texture/Aries/Creator/paracraft/paracraft_mobile_login_32bits.png#32 693 288 88:105 0 105 0'
+    },
+    main_login_mobile_baby_blue_button = {
+        background = 'Texture/Aries/Creator/paracraft/paracraft_mobile_login_32bits.png#523 580 290 90:105 0 105 0'
+    },
+    main_login_mobile_green_button = {
+        background = 'Texture/Aries/Creator/paracraft/paracraft_mobile_login_32bits.png#33 467 633 90:150 0 150 0'
+    },
+    main_login_mobile_blue_button = {
+        background = 'Texture/Aries/Creator/paracraft/paracraft_mobile_login_32bits.png#212 580 290 90:105 0 105 0'
+    },
+    main_login_mobile_textfield = {
+        background = 'Texture/Aries/Creator/paracraft/paracraft_mobile_login_32bits.png#959 12 50 52:12 12 12 12'
+    },
+    main_login_mobile_container_bg = {
+        background = 'Texture/Aries/Creator/paracraft/paracraft_mobile_login_32bits.png#23 4 122 120:40 40 40 40',
+    },
+    main_login_mobile_container_title_bg = {
+        background = 'Texture/Aries/Creator/paracraft/paracraft_mobile_login_32bits.png#27 894 174 67:32 0 111 0',
+    },
+    main_login_container_bg = {
+        background = 'Texture/Aries/Creator/paracraft/paracraft_login_32bits.png#602 12 339 382:80 80 80 80',
+    },
+    main_login_blue_button = {
+        width = 240,
+        height = 44,
+        color = '#FFFFFFF',
+        ['font-size'] = 16,
+        ['base-font-size'] = 16,
+        background = 'Texture/Aries/Creator/paracraft/paracraft_login_32bits.png#271 98 258 44',
+        ['text-offset-y'] = -1,
+    },
+    main_login_cyan_button = {
+        width = 240,
+        height = 44,
+        color = '#FFFFFFF',
+        ['font-size'] = 16,
+        ['base-font-size'] = 16,
+        background = 'Texture/Aries/Creator/paracraft/paracraft_login_32bits.png#749 683 258 44',
+        ['text-offset-y'] = -1,
+    },
+    main_login_green_button = {
+        width = 240,
+        height = 44,
+        color = '#FFFFFFF',
+        ['font-size'] = 16,
+        ['base-font-size'] = 16,
+        background = 'Texture/Aries/Creator/paracraft/paracraft_login_32bits.png#272 147 258 44',
+        ['text-offset-y'] = -1,
+    },
+    main_login_gray_button = {
+        width = 240,
+        height = 44,
+        color = '#FFFFFFF',
+        ['font-size'] = 16,
+        ['base-font-size'] = 16,
+        background = 'Texture/Aries/Creator/paracraft/paracraft_login_32bits.png#271 197 258 44',
+        ['text-offset-y'] = -1,
+    },
+    main_login_white_button = {
+        width = 240,
+        height = 44,
+        color = '#000000',
+        ['font-size'] = 16,
+        ['base-font-size'] = 16,
+        background = 'Texture/Aries/Creator/paracraft/paracraft_login_32bits.png#749 878 256 42',
+        ['text-offset-y'] = -1,
+    },
+    main_login_title_bg = {
+        background = 'Texture/Aries/Creator/paracraft/paracraft_login_32bits.png#272 0 172 49',
+    },
+    main_login_back_button = {
+        width = 33,
+        height = 33,
+        background = 'Texture/Aries/Creator/paracraft/paracraft_login_32bits.png#544 93 33 33',
+    },
+    main_login_close_button = {
+        width = 40,
+        height = 40,
+        background = 'Texture/Aries/Creator/paracraft/paracraft_login_32bits.png#540 145 40 40',
+    },
+    main_login_blue_buttom_small = {
+        width = 123,
+        height = 44,
+        ['font-size'] = 16,
+        ['base-font-size'] = 16,
+        color = '#FFFFFF',
+        background = 'Texture/Aries/Creator/paracraft/paracraft_login_32bits.png#819 748 123 44:16 16 16 16',
+    }
+}

@@ -1,0 +1,356 @@
+<html>
+    <body>
+        <pe:mcml>
+            <script type='text/npl'>
+                <![CDATA[
+                    local MainLogin = NPL.load('(gl)Mod/WorldShare/cellar/MainLogin/MainLogin.lua')
+
+                    local page = document:GetPageCtrl()
+                    Mod.WorldShare.Store:Set('page/Mod.WorldShare.cellar.MainLogin.Register.Notice', page)
+
+                    page.set_mode = function(m)
+                        page.cur_mode = m
+
+                        page:Refresh(0.01)
+                    end
+
+                    function is_active(kind, i)
+                        if kind == 'account' then
+                            return MainLogin.registerValidates.account[i]
+                        elseif kind == 'phone' then
+                            return MainLogin.registerValidates.phone[i]
+                        elseif kind == 'modify' then
+                            return MainLogin.registerValidates.modify[i]
+                        end
+
+                        return nil
+                    end
+
+                    function get_mode()
+                        return page.cur_mode
+                    end
+
+                    function trans(text)
+                        if Mod.WorldShare.Utils.IsEnglish() then
+                            if text == "账号必须由字母开头" then
+                                return "Account number must start with a letter";
+                            elseif text == "账号可以由字母、数字组成，不可添加特殊符号、空格" then
+                                return "The account number can be composed of letters and numbers, and no special symbols or spaces can be added";
+                            elseif text == "账号长度要大于4位" then
+                                return "Account length must be greater than 4 characters";
+                            elseif text == "密码长度超过4位" then
+                                return "The password is longer than 4 characters";
+                            elseif text == "密码可以由字母、数字、符号组成" then
+                                return "Password can be composed of letters, numbers, symbols";
+                            elseif text == "不可使用空格键" then
+                                return "no space bar";
+                            elseif text == "账号不与密码重复" then
+                                return "The account number is not the same as the password";
+                            elseif text == "两次输入的密码不一致，请检查输入是否有误。" then
+                                return "The passwords entered twice are inconsistent, please check whether the input is correct.";
+                            elseif text == "手机号码格式错误" then
+                                return "Wrong format of phone number"
+                            elseif text == "手机验证码不能为空" then
+                                return "Mobile phone verification code cannot be empty"
+                            end
+                        else
+                            return text;
+                        end
+                    end
+                ]]>
+            </script>
+            <div style='width: 208px;
+                        height: 262px;
+                        padding: 12px;
+                        font-size: 12px;
+                        base-font-size: 12px;
+                        color: #999999;
+                        background: url(Texture/Aries/Creator/paracraft/jianjiediban_46x51_32bits.png#0 0 46 51: 10 10 10 10);'>
+                <pe:if condition='<%= Mod.WorldShare.Utils.IsEnglish() %>'>
+                    <div style='width: 54px;
+                                height: 21px;
+                                margin-bottom: 5px;
+                                background: url(Texture/Aries/Creator/keepwork/worldshare/main_login_buttons2_32bits.png#112 56 91 36);'></div>
+                </pe:if>
+                <pe:if condition='<%= not Mod.WorldShare.Utils.IsEnglish() %>'>
+                    <div style='width: 54px;
+                                height: 21px;
+                                margin-bottom: 5px;
+                                background: url(Texture/Aries/Creator/keepwork/worldshare/main_login_buttons2_32bits.png#112 10 91 36);'></div>
+                </pe:if>
+                <pe:if condition='<%= get_mode() == 1 %>'>
+                    <div>
+                        <span style='color: #99a1b4'>1. </span>
+                        <pe:if condition='<%= is_active("account", 1) == nil %>'>
+                            <%= trans('账号必须由字母开头') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("account", 1) == true %>'>
+                            <span style='color: #10c025'><%= trans('账号必须由字母开头') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("account", 1) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('账号必须由字母开头') %></span>
+                        </pe:if>
+                    </div>
+                    <div>
+                        <span style='color: #99a1b4'>2. </span>
+                        <pe:if condition='<%= is_active("account", 2) == nil %>'>
+                            <%= trans('账号可以由字母、数字组成，不可添加特殊符号、空格') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("account", 2) == true %>'>
+                            <span style='color: #10c025'><%= trans('账号可以由字母、数字组成，不可添加特殊符号、空格') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("account", 2) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('账号可以由字母、数字组成，不可添加特殊符号、空格') %></span>
+                        </pe:if>
+                    </div>
+                    <div>
+                        <span style='color: #99a1b4'>3. </span>
+                        <pe:if condition='<%= is_active("account", 3) == nil %>'>
+                            <%= trans('账号长度要大于4位') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("account", 3) == true %>'>
+                            <span style='color: #10c025'><%= trans('账号长度要大于4位') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("account", 3) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('账号长度要大于4位') %></span>
+                        </pe:if>
+                    </div>
+                    <div align='center'
+                        style='width: 190px;
+                                height: 9px;
+                                margin-top: 2.5px;
+                                margin-bottom: 2.5px;
+                                background: url(Texture/Aries/Creator/paracraft/fenggexian_190x9_32bits.png#0 0 190 9);'></div>
+                    <div>
+                        <span style='color: #99a1b4'>1. </span>
+                        <pe:if condition='<%= is_active("account", 4) == nil %>'>
+                            <%= trans('密码长度超过4位') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("account", 4) == true %>'>
+                            <span style='color: #10c025'><%= trans('密码长度超过4位') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("account", 4) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('密码长度超过4位') %></span>
+                        </pe:if>
+                    </div>
+                    <div>
+                        <span style='color: #99a1b4'>2. </span>
+                        <pe:if condition='<%= is_active("account", 5) == nil %>'>
+                            <%= trans('密码可以由字母、数字、符号组成') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("account", 5) == true %>'>
+                            <span style='color: #10c025'><%= trans('密码可以由字母、数字、符号组成') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("account", 5) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('密码可以由字母、数字、符号组成') %></span>
+                        </pe:if>
+                    </div>
+                    <div>
+                        <span style='color: #99a1b4'>3. </span>
+                        <pe:if condition='<%= is_active("account", 6) == nil %>'>
+                            <%= trans('密码不与用户名重复') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("account", 6) == true %>'>
+                            <span style='color: #10c025'><%= trans('密码不与用户名重复') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("account", 6) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('密码不与用户名重复') %></span>
+                        </pe:if>
+                    </div>
+                    <div>
+                        <span style='color: #99a1b4'>4. </span>
+                        <pe:if condition='<%= is_active("account", 7) == nil %>'>
+                            <%= trans('不可使用空格键') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("account", 7) == true %>'>
+                            <span style='color: #10c025'><%= trans('不可使用空格键') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("account", 7) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('不可使用空格键') %></span>
+                        </pe:if>
+                    </div>
+                </pe:if>
+                <pe:if condition='<%= get_mode() == 2 %>'>
+                    <div>
+                        <span style='color: #99a1b4'>1. </span>
+                        <pe:if condition='<%= is_active("phone", 1) == nil %>'>
+                            <%= trans('手机号码格式错误') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("phone", 1) == true %>'>
+                            <span style='color: #10c025'><%= trans('手机号码格式错误') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("phone", 1) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('手机号码格式错误') %></span>
+                        </pe:if>
+                    </div>
+                    <div>
+                        <span style='color: #99a1b4'>2. </span>
+                        <pe:if condition='<%= is_active("phone", 2) == nil %>'>
+                            <%= trans('手机验证码不能为空') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("phone", 2) == true %>'>
+                            <span style='color: #10c025'><%= trans('手机验证码不能为空') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("phone", 2) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('手机验证码不能为空') %></span>
+                        </pe:if>
+                    </div>
+                    <div align='center'
+                        style='width: 190px;
+                                height: 9px;
+                                margin-top: 2.5px;
+                                margin-bottom: 2.5px;
+                                background: url(Texture/Aries/Creator/paracraft/fenggexian_190x9_32bits.png#0 0 190 9);'></div>
+                    <div>
+                        <span style='color: #99a1b4'>1. </span>
+                        <pe:if condition='<%= is_active("phone", 3) == nil %>'>
+                            <%= trans('密码长度超过4位') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("phone", 3) == true %>'>
+                            <span style='color: #10c025'><%= trans('密码长度超过4位') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("phone", 3) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('密码长度超过4位') %></span>
+                        </pe:if>
+                    </div>
+                    <div>
+                        <span style='color: #99a1b4'>2. </span>
+                        <pe:if condition='<%= is_active("phone", 4) == nil %>'>
+                            <%= trans('密码可以由字母、数字、符号组成') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("phone", 4) == true %>'>
+                            <span style='color: #10c025'><%= trans('密码可以由字母、数字、符号组成') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("phone", 4) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('密码可以由字母、数字、符号组成') %></span>
+                        </pe:if>
+                    </div>
+                    <div>
+                        <span style='color: #99a1b4'>3. </span>
+                        <pe:if condition='<%= is_active("phone", 5) == nil %>'>
+                            <%= trans('不可使用空格键') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("phone", 5) == true %>'>
+                            <span style='color: #10c025'><%= trans('不可使用空格键') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("phone", 5) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('不可使用空格键') %></span>
+                        </pe:if>
+                    </div>
+                </pe:if>
+                <pe:if condition='<%= get_mode() == 3 %>'>
+                    <div>
+                        <span style='color: #99a1b4'>1. </span>
+                        <pe:if condition='<%= is_active("phone", 6) == nil %>'>
+                            <%= trans('账号必须由字母开头') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("phone", 6) == true %>'>
+                            <span style='color: #10c025'><%= trans('账号必须由字母开头') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("phone", 6) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('账号必须由字母开头') %></span>
+                        </pe:if>
+                    </div>
+                    <div>
+                        <span style='color: #99a1b4'>2. </span>
+                        <pe:if condition='<%= is_active("phone", 7) == nil %>'>
+                            <%= trans('账号可以由字母、数字组成，不可添加特殊符号、空格') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("phone", 7) == true %>'>
+                            <span style='color: #10c025'><%= trans('账号可以由字母、数字组成，不可添加特殊符号、空格') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("phone", 7) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('账号可以由字母、数字组成，不可添加特殊符号、空格') %></span>
+                        </pe:if>
+                    </div>
+                    <div>
+                        <span style='color: #99a1b4'>3. </span>
+                        <pe:if condition='<%= is_active("phone", 8) == nil %>'>
+                            <%= trans('账号长度要大于4位') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("phone", 8) == true %>'>
+                            <span style='color: #10c025'><%= trans('账号长度要大于4位') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("phone", 8) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('账号长度要大于4位') %></span>
+                        </pe:if>
+                    </div>
+                    <div>
+                        <span style='color: #99a1b4'>4. </span>
+                        <pe:if condition='<%= is_active("phone", 9) == nil %>'>
+                            <%= trans('账号不与密码重复') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("phone", 9) == true %>'>
+                            <span style='color: #10c025'><%= trans('账号不与密码重复') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("phone", 9) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('账号不与密码重复') %></span>
+                        </pe:if>
+                    </div>
+                </pe:if>
+                <pe:if condition='<%= get_mode() == 4 %>'>
+                    <div>
+                        <span style='color: #99a1b4'>1. </span>
+                        <pe:if condition='<%= is_active("modify", 1) == nil %>'>
+                            <%= trans('密码长度超过4位') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("modify", 1) == true %>'>
+                            <span style='color: #10c025'><%= trans('密码长度超过4位') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("modify", 1) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('密码长度超过4位') %></span>
+                        </pe:if>
+                    </div>
+                    <div>
+                        <span style='color: #99a1b4'>2. </span>
+                        <pe:if condition='<%= is_active("modify", 2) == nil %>'>
+                            <%= trans('密码可以由字母、数字、符号组成') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("modify", 2) == true %>'>
+                            <span style='color: #10c025'><%= trans('密码可以由字母、数字、符号组成') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("modify", 2) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('密码可以由字母、数字、符号组成') %></span>
+                        </pe:if>
+                    </div>
+                    <div>
+                        <span style='color: #99a1b4'>3. </span>
+                        <pe:if condition='<%= is_active("modify", 3) == nil %>'>
+                            <%= trans('不可使用空格键') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("modify", 3) == true %>'>
+                            <span style='color: #10c025'><%= trans('不可使用空格键') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("modify", 3) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('不可使用空格键') %></span>
+                        </pe:if>
+                    </div>
+                    <div>
+                        <span style='color: #99a1b4'>4. </span>
+                        <pe:if condition='<%= is_active("modify", 4) == nil %>'>
+                            <%= trans('账号不与密码重复') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("modify", 4) == true %>'>
+                            <span style='color: #10c025'><%= trans('账号不与密码重复') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("modify", 4) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('账号不与密码重复') %></span>
+                        </pe:if>
+                    </div>
+                    <div>
+                        <span style='color: #99a1b4'>5. </span>
+                        <pe:if condition='<%= is_active("modify", 5) == nil %>'>
+                            <%= trans('两次输入的密码不一致，请检查输入是否有误。') %>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("modify", 5) == true %>'>
+                            <span style='color: #10c025'><%= trans('两次输入的密码不一致，请检查输入是否有误。') %></span>
+                        </pe:if>
+                        <pe:if condition='<%= is_active("modify", 5) == false %>'>
+                            <span style='color: #e11a1d'><%= trans('两次输入的密码不一致，请检查输入是否有误。') %></span>
+                        </pe:if>
+                    </div>
+                </pe:if>
+            </div>
+        </pe:mcml>
+    </body>
+</html>

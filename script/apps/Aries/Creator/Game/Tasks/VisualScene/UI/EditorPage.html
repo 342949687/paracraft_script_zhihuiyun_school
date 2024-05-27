@@ -1,0 +1,60 @@
+﻿<!-- "script/apps/Aries/Creator/Game/Tasks/VisualScene/UI/EditorPage.html" -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title></title>
+</head>
+<body>
+<pe:mcml>
+<script refresh="true" type="text/npl" src="EditorPage.lua"><![CDATA[
+local VisualSceneLogic = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/VisualScene/VisualSceneLogic.lua");
+local EditorPage = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/VisualScene/UI/EditorPage.lua");
+local editor = VisualSceneLogic.getSelectedEditor();
+
+function onStop()
+    if(not editor)then
+        return
+    end
+    editor:stop();
+end
+function onRun()
+    if(not editor)then
+        return
+    end
+    editor:run();
+end   
+function onToggleSize()
+    EditorPage.ToggleSize();
+end
+function onClose()
+    EditorPage.Show(false);
+end 
+]]></script>
+<div width="100%" height="100%" style="background-color:#292929;" class="default">
+    <div style="margin:5px;height:37px;">
+        <div style="float:left;margin-left:2px;margin-top:3px">
+            <input type="button" name="run" tooltip='<%=L"编译并运行"%>' style="margin-left: 0px; width: 32px; height: 32px; background: url(Texture/Aries/Creator/player/play_off.png); " onclick="onRun" />
+            <input type="button" name="pause" tooltip='<%=L"终止运行"%>' style="margin-left: 0px; width: 32px; height: 32px; background: url(Texture/Aries/Creator/player/suspend_off.png); " onclick="onStop" />
+        </div>
+        
+        
+        <div style="position:relative;float:left;width:82px;" align="right">
+            <input type="button" name="resizeBtn" tooltip='<%=L"放缩窗口"%>' onclick="onToggleSize()" style="margin-left:2px;margin-top:5px;width:28px;height:28px;background:url(Texture/3DMapSystem/Creator/Objects/Tool_Move.png);" />
+            <input type="button" name="saveAndClose" tooltip='<%=L"关闭"%>' onclick="onClose()" class="mc_close_button" style="margin-left:2px;margin-top:10px;" />
+        </div>
+    </div>
+    
+    <pe:container alignment="_fi" name="helpContainer" style="position:relative;margin-bottom:54px;margin-left:3px;width:200px;background:url();">
+        <iframe src= "script/apps/Aries/Creator/Game/Tasks/VisualScene/UI/Inspector/EditorInspector.html" width="200"/>
+    </pe:container>
+    <pe:container alignment="_fi" name="codeContainer" class="mc_paper_panel" style="position:relative;margin-bottom:54px;margin-left:205px;">
+        <iframe src= "script/apps/Aries/Creator/Game/Tasks/VisualScene/UI/Inspector/SceneNodeInspector.html" />
+    </pe:container>
+    <pe:container style="position:relative;vertical-align:bottom;height:54px;background:;">
+    </pe:container>
+</div>
+</pe:mcml>
+</body>
+</html>
+

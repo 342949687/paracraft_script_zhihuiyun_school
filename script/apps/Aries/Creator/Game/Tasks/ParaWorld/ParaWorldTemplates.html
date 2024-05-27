@@ -1,0 +1,45 @@
+﻿<!-- "script/apps/Aries/Creator/Game/Tasks/ParaWorld/ParaWorldTemplates.html" -->
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title></title>
+</head>
+<body>
+    <pe:mcml>
+        <script refresh="false" type="text/npl" src="ParaWorldTemplates.lua">
+            <![CDATA[
+            ParaWorldTemplates = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/ParaWorld/ParaWorldTemplates.lua");
+            ParaWorldTemplates.OnInit()
+
+            ]]>
+        </script>
+        <kp:window width="840" height="500" title='<%=L"选择模板"%>' tooltip='<%=L"关闭后可在工具栏>建造>模板中点击【官方模板】重新打开"%>' onclose="ParaWorldTemplates.OnClose">
+            <div style="margin-top:40px;width:840px;height:20px;text-align:center;base-font-size:20px;font-size:20px;font-weight:bold;color:#000000">
+                <%=L"欢迎回到你的家园"%>
+            </div>
+            <div style="margin-top:10px;margin-left:40px;width:760px;height:20px;color:#000000">
+                <%=L"亲爱的伙伴！欢迎回来！你想不想让你的家园更加丰富，更加精彩，快用你的奇思妙想来实现它吧！请选择一个感兴趣的主题出发，开启我们的造梦之旅。"%>
+            </div>
+            <div style="margin-top:0px;width:840px;height:360px;">
+                <div onclick="ParaWorldTemplates.ShowPrevious" style="margin-left:10px;margin-top:120px;width:64px;height:64px;background:url(Texture/3DMapSystem/common/PageLeft64.png);" />
+                <div style="float:left;margin-top:-96px;margin-left:110px;width:128px;height:128px;">
+                    <img style="width:128px;height:128px;" src='<%=ParaWorldTemplates.GetPreviousImage()%>' />
+                </div>
+                <div style="margin-top:-160px;width:256px;height:256px;" align="center">
+                    <img style="width:256px;height:256px;" src='<%=ParaWorldTemplates.GetCurrentImage()%>' />
+                    <div style="margin-top:0px;text-align:center;base-font-size:16px;font-size:16px;"><%=ParaWorldTemplates.GetCurrentName()%></div>
+                </div>
+                <div style="float:right;margin-top:-224px;margin-right:120px;width:128px;height:128px;" align="right">
+                    <img style="width:128px;height:128px;" src='<%=ParaWorldTemplates.GetNextImage()%>' />
+                </div>
+                <div onclick="ParaWorldTemplates.ShowNext" style="float:right;margin-top:-192px;margin-right:10px;width:64px;height:64px;background:url(Texture/3DMapSystem/common/PageRight64.png);" align="right" />
+            </div>
+            <div style="width:840px;height:30px;">
+                <input type="button" name="OK" hotkey="DIK_RETURN" align="center" style="min-width:104px;height:40px;" class="kp_yellow_button" onclick="ParaWorldTemplates.OnOK" value='<%=L"确定"%>' />
+            </div>
+        </kp:window>
+    </pe:mcml>
+</body>
+</html>
+

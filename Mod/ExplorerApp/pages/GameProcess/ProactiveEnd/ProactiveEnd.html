@@ -1,0 +1,89 @@
+<html>
+<body>
+<pe:mcml>
+    <script refresh="false" type="text/npl" src="ProactiveEnd.lua">
+        <![CDATA[
+            ProactiveEnd = NPL.load('./ProactiveEnd.lua')
+            Utils = NPL.load('(gl)Mod/WorldShare/helper/Utils.lua')
+
+            ProactiveEnd:SetPage()
+
+            function container()
+                local style = Utils.FixCenter(169, 144)
+                return style .. ';background:url(Texture/Aries/Creator/Theme/GameCommonIcon_32bits.png#267 89 34 34:8 8 8 8)';
+            end
+
+            function goon()
+                ProactiveEnd:ClosePage()
+            end
+
+            function exit()
+                ProactiveEnd:Exit()
+            end
+
+            function close()
+                ProactiveEnd:ClosePage()
+            end
+        ]]>
+    </script>
+    <style type="text/scss">
+        {
+            strip = {
+                height = 40,
+                padding = 10
+            },
+            close = {
+                position = 'relative',
+                align = 'right',
+                width = 26,
+                height = 26
+            },
+            close_button = {
+                background = 'Texture/Aries/Creator/Theme/GameCommonIcon_32bits.png#363 59 26 26:7 7 7 7',
+                width = 26,
+                height = 26
+            },
+            area = {
+                ['padding-top'] = 0,
+                ['padding-left'] = 13,
+                ['padding-right'] = 13,
+            },
+            goon = {
+                color = '#ffffff',
+                position = 'relative',
+                align = 'center',
+                width = 88,
+                height = 32,
+                ['text-align'] = 'center',
+                ['padding-top'] = 4,
+                background = 'Texture/Aries/Creator/keepwork/explorer_32bits.png#61 131 16 16:3 3 3 3'
+            },
+            exit = {
+                color = '#ffffff',
+                position = 'relative',
+                align = 'center',
+                width = 88,
+                height = 32,
+                ['text-align'] = 'center',
+                ['margin-top'] = 45
+                ['padding-top'] = 4,
+                background = 'Texture/Aries/Creator/keepwork/explorer_32bits.png#61 131 16 16:3 3 3 3'
+            },
+        }
+    </style>
+    <div width="100%" height="100%">
+        <div class="default" width="169" height="144" style="<%= container() %>">
+            <div class="strip">
+                <div class="close">
+                    <!-- <input onclick="close()" class="close_button" type="button"/> -->
+                </div>
+            </div>
+            <div class="area">
+                <input type="button" class="goon" value="<%=L'继续游戏'%>" onclick="goon" />
+                <input type="button" class="exit" value="<%=L'退出本关'%>" onclick="exit" />
+            </div>
+        </div>
+    </div>
+</pe:mcml>
+</body>
+</html>

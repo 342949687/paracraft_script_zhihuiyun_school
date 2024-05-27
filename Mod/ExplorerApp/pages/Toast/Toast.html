@@ -1,0 +1,37 @@
+<html>
+<body>
+    <pe:mcml>
+        <script refresh='false' type='text/npl'>
+            Toast = NPL.load('./Toast.lua')
+
+            function toast_text_style()
+                local textPx = _guihelper.GetTextWidth(Toast.msg)
+
+                local marginLeft = (300 - textPx) / 2
+
+                return 'margin-left: ' .. marginLeft .. 'px;'
+            end
+        </script>
+        <style type='text/mcss'>
+            {
+                toast = {
+                    ['margin-top'] = 200,
+                },
+                toast_text = {
+                    padding = 10,
+                    color = '#ffffff',
+                    background = 'Texture/Aries/Creator/keepwork/explorer_32bits.png#4 233 32 32:3 3 3 3',
+                }
+            }
+        </style>
+        <div class='toast'
+             width='300'
+             height='32'>
+            <div class='toast_text'
+                 style='<%= toast_text_style() %>' >
+                 <%= Toast.msg %>
+            </div>
+        </div>
+    </pe:mcml>
+</body>
+</html>

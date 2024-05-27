@@ -1,0 +1,25 @@
+--[[
+Title: Main Page Mcss
+Author(s):  big
+Date:  2021.03.18
+Desc: 
+use the lib:
+------------------------------------------------------------
+local MainPageMcss = NPL.load("(gl)Mod/WorldShare/cellar/Theme/Mcss/MainPageMcss.lua")
+------------------------------------------------------------
+]]
+
+{
+    main_page_black_button = {
+        width = 140,
+        height = 40,
+        background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#168 174 108 36:15 15 15 15',
+        ['margin-left'] = 4,
+    },
+    main_page_black_button_selected = {
+        width = 140,
+        height = 40,
+        background = 'Texture/Aries/Creator/paracraft/paracraft_explorer_32bits.png#226 121 108 36:15 15 15 15',
+        ['margin-left'] = 4,
+    },
+}

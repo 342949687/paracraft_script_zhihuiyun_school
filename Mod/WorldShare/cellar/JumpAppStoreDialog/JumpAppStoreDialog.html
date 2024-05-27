@@ -1,0 +1,67 @@
+<!-- "script/apps/Aries/Creator/Game/Login/Update/JumpAppStoreDialog.html?latestVersion&curVersion=" -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head>
+<title></title>
+</head>
+<body> 
+<pe:mcml>
+<script type="text/npl" refresh="false">
+<![CDATA[
+    JumpAppStoreDialog = commonlib.gettable("Mod.WorldShare.cellar.JumpAppStoreDialog");
+    JumpAppStoreDialog.OnInit();
+
+    function OnClose()
+        Page:CloseWindow();
+    end
+
+    function OnClickExit()
+        if System.options.channelId=="430" then
+            ParaGlobal.ShellExecute("open", System.options.launcherExeName, "isFixMode=true", "", 1);
+        end
+        commonlib.TimerManager.SetTimeout(function()  
+            ParaGlobal.ExitApp();
+        end, 200);
+        
+    end
+
+    function OnClickChangeLog()
+        ParaGlobal.ShellExecute("open", L"https://keepwork.com/keepwork/changelog/paracraft/changelog_zh", "", "", 1);
+    end
+
+    latestVersion = Page:GetRequestParam("latestVersion");
+    curVersion = Page:GetRequestParam("curVersion");
+
+    function GetBtnText()
+        return L"更新";
+    end
+]]>
+</script>
+<aries:window mode="thin" width="420" title='<%=L"发现内核更新" %>' >
+    <pe:if condition="<%= JumpAppStoreDialog.style == 1 %>">
+        <div class="default" style="margin:20px">
+            <div style="margin-top: 10px;color: #ff6a00">
+                <div>发现客户端新版本，请点击下方按钮跳转App Store</div>
+            </div>
+        </div>
+        <hr />
+        <div style="margin-top: 30px;margin-bottom: 30px;" class="default">
+            <input type="button" value='<%=GetBtnText() %>' class="mc_yellow_button_with_fillet" align="right" style="margin-right:20px;min-width:70px;height:28px;" onclick="JumpAppStoreDialog.OnClickUpdate"/>
+        </div>
+    </pe:if>
+    <pe:if condition="<%= JumpAppStoreDialog.style == 2 %>">
+        <div class="default" style="margin:20px">
+            <div style="margin-top: 10px;color: #ff6a00">
+                <div>强烈建议更新</div>
+            </div>
+        </div>
+        <hr />
+        <div style="margin-top: 30px;margin-bottom: 30px;width: 180px;height:28px;" align="right" class="default">
+            <input type="button" value='<%=GetBtnText() %>' class="mc_yellow_button_with_fillet" style="margin-right:20px;min-width:70px;height:28px;" onclick="JumpAppStoreDialog.OnClickUpdate"/>
+            <input type="button" value='<%= "忽略" %>' class="mc_yellow_button_with_fillet" style="margin-right:20px;min-width:70px;height:28px;" onclick="JumpAppStoreDialog.OnClickCancel"/>
+        </div>
+    </pe:if>
+</aries:window>
+</pe:mcml>
+</body>
+</html>

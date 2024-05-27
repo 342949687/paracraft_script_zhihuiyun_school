@@ -1,0 +1,266 @@
+<html>
+<body>
+    <pe:mcml>
+        <script type='text/npl' refresh='false'>
+            <![CDATA[
+                local WorldCommon = commonlib.gettable('MyCompany.Aries.Creator.WorldCommon')
+                -- UI
+                local ShareWorld = NPL.load('(gl)Mod/WorldShare/cellar/ShareWorld/ShareWorld.lua')
+
+                -- service
+                local KeepworkService = NPL.load('(gl)Mod/WorldShare/service/KeepworkService.lua')
+
+                local origin_visibility = 0
+                local page = document:GetPageCtrl()
+
+                function open_world()
+                    GameLogic.RunCommand('/menu file.openworlddir')
+                end
+
+                function get_full_world_name()
+                    return ShareWorld:GetWorldName()
+                end
+
+                function worldname()
+                    return Mod.WorldShare.Utils.WordsLimit(ShareWorld:GetWorldName())
+                end
+
+                function snapshot()
+                    ShareWorld:Snapshot()
+                end
+
+                function size()
+                    return ShareWorld:GetWorldSize()
+                end
+
+                function set_private()
+                    GameLogic.IsVip(
+                        'Vip',
+                        true,
+                        function(result)
+                            local isHomeWorkWorld = WorldCommon.GetWorldTag('isHomeWorkWorld')
+                            if not result or isHomeWorkWorld then
+                                if origin_visibility == 1 then
+                                    page:SetValue('set_private', true)
+                                elseif origin_visibility == 0 then
+                                    if isHomeWorkWorld then
+                                        GameLogic.AddBBS(nil, L'设置失败,作业世界不能设置成私有世界', 3000, '255 0 0')
+                                        page:SetValue('set_private', false)
+                                        page:Refresh(0.01)
+                                        return
+                                    end
+                                    page:SetValue('set_private', false)
+                                end
+
+                                return
+                            end
+                        end
+                    )
+                end
+
+                function share_now()
+                    local set_private = page:GetValue('set_private')
+                    local isHomeWorkWorld = WorldCommon.GetWorldTag('isHomeWorkWorld')
+                    if set_private and not isHomeWorkWorld then
+                        Mod.WorldShare.Store:Set('world/setPrivateDuringSync', true)
+                    end
+
+                    ShareWorld:OnClick()
+                end
+
+                function remote_revision()
+                    return ShareWorld:GetRemoteRevision()
+                end
+
+                function current_revision()
+                    return tostring(ShareWorld:GetCurrentRevision())
+                end
+
+                function close()
+                    ShareWorld:ClosePage()
+                end
+
+                function get_world_url()
+                    local url = ShareWorld:GetShareUrl()
+
+                    if #url == 0 then
+                        return L'此世界暂未分享'
+                    else
+                        return ShareWorld:GetShareUrl()
+                    end
+                end
+
+                function has_url()
+                    local url = ShareWorld:GetShareUrl()
+
+                    if #url == 0 then
+                        return false
+                    else
+                        return true
+                    end
+                end
+
+                function open_url()
+                    Mod.WorldShare.Utils.OpenKeepworkUrlByToken(get_world_url())
+                end
+
+                function diff_world()
+                    close()
+                    GameLogic.RunCommand('/diff')
+                end
+
+                Mod.WorldShare.Utils.SetTimeOut(function()
+                    local current_enter_world = Mod.WorldShare.Store:Get('world/currentEnterWorld')
+
+                    if current_enter_world and type(current_enter_world) == 'table' then
+                        local project = current_enter_world.project or {}
+
+                        if type(project.visibility) == 'number' then
+                            if project.visibility == 0 then
+                                page:SetValue('set_private', true)
+                                origin_visibility = 0
+                            elseif project.visibility == 1 then
+                                page:SetValue('set_private', false)
+                                origin_visibility = 1
+                            end
+                        end
+                    end
+                end, 0)
+             ]]>
+        </script>
+        <style type='text/mcss' src='Mod/WorldShare/cellar/Theme/Mcss/Theme1.mcss'>
+            {
+                text_field = {
+                    textcolor = "#ffffff",
+                    float = "left",
+                    height = 30,
+                    ['text-valign'] = 'center',
+                    ['text-align'] = 'center'
+                },
+                info = {
+                    ["font-size"] = 13,
+                    ["base-font-size"] = 13,
+                    ["margin-bottom"] = 5,
+                }
+            }
+        </style>
+        <kp:window
+            width='640'
+            height='415'
+            onclose='close()'>
+            <div style='height: 40px;'>
+                <!-- header -->
+                <img width='163'
+                     height='23'
+                     style='margin-top: 9px;
+                            margin-left: 8px;'
+                     src='Texture/Aries/Creator/paracraft/share_world_32bits.png#2 141 163 23' />
+            </div>
+            <div style='padding:20px;'>
+                <div style='width: 595px;'
+                     align='center'>
+                    <div class='theme1_gray_container_background'
+                         style='width: 595px;
+                                padding: 10px;'>
+                        <div style='float:left'>
+                            <div zorder='2'
+                                 class='theme1_gray_image_mask'
+                                 style='width: 300px;
+                                        height: 200px;'></div>
+                            <img name='share_world_image'
+                                 zorder='1'
+                                 width='300'
+                                 height='200' />
+                        </div>
+                        <div style='float:right;
+                                    padding-left:28px;'>
+                            <div style='position: relative;
+                                        left: 130px;
+                                        top: 90px;'>
+                                <pe:if condition='<%= ParaEngine.GetAppCommandLineByParam("IsDevMode", nil) %>'>
+                                    <input type='button'
+                                           style='font-size:11px;
+                                                  height:20px;
+                                                  margin-top:10px;
+                                                  min-width:65px;
+                                                  height:30px;'
+                                           value='<%= L"对比版本" %>'
+                                           class='theme1_gray_button'
+                                           onclick='diff_world' />
+                                </pe:if>
+                            </div>
+                            <div style='font-size: 18px;
+                                        base-font-size: 18px;
+                                        margin-bottom: 25px;'>
+                                <%= worldname() %>
+                                <input type='button'
+                                       width='32'
+                                       height='28'
+                                       style='margin-left: 3px;
+                                              margin-top: 0px;
+                                              font-size: 11px;
+                                              height: 28px;
+                                              background: url(Texture/Aries/Creator/paracraft/share_world_32bits.png#0 81 32 28);'
+                                       value=''
+                                       tooltip='<%= get_full_world_name() %>'
+                                       onclick='open_world()' />
+                            </div>
+                            <div class="info"><%=L"大小：" %><%= size() %></div>
+                            <div class="info"><%=L"远程版本号：" %>
+                                <%= remote_revision() %>
+                            </div>
+                            <div class="info"><%=L"本地版本号：" %>
+                                <label name='current_revision' value='<%= current_revision() %>' />
+                            </div>
+                            <input type='button'
+                                   style='font-size: 11px;
+                                          margin-top: 10px;
+                                          margin-left: -3px;
+                                          height: 40px;
+                                          width: 120px;
+                                          background: url(Texture/Aries/Creator/paracraft/share_world_32bits.png#108 56 120 40);'
+                                   value=''
+                                   onclick='snapshot' />
+                        </div>
+                    </div>
+                    <div style='margin-top:20px;'>
+                        <input type='text'
+                               value='<%= get_world_url() %>'
+                               width='100%'
+                               class='text_field theme1_black_textfield' />
+                    </div>
+                </div>
+                <div style='width: 595px;'
+                     align='center'>
+                    <div style='position: relative;
+                                margin-top: 10px;'>
+                        <input type='checkbox'
+                               iconsize='18'
+                               CheckedBG='Texture/Aries/Creator/paracraft/paracraft_login_32bits.png#275 79 12 12'
+                               UncheckedBG='Texture/Aries/Creator/paracraft/paracraft_login_32bits.png#295 79 12 12'
+                               style='float: left;
+                                      margin-top: 2px;
+                                      margin-right: 4px;
+                                      min-width: 90px;'
+                               name='set_private'
+                               onclick='set_private' />
+                        <div for='set_private'
+                             style='float: left;'>
+                            <%= L'设为私有世界上传' %>
+                        </div>
+                    </div>
+                    <input type='button'
+                           onclick='share_now()'
+                           value='<%=L"上传并分享" %>'
+                           class='theme1_orange_button'
+                           align='right'
+                           style='margin-right: -3px;
+                                  margin-top: 10px;
+                                  min-width: 160px;
+                                  height:50px' />
+                </div>
+            </div>
+        </kp:window>
+    </pe:mcml>
+</body>
+</html>

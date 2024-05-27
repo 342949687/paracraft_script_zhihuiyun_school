@@ -1,0 +1,252 @@
+<html>
+    <body>
+        <pe:mcml>
+            <script type='text/npl'>
+                <![CDATA[
+                    -- bottles
+                    local SyncWorld = NPL.load('(gl)Mod/WorldShare/cellar/Sync/SyncWorld.lua')
+
+                    -- service
+                    local Compare = NPL.load('(gl)Mod/WorldShare/service/SyncService/Compare.lua')
+                    local LocalService = NPL.load('(gl)Mod/WorldShare/service/LocalService.lua')
+
+                    page = document:GetPageCtrl()
+                    use_offline = page:GetRequestParam('useOffline')
+
+                    function use_local()
+                        SyncWorld:CloseStartSyncPage()
+
+                        if SyncWorld.GetCurrentRevision() < SyncWorld.GetRemoteRevision() then
+                            SyncWorld:ShowStartSyncUseLocalPage(page.afterSyncCallback)
+                        elseif SyncWorld.GetCurrentRevision() >= SyncWorld.GetRemoteRevision() then
+                            SyncWorld:CheckTagName(function(result, remoteName)
+                                if not result or type(result) ~= 'string' then
+                                    return
+                                end
+
+                                if result == 'remote' then
+                                    local currentWorld = Mod.WorldShare.Store:Get('world/currentWorld')
+                                    local tag = LocalService:GetTag(currentWorld.worldpath)
+                
+                                    tag.name = remoteName
+                                    currentWorld.name = remoteName
+
+                                    LocalService:SetTag(currentWorld.worldpath, tag)
+                                    Mod.WorldShare.Store:Set('world/currentWorld', currentWorld)
+                                end
+
+                                SyncWorld:SyncToDataSource(function()
+                                    local currentEnterWorld = Mod.WorldShare.Store:Get('world/currentEnterWorld')
+                                    local displayEntryPrompts = false
+                                    
+                                    if currentEnterWorld and type(currentEnterWorld) == 'table' then
+                                        if currentEnterWorld.foldername ~= currentWorld.foldername then
+                                            displayEntryPrompts = true
+                                        end
+                                    else
+                                        displayEntryPrompts = true
+                                    end
+
+                                    if displayEntryPrompts then
+                                        _guihelper.MessageBox(
+                                            L"世界同步完成，是否要进入世界？",
+                                            function(res)
+                                                if res and res == _guihelper.DialogResult.OK then
+                                                    if currentWorld and currentWorld.worldpath then
+                                                        local CommandManager = commonlib.gettable('MyCompany.Aries.Game.CommandManager')
+                                                        CommandManager:RunCommand('/loadworld ' .. commonlib.Encoding.DefaultToUtf8(currentWorld.worldpath))
+                                                    end
+                                                end
+                                            end,
+                                            _guihelper.MessageBoxButtons.OKCancel
+                                        )
+                                    end
+
+                                    if page.afterSyncCallback and type(page.afterSyncCallback) == 'function' then
+                                        page.afterSyncCallback()
+                                    end
+                                end, true)
+                            end)
+                        end
+                    end
+
+                    function use_remote()
+                        SyncWorld:CloseStartSyncPage()
+
+                        if SyncWorld.GetRemoteRevision() < SyncWorld.GetCurrentRevision() then
+                            SyncWorld:ShowStartSyncUseDataSourcePage(page.afterSyncCallback)
+                        elseif SyncWorld.GetRemoteRevision() >= SyncWorld.GetCurrentRevision() then
+                            SyncWorld:SyncToLocal(function()
+                                SyncWorld:CheckTagName(function(result, remoteName)
+                                    if not result or type(result) ~= 'string' then
+                                        return
+                                    end
+
+                                    local currentWorld = Mod.WorldShare.Store:Get('world/currentWorld')
+
+                                    if result and result == 'remote' then
+                                        local tag = LocalService:GetTag(currentWorld.worldpath)
+                    
+                                        tag.name = remoteName
+                                        currentWorld.name = remoteName
+
+                                        LocalService:SetTag(currentWorld.worldpath, tag)
+                                        Mod.WorldShare.Store:Set('world/currentWorld', currentWorld)
+                                        GameLogic.AddBBS(nil, format(L'更新【%s】名称信息完成', currentWorld.foldername), 3000, '0 255 0')
+                                    end
+
+                                    local currentEnterWorld = Mod.WorldShare.Store:Get('world/currentEnterWorld')
+                                    local displayEntryPrompts = false
+                                    
+                                    if currentEnterWorld and type(currentEnterWorld) == 'table' then
+                                        if currentEnterWorld.foldername ~= currentWorld.foldername then
+                                            displayEntryPrompts = true
+                                        end
+                                    else
+                                        displayEntryPrompts = true
+                                    end
+
+                                    if displayEntryPrompts then
+                                        _guihelper.MessageBox(
+                                            L"世界同步完成，是否要进入世界？",
+                                            function(res)
+                                                if res and res == _guihelper.DialogResult.OK then
+                                                    if currentWorld and currentWorld.worldpath then
+                                                        local CommandManager = commonlib.gettable('MyCompany.Aries.Game.CommandManager')
+                                                        CommandManager:RunCommand('/loadworld ' .. commonlib.Encoding.DefaultToUtf8(currentWorld.worldpath))
+                                                    end
+                                                end
+                                            end,
+                                            _guihelper.MessageBoxButtons.OKCancel
+                                        )
+                                    end
+
+                                    if page.afterSyncCallback and type(page.afterSyncCallback) == 'function' then
+                                        page.afterSyncCallback()
+                                    end
+                                end)
+                            end, nil, true)
+                        end
+                    end
+
+                    function be_show_use_remote()
+                        return Compare:IsCompareFinish() and SyncWorld.GetRemoteRevision() ~= 0
+                    end
+
+                    function get_window_style()
+                        return Mod.WorldShare.Utils.FixCenter(500, 270)
+                    end
+
+                    function close()
+                        local isEnterWorld = Mod.WorldShare.Store:Get('world/isEnterWorld')
+
+                        if isEnterWorld then
+                            SyncWorld:CloseStartSyncPage()
+                            return true
+                        end
+
+                        SyncWorld:CloseStartSyncPage()
+                    end
+
+                    function enter_offline_world()
+                        local currentWorld = Mod.WorldShare.Store:Get('world/currentWorld')
+
+                        if not currentWorld then
+                            return
+                        end
+
+                        Game.Start(currentWorld.worldpath)
+                        SyncWorld:CloseStartSyncPage()
+                    end
+
+                    function get_current_world_name()
+                        return Mod.WorldShare.Store:Getter('world/GetWorldTextName')
+                    end
+
+                    function get_bigger_class(type)
+                        if type == 'remote' and SyncWorld.GetRemoteRevision() > SyncWorld.GetCurrentRevision() then
+                            return 'theme1_orange_button'
+                        end
+
+                        if type == 'local' and SyncWorld.GetRemoteRevision() < SyncWorld.GetCurrentRevision() then
+                            return 'theme1_orange_button'
+                        end
+
+                        return 'theme1_gray_button'
+                    end
+
+                    function get_remote_revision()
+                        return SyncWorld.GetRemoteRevision()
+                    end
+
+                    function get_current_revision()
+                        return SyncWorld.GetCurrentRevision()
+                    end
+                ]]>
+            </script>
+            <style type='text/mcss' src='Mod/WorldShare/cellar/Theme/Mcss/Theme1.mcss'></style>
+            <kp:window width='500'
+                       height='270'
+                       style='<%= get_window_style()%>'
+                       title='<%= L"与数据源同步" %>'
+                       onclose='close()'>
+                <div style='height: 40px;'></div>
+                <div align='center'
+                     style='font-size: 18px;
+                            base-font-size: 18px;
+                            width: 280px;
+                            padding-top: 25px;'>
+                    <div style='margin-top: 20px;
+                                width: 500px;'>
+                        <%= L'世界名称：' %>
+                        <input type='text'
+                               style='background:;
+                                      width: 250px;
+                                      height: 30px;
+                                      font-size: 18px;
+                                      base-font-size: 18px;'
+                               value='<%= get_current_world_name() %>' />
+                    </div>
+                    <div style='margin-top: 20px;
+                                width: 500px;'>
+                        <%= format(L'远程版本号：%s', get_remote_revision()) %>
+                        <pe:if condition='<%= be_show_use_remote()%>'>
+                            <input onclick='use_remote()'
+                                   class='<%= get_bigger_class("remote") %>'
+                                   name='remote'
+                                   style='margin-left: 10px;
+                                          width: 130px;
+                                          height:30px;'
+                                   type='button'
+                                   value='<%= L"使用远程版本" %>' />
+                        </pe:if>
+                    </div>
+                    <div style='margin-top:20px;
+                                width: 500px;'>
+                        <%= format(L'本地版本号：%s', get_current_revision()) %>
+                        <pe:if condition='<%= use_offline == "true" %>'>
+                            <input onclick='enter_offline_world()'
+                                   class='theme1_gray_button'
+                                   style='margin-left: 10px;
+                                          width: 130px;
+                                          height:30px;'
+                                   type='button'
+                                   value='<%= L"使用本地离线版本" %>' />
+                        </pe:if>
+                        <pe:if condition='<%= use_offline == "false" %>'>
+                            <input onclick='use_local()'
+                                   class='<%= get_bigger_class("local") %>'
+                                   name='local'
+                                   style='margin-left: 10px;
+                                          width: 130px;
+                                          height: 30px;'
+                                   type='button'
+                                   value='<%= L"使用本地版本" %>' />
+                        </pe:if>
+                    </div>
+                </div>
+            </kp:window>
+        </pe:mcml>
+    </body>
+</html>
+

@@ -1,0 +1,111 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<body>
+<pe:mcml>
+<script refresh="true" type="text/npl" src="" ><![CDATA[
+    ParaLife = commonlib.gettable("MyCompany.Aries.Game.Tasks.ParaLife.ParaLife")
+    ParalifeLiveModel = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/ParaLife/ParalifeLiveModel.lua");
+    ParalifeLiveModel.OnInit()
+    function ClosePage()
+        Page:CloseWindow();
+    end
+
+    function getButtonType()
+        return ParalifeLiveModel.main_ui_mode
+    end
+
+    function switchButton(name)
+        ParalifeLiveModel.SwitchOperateButton(name)
+    end
+
+    function SwitchView()
+        ParalifeLiveModel.SwitchView()
+    end
+
+    function OnClickGlove()
+        ParalifeLiveModel.OnClickGlove()
+    end
+    function OnClickBrush()
+        ParalifeLiveModel.OnClickBrush()
+    end
+    function OnClickPaint()
+        ParalifeLiveModel.OnClickPaint()
+    end
+    function OnClickFurniture()
+        ParalifeLiveModel.OnClickFurniture()
+    end
+    function OnClickCamera()
+        ParalifeLiveModel.OnClickCamera()
+    end
+
+    function ShowRolePage()
+        ParalifeLiveModel.ShowRolePage()
+    end
+
+    function OnClickTopBtn(name)
+        ParalifeLiveModel.OnClickTopBtn(name)
+    end
+
+    function GetIconName(index)
+        return string.format("main_user_player"..index)
+    end
+
+    function GetParentIconName(index)
+        return string.format("main_user_player_parent"..index)
+    end
+
+    function GetSceneName(index)
+        return string.format("parascenerole"..index) --ClickThrough="true"
+    end
+
+    function CheckShow(index)
+        local index = tonumber(index)
+        return index <= ParalifeLiveModel.GetShowNum()
+    end
+
+    function click()
+
+    end
+
+    function OnClickExit()
+        NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/ParaLife/ParaLifeFrontPage.lua");
+        local ParaLifeFrontPage = commonlib.gettable("MyCompany.Aries.Game.Tasks.ParaLife.ParaLifeFrontPage")
+        ParaLifeFrontPage.ShowPage(true)
+        -- GameLogic.RunCommand(string.format("/loadworld -s -auto %s", 132919))
+    end
+]]></script>
+<pe:container uiname="paralife_back" ClickThrough="true" alignment="_fi" width="100%" height="100%" style="background:;">
+    <pe:if condition='<%=ParalifeLiveModel.main_ui_mode == "switchmain"%>'>
+        <pe:container alignment="_rb"  style="position: relative; margin-bottom: -50px; margin-right: 15px; background:;">
+            <pe:if condition='<%=not ParaLife:IsNoFacialBtn()%>'>
+                <input type="button" name="switch_expression" style="width:96px;height:160px;background: url(Texture/Aries/Creator/keepwork/Paralife/main/btn_expression_32bits.png#0 0 119 201);" onclick="switchButton()"/>
+            </pe:if>
+            <pe:if condition='<%=not ParaLife:IsNoBagBtn()%>'>
+                <input type="button" name="switchrole" style="margin-left:20px;width:96px;height:160px;background: url(Texture/Aries/Creator/keepwork/Paralife/main/role_32bits.png#0 0 119 201);" onclick="switchButton()"/>
+            </pe:if>    
+        </pe:container>
+        <pe:container ClickThrough="true" alignment="_rt" style="position: relative;margin-top: 15px; margin-right: 10px; background:;">
+            <pe:container ClickThrough="false" uiname="ui_camera" style="width:128px; height:128px; background: url(Texture/Aries/Creator/keepwork/Paralife/main/camera_32bits.png#0 0 128 128);"></pe:container>
+        </pe:container>
+    </pe:if>
+    <pe:if condition='<%=not ParaLife:IsNoBagBtn() and ParalifeLiveModel.main_ui_mode == "switchrole"%>'>
+        <pe:container alignment="_fi" zorder="-1" name="paralife_touch_scene" width="100%" height="100%" style="position: relative; background:url();">
+        </pe:container>
+        <pe:container alignment="_lb" uiname="paralife_role" width="100%" height="200" style="position: relative; background:url();">
+        </pe:container>
+        <pe:container zorder="-2" alignment="_lb"  width="100%" height="100" style="background:url(Texture/Aries/Creator/keepwork/Paralife/main/bottom_new_32bits.png);">
+        </pe:container>
+        <pe:container alignment="_rb" style="margin-bottom: 60px; width:80px;background:;">
+            <input align="right" type="button" name="switchmain" style="width:80px;height:80px;background: url(Texture/Aries/Creator/keepwork/Paralife/main/close_32bits.png#0 0 128 128);" onclick="switchButton()"/>
+        </pe:container>
+    </pe:if>
+    <pe:if condition='<%=not ParaLife:IsNoFacialBtn() and ParalifeLiveModel.main_ui_mode == "switch_expression"%>'>
+        <pe:container alignment="_lb" uiname="paralife_expression" width="100%" height="100" style="background:url(Texture/Aries/Creator/keepwork/Paralife/main/bg_32X32_32bits.png#0 0 16 16:6 6 6 6);">
+            <input align="right" type="button" name="next_page_expression" style="position:relative;margin-top:20px;margin-right:90px;width:64x;height:64px;background: url(Texture/Aries/Creator/keepwork/Paralife/main/img_default_expression_32bits.png#0 0 64 64);" onclick="switchButton()"/>
+            <input align="right" type="button" name="switchmain" style="position:relative;margin-top:10px;width:80px;height:80px;background: url(Texture/Aries/Creator/keepwork/Paralife/main/close_32bits.png#0 0 128 128);" onclick="switchButton()"/>
+        </pe:container>
+    </pe:if>    
+</pe:container>
+</pe:mcml>
+</body>
+</html>

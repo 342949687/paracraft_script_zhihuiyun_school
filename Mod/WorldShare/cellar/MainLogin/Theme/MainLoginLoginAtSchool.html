@@ -1,0 +1,289 @@
+<html>
+    <body> 
+        <pe:mcml>
+            <script type='text/npl'>
+                <![CDATA[
+                    -- bottles
+                    local MainLogin = NPL.load('(gl)Mod/WorldShare/cellar/MainLogin/MainLogin.lua')
+                    local ForgetPassword = NPL.load('(gl)Mod/WorldShare/cellar/ForgetPassword/ForgetPassword.lua')
+                    local ThirdPartyLogin = NPL.load('(gl)Mod/WorldShare/cellar/LoginModal/ThirdPartyLogin.lua')
+                    local MySchool = NPL.load('(gl)Mod/WorldShare/cellar/MySchool/MySchool.lua')
+                    local Create = NPL.load('(gl)Mod/WorldShare/cellar/Create/Create.lua')
+
+                    -- service
+                    local KeepworkServiceSession = NPL.load('(gl)Mod/WorldShare/service/KeepWorkService/KeepworkServiceSession.lua')
+                    local EventTrackingService = NPL.load('(gl)Mod/WorldShare/service/EventTracking.lua')
+
+                    -- helper
+                    local Validated = NPL.load('(gl)Mod/WorldShare/helper/Validated.lua')
+
+                    -- database
+                    local SessionsData = NPL.load('(gl)Mod/WorldShare/database/SessionsData.lua')
+
+                    local page = document:GetPageCtrl()
+
+                    function get_history_users()
+                        return MainLogin:GetHistoryUsers()
+                    end
+
+                    function remove_account(username)
+                        MainLogin:RemoveAccount(username)
+                    end
+
+                    function is_support_third_party_login()
+                        if System.os.GetPlatform() == 'win32' or System.os.GetPlatform() == 'mac' then
+                            return true
+                        else
+                            return false
+                        end
+                    end
+
+                    function close()
+                        local MainLoginLoginAtSchoolPage = Mod.WorldShare.Store:Get('page/Mod.WorldShare.cellar.MainLogin.LoginAtSchool')
+
+                        if MainLoginLoginAtSchoolPage then
+                            MainLoginLoginAtSchoolPage:CloseWindow()
+                        end
+                    end
+
+                    function back()
+                        close()
+                        MainLogin:SelectMode()
+                    end
+
+                    function forget_password()
+                        ForgetPassword:ShowPage()
+                    end
+
+                    function register()
+                        close()
+                        MainLogin:ShowRegisterNew(page.mode)
+                    end
+
+                    function login()
+                        if is_login then
+                            return
+                        end
+
+                        is_login = true
+
+                        if not MainLogin:LoginAtSchoolAction(function(b_succeed, code)
+                            is_login = false
+
+                            if not b_succeed then
+                                if page.mode == 'LOCAL' and (code == 0 or code == 500) then
+                                    _guihelper.MessageBox(
+                                        L'网络不稳定，是否进入游客模式（离线模式）？',
+                                        function(res)
+                                            if res and res == _guihelper.DialogResult.Yes then
+                                                local SetWhereAnonymousUser = Mod.WorldShare.Store:Action('user/SetWhereAnonymousUser')
+                                                SetWhereAnonymousUser(page.mode)
+
+                                                MainLogin:Close()
+                                                close()
+                                                Create:Show()
+                                            end
+                                        end,
+                                        _guihelper.MessageBoxButtons.YesNo
+                                    )
+                                end
+
+                                return
+                            end
+
+                            SessionsData:SetUserLocation(page.mode, Mod.WorldShare.Store:Get('user/username'))
+
+                            close()
+
+                            if not Mod.WorldShare.Store:Get('user/hasJoinedSchool') then
+                                MySchool:ShowJoinSchoolAfterRegister(function()
+                                    if page.mode == 'SCHOOL' then
+                                        MainLogin:EnterUserConsole()
+                                    elseif page.mode == 'LOCAL' then
+                                        Create:Show()
+                                    end
+                                end)
+                            else
+                                if page.mode == 'SCHOOL' then
+                                    MainLogin:EnterUserConsole()
+                                elseif page.mode == 'LOCAL' then
+                                    Create:Show()
+                                end
+                            end
+                        end) then
+                            is_login = false
+                        end
+                    end
+
+                    function update_login_button_status()
+                        local account = page:GetValue('account')
+                        local password = page:GetValue('password')
+
+                        local beSuccess = true
+
+                        if not Validated:AccountCompatible(account) then
+                           -- page:SetUIValue('account_field_error_msg', L'*账号不合法')
+                           -- page:FindControl('account_field_error').visible = true
+                           beSuccess = false
+                        else
+                            page:FindControl('account_field_error').visible = false
+                        end
+
+                        local password
+
+                        if be_show_password then
+                            password = page:GetValue('password_show')
+                        else
+                            password = page:GetValue('password_hide')
+                        end
+
+                        page:SetValue('password', password)
+
+                        if not Validated:Password(password) then
+                            -- page:SetUIValue('password_field_error_msg', L'*密码不合法')
+                            -- page:FindControl('password_field_error').visible = true
+                            beSuccess = false
+                        else
+                            page:FindControl('password_field_error').visible = false
+                        end
+
+                        if beSuccess then
+                            page:SetUIBackground('login_button', 'Texture/Aries/Creator/paracraft/paracraft_login_32bits.png#271 98 258 44')
+                        else
+                            page:SetUIBackground('login_button', 'Texture/Aries/Creator/paracraft/paracraft_login_32bits.png#271 197 258 44')
+                        end
+                    end
+
+                    function set_show_password()
+                        if be_show_password then
+                        be_show_password = false
+
+                            local val = page:GetValue('password_show')
+                            page:SetValue('password_hide', val)
+                            page:SetValue('password', val)
+
+                            page:FindControl('password_show').visible = false
+                            page:FindControl('password_hide').visible = true
+                        else
+                            be_show_password = true
+
+                            local val = page:GetValue('password_hide')
+                            page:SetValue('password_show', val)
+                            page:SetValue('password', val)
+
+                            page:FindControl('password_show').visible = true
+                            page:FindControl('password_hide').visible = false
+                        end
+                    end
+
+                    -- don't remove
+                    Mod.WorldShare.Utils.SetTimeOut(function()
+                        local val = page:GetValue('password_show')
+                        page:SetValue('password_hide', val)
+                        page:SetValue('password', val)
+
+                        page:FindControl('password_show').visible = false
+                        page:FindControl('password_hide').visible = true
+                    end, 0)
+                ]]>
+            </script>
+            <style type='text/mcss' src='Mod/WorldShare/cellar/Theme/Mcss/MainLoginMcss.mcss'>
+                {
+                    container_size = {
+                        ['margin-left'] = -160,
+                        ['margin-top'] = -100,
+                    },
+                    main_area = {
+                        width = 320,
+                        height = 320,
+                        ['base-font-size'] = 16,
+                        ['font-size'] = 16,
+                        color = '#ffffff',
+                        ['padding-top'] = 0,
+                        ['padding-left'] = 40,
+                        ['padding-right'] = 40,
+                    },
+                }
+            </style>
+            <pe:container alignment='_ct' ClickThrough='true' class='main_login_container_bg container_size'>
+                <div style='padding-top: 12px;padding-left: 18px;'>
+                    <div class='main_login_title_bg' style='float: left;width: 172px;height: 49px;'>
+                        <img style='margin-top: 13px;margin-left: 30px;width: 54px;height: 23px;' src='Texture/Aries/Creator/paracraft/paracraft_login_32bits.png#72 422 54 23' />
+                    </div>
+                    <div style='float: left;margin-left: 70px;margin-top: 10px;'>
+                        <input type='button' class='main_login_back_button' onclick="back"/>
+                    </div>
+                </div>
+                <div class='main_area'>
+                    <pe:container name='account_field_error' visible='false' style='display:none;background:'>
+                        <!-- error message -->
+                        <div>
+                            <label style='font-size: 12px;base-font-size: 12px;color: #EB2222;' name='account_field_error_msg' />
+                        </div>
+                    </pe:container>
+                    <pe:container name='password_field_error' visible='false' style='display:none;background:'>
+                        <!-- error message -->
+                        <div>
+                            <label style='font-size: 12px;base-font-size: 12px;color: #EB2222;' name='password_field_error_msg' />
+                        </div>
+                    </pe:container>
+                    <div style='width: 240px; height: 88.1px;padding-left: 35px;background: url(Texture/Aries/Creator/paracraft/paracraft_login_32bits.png#9 0 256 94)'>
+                        <div>
+                            <input type='text'
+                                   name='account'
+                                   onchange='update_login_button_status'
+                                   style='background:;textcolor: #FFFFFF;height: 30px;width: 190px;margin-top: 10px;font-size: 16px;'
+                                   EmptyText='<%= L"请输入您的账号/手机号" %>'
+                                   MoveViewWhenAttachWithIME='true' />
+                        </div>
+                        <div style='margin-bottom:12px;'>
+                            <div style="float: left;width: 190px;">
+                                <input type='text'
+                                        name='password_show'
+                                        style='background:;textcolor: #FFFFFF;height: 30px;width: 190px;margin-top: 10px;font-size: 16px;'
+                                        onchange='update_login_button_status'
+                                        SkipAutoBadWordFilter="true"
+                                        EmptyText='<%= L"请输入密码" %>'
+                                        MoveViewWhenAttachWithIME='true' />
+                                <input type='text'
+                                        name='password_hide'
+                                        PasswordChar="*"
+                                        style='background:;textcolor: #FFFFFF;height: 30px;margin-left: -190px;width: 190px;margin-top: 10px;font-size: 16px;'
+                                        onchange='update_login_button_status'
+                                        SkipAutoBadWordFilter="true"
+                                        EmptyText='<%= L"请输入密码" %>'
+                                        MoveViewWhenAttachWithIME='true' />
+                                <input type="hidden" name="password" value="" />
+                            </div>
+                            <input type="checkbox"
+                                    checked="false"
+                                    iconsize="20"
+                                    CheckedBG="Texture/Aries/Creator/paracraft/paracraft_login_32bits.png#272 52 20 20"
+                                    UncheckedBG="Texture/Aries/Creator/paracraft/paracraft_login_32bits.png#297 52 20 20"
+                                    style="position: relative;margin-left: -12px;margin-top: 14px;"
+                                    onclick="set_show_password"/>
+                        </div>
+                    </div>
+                    <div style="margin-top: 5px;">
+                        <div style='float:left;base-font-size: 13px;font-size: 13px;' onclick='forget_password()'><%= L"找回密码" %></div>
+                    </div>
+                    <div style='margin-top:5px;margin-bottom:10px;margin-top: 10px;'>
+                        <input type='button'
+                               name='login_button'
+                               DefaultButton='true'
+                               class='main_login_gray_button'
+                               onclick='login()'
+                               value='<%= L"登录"%>' />
+                    </div>
+                    <div style='margin-top:5px;margin-bottom:10px;'>
+                        <input type='button'
+                               name='login_button'
+                               class='main_login_cyan_button'
+                               onclick='register()'
+                               value='<%= L"注册"%>' />
+                    </div>
+                </div>
+            </pe:container>
+        </pe:mcml>
+    </body>
+</html>

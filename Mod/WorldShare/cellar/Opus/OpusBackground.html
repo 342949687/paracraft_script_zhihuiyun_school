@@ -1,0 +1,625 @@
+<html>
+    <body>
+        <pe:mcml>
+            <script type='text/npl' refresh='false'>
+                <![CDATA[
+                    -- bottles
+                    local Opus = NPL.load('./Opus.lua')
+                    local CommonLoadWorld = NPL.load('(gl)Mod/WorldShare/cellar/Common/LoadWorld/CommonLoadWorld.lua')
+                    local Server = NPL.load('(gl)Mod/WorldShare/cellar/Server/Server.lua')
+                    local CreateWorld = NPL.load('(gl)Mod/WorldShare/cellar/CreateWorld/CreateWorld.lua')
+                    local MainPage = NPL.load('(gl)Mod/ExplorerApp/pages/MainPage/MainPage.lua')
+                    local isGotoWorld = false
+                    local page = document:GetPageCtrl()
+
+                    function sel(index)
+                        CreateWorld.ClosePage()
+
+                        local my_opus_sel = page:FindControl('my_opus_sel')
+                        local my_opus_unsel = page:FindControl('my_opus_unsel')
+                        local my_home_sel = page:FindControl('my_home_sel')
+                        local my_home_unsel = page:FindControl('my_home_unsel')
+                        local my_favorite_sel = page:FindControl('my_favorite_sel')
+                        local my_favorite_unsel = page:FindControl('my_favorite_unsel')
+                        local my_history_sel = page:FindControl('my_history_sel')
+                        local my_history_unsel = page:FindControl('my_history_unsel')
+
+                        if my_opus_sel then
+                            my_opus_sel.visible = false
+                        end
+                        
+                        if my_opus_unsel then
+                            my_opus_unsel.visible = true
+                        end
+
+                        if my_home_sel then
+                            my_home_sel.visible = false
+                        end
+
+                        if my_home_unsel then
+                            my_home_unsel.visible = true
+                        end
+
+                        if my_favorite_sel then
+                            my_favorite_sel.visible = false
+                        end
+
+                        if my_favorite_unsel then
+                            my_favorite_unsel.visible = true
+                        end
+
+                        if my_history_sel then
+                            my_history_sel.visible = false
+                        end
+
+                        if my_history_unsel then
+                            my_history_unsel.visible = true
+                        end
+
+                        if index == '1' then
+                            if my_opus_sel then
+                                my_opus_sel.visible = true
+                            end
+
+                            if my_opus_unsel then
+                                my_opus_unsel.visible = false
+                            end
+
+                            if index ~= Opus.cur_sel then
+                                Opus.cur_sel = index
+                                Opus:CloseMyHome()
+                                MainPage:CloseExplorerEmbed()
+                                Opus:ShowOpus()
+                            end
+                        elseif index == '2' then
+                            if my_home_sel then
+                                my_home_sel.visible = true
+                            end
+
+                            if my_home_unsel then
+                                my_home_unsel.visible = false
+                            end
+
+                            if index ~= Opus.cur_sel then
+                                Opus.cur_sel = index
+
+                                Opus:CloseOpus()
+                                MainPage:CloseExplorerEmbed()
+
+                                Opus:ShowMyHome()
+                            end
+                        elseif index == '3' then
+                            if my_favorite_sel then
+                                my_favorite_sel.visible = true
+                            end
+
+                            if my_favorite_unsel then
+                                my_favorite_unsel.visible = false
+                            end
+
+                            if index ~= Opus.cur_sel then
+                                Opus.cur_sel = index
+
+                                Opus:CloseOpus()
+                                Opus:CloseMyHome()
+
+                                MainPage:ShowExporerEmbed()
+                                MainPage:SetMyFavoriteWorksTree()
+                            end
+                        elseif index == '4' then
+                            if my_history_sel then
+                                my_history_sel.visible = true
+                            end
+
+                            if my_history_unsel then
+                                my_history_unsel.visible = false
+                            end
+
+                            if index ~= Opus.cur_sel then
+                                Opus.cur_sel = index
+
+                                Opus:CloseOpus()
+                                Opus:CloseMyHome()
+
+                                MainPage:ShowExporerEmbed()
+                                MainPage:SetMyHistoryWorksTree()
+                            end
+                        end
+                    end
+
+                    page.sel = sel
+
+                    function open()
+                        if not isGotoWorld then
+                            local opus_content = page:GetValue('opus_content', '')
+
+                            local pid = Mod.WorldShare.Utils.GetProjectId(opus_content)
+
+                            if pid then
+                                GameLogic.RunCommand('/loadworld -auto ' .. pid)
+                            else
+                                CommonLoadWorld.GotoUrl(opus_content)
+                            end
+                            isGotoWorld = true
+                            commonlib.TimerManager.SetTimeout(function()
+                                isGotoWorld = false
+                            end,2000)
+                        end
+                    end
+
+                    function close()
+                        Opus:CloseAll()
+                    end
+
+                    function open_vip()
+                        GameLogic.IsVip('RedSummerCampWorks', true, function(result)
+                            if result then
+                            end
+                        end)
+                    end
+
+                    function open_lan_server()
+                        local ServerSetting = NPL.load('(gl)script/apps/Aries/Creator/Game/Setting/ServerSetting.lua')
+                        ServerSetting.ShowPage()
+                    end
+
+                    function show_explorer()
+                        close()
+                        Mod.WorldShare.Store:Remove('world/searchFolderName')
+                        GameLogic.GetFilters():apply_filters('cellar.explorer.show')
+                    end
+
+                    function get_recommand_title()
+                        if System.os.GetAndroidFlavor() == 'huawei' then
+                            return '优秀作品'
+                        else
+                            return '推荐作品'
+                        end
+                    end
+                ]]>
+            </script>
+            <style type='type/mcss' src='Mod/WorldShare/cellar/Opus/OpusMcss.mcss'></style>
+            <style type='type/mcss' src='Mod/WorldShare/cellar/Theme/Mcss/Theme1.mcss'></style>
+            <pe:container
+                alignment='_fi'
+                zorder='-1'
+                width='100%'
+                height='100%'
+                style='position:relative;background-color:#dcdcdc'>
+            </pe:container>
+            <pe:container
+                alignment='_fi'
+                zorder='-1'
+                width='100%'
+                height='100%'
+                class='red_summer_camp_bg'>
+            </pe:container>
+            <div>
+                <div>
+                    <div align='right'
+                         style='width: 67px;
+                                height: 70px;
+                                position: relative;
+                                margin-right: 20px;
+                                margin-top: 8px;'>
+                        <!-- <div onclick='open_vip'
+                             style='background: url(Texture/Aries/Creator/keepwork/RedSummerCamp/works/works_32bits.png#304 111 67 70);
+                                    width: 67px;
+                                    height: 70px;'></div> -->
+                        <%=GameLogic.GetFilters():apply_filters('get_vip_btn_div',"position: relative;margin-right: 20px;margin-top: 5px;","RedSummerCampWorks")%>
+                    </div>
+                    <div style='background: url(Texture/Aries/Creator/keepwork/RedSummerCamp/courses/courses_32bits.png#7 249 169 56);
+                                width: 169px;
+                                height: 56px;
+                                float: left;'>
+                        <div align='center'
+                             onclick='close'
+                             style='background: url(Texture/Aries/Creator/keepwork/RedSummerCamp/works/works_32bits.png#5 67 38 33);
+                                    width: 38px;
+                                    height: 33px;
+                                    margin-top: 12px;
+                                    margin-left: -20px;'></div>
+                    </div>
+                    <div style='float: left;
+                                width: 283px;
+                                height: 56px;
+                                margin-left: -73px;
+                                background: url(Texture/Aries/Creator/keepwork/RedSummerCamp/shentongbei/shentongbei_32bits.png#17 794 283 56)'>
+                        <pe:if condition='<%= not Mod.WorldShare.Utils.IsEnglish() %>'>
+                            <div align='center'
+                                 style='background: url(Texture/Aries/Creator/keepwork/RedSummerCamp/works/works_32bits.png#231 197 79 20);
+                                        width: 79px;
+                                        height: 20px;
+                                        margin-top: 19px;
+                                        float: left;'></div>
+                        </pe:if>
+                        <pe:if condition='<%= Mod.WorldShare.Utils.IsEnglish() %>'>
+                            <div align='center'
+                                 style='width: 180px;
+                                        height: 20px;
+                                        margin-top: 12px;
+                                        float: left;
+                                        font-weight: bold;
+                                        font-size: 22px;
+                                        base-font-size: 22px;
+                                        color: #FFFFFF;'>
+                                Load world
+                            </div>
+                        </pe:if>
+                    </div>
+                    <div style='float: left;'>
+                        <!-- seach bar -->
+                        <div style='background: url(Texture/Aries/Creator/keepwork/RedSummerCamp/works/works_32bits.png#176 173 32 42: 7 7 7 7);
+                                    width: 490px;
+                                    height: 42px;
+                                    margin-left: 10px;
+                                    margin-top: 10px;'>
+                            <div style='width: 495px;'>
+                                <input type='text'
+                                       uiname='OpusBackground.opus_content'
+                                       name='opus_content'
+                                       spacing='10'
+                                       EmptyText='<%= L"输入作品ID或作品链接" %>'
+                                       EmptyTextColor='#FF25282E'
+                                       style='width: 406px;
+                                              height: 42px;
+                                              font-size: 18px;
+                                              base-font-size: 18px;
+                                              text-valign: center;
+                                              background:;'/>
+                                <input type='button'
+                                       class='opus_bar_button'
+                                       DefaultButton='true'
+                                       uiname='OpusBackground.open'
+                                       style='width: 86px;
+                                              height: 46px;
+                                              text-offset-y: -3px;
+                                              font-weight: bold;
+                                              font-size: 20px;
+                                              base-font-size: 20px;
+                                              margin-top: -2px;'
+                                       name='open_button'
+                                       onclick='open'
+                                       value='<%= L"打开" %>' />
+                            </div>
+                        </div>
+                    </div>
+                    <div style='float: left'>
+                        <input type='button'
+                               onclick='open_lan_server'
+                               style='width: 49px;
+                                      height: 49px;
+                                      margin-top: 8px;
+                                      margin-left: 12px;
+                                      background: url(Texture/Aries/Creator/keepwork/worldshare/main_login_buttons2_32bits.png#10 10 78 78)' />
+                    </div>
+                </div>
+                <pe:container alignment='_ct'
+                              zorder='-1'
+                              width='1280'
+                              height='720'
+                              style='margin-left:-640px;
+                                     margin-top:-340px;
+                                     background:;'>
+                    <div width='100%' style='padding-top: 20px;'>
+                        <pe:container alignment='_ct' style='margin-left:-640px;margin-top:-360px;width:1280px;height:720px;background:url();'>
+                            <!--背景水印-->
+                            <div>
+                                <div style='position:relative;margin-left:24px;margin-top:104px;width:512px;height:256px;background:url(Texture/Aries/Creator/keepwork/RedSummerCamp/courses/watermark_bg_32bits.png);' />
+                                <div style='position:relative;margin-left:557px;margin-top:26px;width:512px;height:256px;background:url(Texture/Aries/Creator/keepwork/RedSummerCamp/courses/watermark_bg_32bits.png);' />
+                                <div style='position:relative;margin-left:103px;margin-top:282px;width:512px;height:256px;background:url(Texture/Aries/Creator/keepwork/RedSummerCamp/courses/watermark_bg_32bits.png);' />
+                                <div style='position:relative;margin-left:879px;margin-top:311px;width:512px;height:256px;background:url(Texture/Aries/Creator/keepwork/RedSummerCamp/courses/watermark_bg_32bits.png);' />
+                                <div style='position:relative;margin-left:438px;margin-top:477px;width:512px;height:256px;background:url(Texture/Aries/Creator/keepwork/RedSummerCamp/courses/watermark_bg_32bits.png);' />
+                            </div>
+                        </pe:container>
+                        <!-- bottom content -->
+                        <div width='18%'
+                             style='float: left;
+                                    height: 620px;'>
+                            <div align='center'
+                                 style='height: 64px;
+                                        width: 160px;
+                                        position: relative;
+                                        top: 540px;'>
+                                <pe:container style='position: relative;background:;'>
+                                    <div style='width: 160px;'>
+                                        <pe:if condition='<%= not Mod.WorldShare.Utils.IsEnglish() %>'>
+                                            <input type='button'
+                                                   onclick='show_explorer' 
+                                                   name='2'
+                                                   class='theme1_green_button'
+                                                   textscale=1.2
+                                                   style='width: 160px;
+                                                          height: 64px;
+                                                          font-weight: bold;
+                                                          font-size: 20px;
+                                                          base-font-size: 20px;
+                                                          margin-bottom: 40px;
+                                                          color: #000000;'
+                                                   value='<%= get_recommand_title() %>' />
+                                        </pe:if>
+                                        <pe:if condition='<%= Mod.WorldShare.Utils.IsEnglish() %>'>
+                                            <input type='button'
+                                                   onclick='show_explorer' 
+                                                   name='2'
+                                                   class='theme1_green_button'
+                                                   textscale=1.2
+                                                   style='width: 160px;
+                                                          height: 64px;
+                                                          font-weight: bold;
+                                                          font-size: 16px;
+                                                          base-font-size: 16px;
+                                                          margin-bottom: 40px;
+                                                          color: #000000;'
+                                                   value='Recommended' />
+                                        </pe:if>
+                                    </div>
+                                </pe:container>
+                            </div>
+                            <div align='center'
+                                 style='height: 64px;
+                                        width: 160px;
+                                        margin-bottom: 20px;'>
+                                <pe:container name='my_opus_sel' visible='true' style='position: relative;background:;'>
+                                    <div style='width: 160px;'>
+                                        <pe:if condition='<%= not Mod.WorldShare.Utils.IsEnglish() %>'>
+                                            <input type='button'
+                                                   onclick='sel'
+                                                   name='1'
+                                                   class='opus_menu_button'
+                                                   textscale=1.2
+                                                   style='width: 160px;
+                                                          font-weight: bold;
+                                                          font-size: 20px;
+                                                          base-font-size: 40px;'
+                                                   value='我的存档' />
+                                        </pe:if>
+                                        <pe:if condition='<%= Mod.WorldShare.Utils.IsEnglish() %>'>
+                                            <input type='button'
+                                                   onclick='sel'
+                                                   name='1'
+                                                   class='opus_menu_button'
+                                                   textscale=1.2
+                                                   style='width: 160px;
+                                                          font-weight: bold;
+                                                          font-size: 20px;
+                                                          base-font-size: 40px;'
+                                                   value='My Worlds' />
+                                        </pe:if>
+                                    </div>
+                                </pe:container>
+                                <pe:container name='my_opus_unsel' visible='false' style='position: relative;background:;'>
+                                    <div style='width: 160px;'>
+                                        <pe:if condition='<%= not Mod.WorldShare.Utils.IsEnglish() %>'>
+                                            <input type='button'
+                                                   onclick='sel'
+                                                   name='1'
+                                                   class='opus_menu_button_unsel'
+                                                   textscale=1.2
+                                                   style='width: 160px;
+                                                          font-weight: bold;
+                                                          font-size: 20px;
+                                                          base-font-size: 40px;
+                                                          color: #FFFFFF;'
+                                                   value='我的存档' />
+                                        </pe:if>
+                                        <pe:if condition='<%= Mod.WorldShare.Utils.IsEnglish() %>'>
+                                            <input type='button'
+                                                   onclick='sel'
+                                                   name='1'
+                                                   class='opus_menu_button_unsel'
+                                                   textscale=1.2
+                                                   style='width: 160px;
+                                                          font-weight: bold;
+                                                          font-size: 20px;
+                                                          base-font-size: 40px;
+                                                          color: #FFFFFF;'
+                                                   value='My Worlds' />
+                                        </pe:if>
+                                    </div>
+                                </pe:container>
+                            </div>
+                            <div align='center'
+                                 style='height: 64px;
+                                        width: 160px;
+                                        margin-bottom: 20px;'>
+                                <pe:container name='my_home_sel' visible='false' style='position: relative;background:;'>
+                                    <div style='width: 160px;'>
+                                        <pe:if condition='<%= not Mod.WorldShare.Utils.IsEnglish() %>'>
+                                            <input type='button'
+                                                   onclick='sel'
+                                                   name='2'
+                                                   class='opus_menu_button'
+                                                   textscale=1.2
+                                                   style='width: 160px;
+                                                          font-weight: bold;
+                                                          font-size: 20px;
+                                                          base-font-size: 40px;'
+                                                   value='我的家园' />
+                                        </pe:if>
+                                        <pe:if condition='<%= Mod.WorldShare.Utils.IsEnglish() %>'>
+                                            <input type='button'
+                                                   onclick='sel'
+                                                   name='2'
+                                                   class='opus_menu_button'
+                                                   textscale=1.2
+                                                   style='width: 160px;
+                                                          font-weight: bold;
+                                                          font-size: 20px;
+                                                          base-font-size: 40px;'
+                                                   value='Home Land' />
+                                        </pe:if>
+                                    </div>
+                                </pe:container>
+                                <pe:container name='my_home_unsel' visible='true' style='position: relative;background:;'>
+                                    <div style='width: 160px;'>
+                                        <pe:if condition='<%= not Mod.WorldShare.Utils.IsEnglish() %>'>
+                                            <input type='button'
+                                                   onclick='sel'
+                                                   name='2'
+                                                   class='opus_menu_button_unsel'
+                                                   textscale=1.2
+                                                   style='width: 160px;
+                                                          font-weight: bold;
+                                                          font-size: 20px;
+                                                          base-font-size: 40px;
+                                                          color: #FFFFFF;'
+                                                   value='我的家园' />
+                                        </pe:if>
+                                        <pe:if condition='<%= Mod.WorldShare.Utils.IsEnglish() %>'>
+                                            <input type='button'
+                                                   onclick='sel'
+                                                   name='2'
+                                                   class='opus_menu_button_unsel'
+                                                   textscale=1.2
+                                                   style='width: 160px;
+                                                          font-weight: bold;
+                                                          font-size: 20px;
+                                                          base-font-size: 40px;
+                                                          color: #FFFFFF;'
+                                                   value='Home Land' />
+                                        </pe:if>
+                                    </div>
+                                </pe:container>
+                            </div>
+                            <div align='center'
+                                 style='height: 64px;
+                                        width: 160px;
+                                        margin-bottom: 20px;'>
+                                <pe:container name='my_favorite_sel' visible='false' style='position: relative;background:;'>
+                                    <div style='width: 160px;'>
+                                        <pe:if condition='<%= not Mod.WorldShare.Utils.IsEnglish() %>'>
+                                            <input type='button'
+                                                   onclick='sel'
+                                                   name='3'
+                                                   class='opus_menu_button'
+                                                   textscale=1.2
+                                                   style='width: 160px;
+                                                          font-weight: bold;
+                                                          font-size: 20px;
+                                                          base-font-size: 40px;'
+                                                   value='收藏列表' />
+                                        </pe:if>
+                                        <pe:if condition='<%= Mod.WorldShare.Utils.IsEnglish() %>'>
+                                            <input type='button'
+                                                   onclick='sel'
+                                                   name='3'
+                                                   class='opus_menu_button'
+                                                   textscale=1.2
+                                                   style='width: 160px;
+                                                          font-weight: bold;
+                                                          font-size: 20px;
+                                                          base-font-size: 40px;'
+                                                   value='Favorites' />
+                                        </pe:if>
+                                    </div>
+                                </pe:container>
+                                <pe:container name='my_favorite_unsel' visible='true' style='position: relative;background:;'>
+                                    <div style='width: 160px;'>
+                                        <pe:if condition='<%= not Mod.WorldShare.Utils.IsEnglish() %>'>
+                                            <input type='button'
+                                                   onclick='sel'
+                                                   name='3'
+                                                   class='opus_menu_button_unsel'
+                                                   textscale=1.2
+                                                   style='width: 160px;
+                                                          font-weight: bold;
+                                                          font-size: 20px;
+                                                          base-font-size: 40px;
+                                                          color: #FFFFFF;'
+                                                   value='收藏列表' />
+                                        </pe:if>
+                                        <pe:if condition='<%= Mod.WorldShare.Utils.IsEnglish() %>'>
+                                            <input type='button'
+                                                   onclick='sel'
+                                                   name='3'
+                                                   class='opus_menu_button_unsel'
+                                                   textscale=1.2
+                                                   style='width: 160px;
+                                                          font-weight: bold;
+                                                          font-size: 20px;
+                                                          base-font-size: 40px;
+                                                          color: #FFFFFF;'
+                                                   value='Favorites' />
+                                        </pe:if>
+                                    </div>
+                                </pe:container>
+                            </div>
+                            <div align='center'
+                                 style='height: 64px;
+                                        width: 160px;
+                                        margin-bottom: 20px;'>
+                                <pe:container name='my_history_sel' visible='false' style='position: relative;background:;'>
+                                    <div style='width: 160px;'>
+                                        <pe:if condition='<%= not Mod.WorldShare.Utils.IsEnglish() %>'>
+                                            <input type='button'
+                                                   onclick='sel'
+                                                   name='4'
+                                                   class='opus_menu_button'
+                                                   textscale=1.2
+                                                   style='width: 160px;
+                                                          font-weight: bold;
+                                                          font-size: 20px;
+                                                          base-font-size: 40px;'
+                                                   value='访问历史' />
+                                        </pe:if>
+                                        <pe:if condition='<%= Mod.WorldShare.Utils.IsEnglish() %>'>
+                                            <input type='button'
+                                                   onclick='sel'
+                                                   name='3'
+                                                   class='opus_menu_button'
+                                                   textscale=1.2
+                                                   style='width: 160px;
+                                                          font-weight: bold;
+                                                          font-size: 20px;
+                                                          base-font-size: 40px;'
+                                                   value='History' />
+                                        </pe:if>
+                                    </div>
+                                </pe:container>
+                                <pe:container name='my_history_unsel' visible='true' style='position: relative;background:;'>
+                                    <div style='width: 160px;'>
+                                        <pe:if condition='<%= not Mod.WorldShare.Utils.IsEnglish() %>'>
+                                            <input type='button'
+                                                   onclick='sel'
+                                                   name='4'
+                                                   class='opus_menu_button_unsel'
+                                                   textscale=1.2
+                                                   style='width: 160px;
+                                                          font-weight: bold;
+                                                          font-size: 20px;
+                                                          base-font-size: 40px;
+                                                          color: #FFFFFF;'
+                                                   value='访问历史' />
+                                        </pe:if>
+                                        <pe:if condition='<%= Mod.WorldShare.Utils.IsEnglish() %>'>
+                                            <input type='button'
+                                                   onclick='sel'
+                                                   name='4'
+                                                   class='opus_menu_button_unsel'
+                                                   textscale=1.2
+                                                   style='width: 160px;
+                                                          font-weight: bold;
+                                                          font-size: 20px;
+                                                          base-font-size: 40px;
+                                                          color: #FFFFFF;'
+                                                   value='History' />
+                                        </pe:if>
+                                    </div>
+                                </pe:container>
+                            </div>
+                        </div>
+                        <div style='float:left;
+                                    height: 620px;
+                                    width: 2px;
+                                    margin-left: -6px;
+                                    background-color: #99999999;'></div>
+                        <div width='80%' style='float: left;'>
+                            <!-- holder -->
+                        </div>
+                    </div>
+                </pe:container>
+            </div>
+        </pe:mcml>
+    </body>
+</html>

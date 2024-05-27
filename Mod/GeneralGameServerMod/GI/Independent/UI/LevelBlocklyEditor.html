@@ -1,0 +1,84 @@
+<template class="container">
+    <div class="header">
+        <div style="height: 100%; width: 300px; display: flex; align-items: center;">
+            <div tooltip="编译并运行" class="btn" style="width:62px; height:30px; background:url(@/textures/code_32bits.png#152 64 62 30);" onclick=OnClickRun></div>
+            <div tooltip="设置倍速" class="btn" v-bind:style="format('margin-left: 4px; width:62px; height:30px; background:url(@/textures/beisu%d_32bits.png#8 6 122 56);', Speed)" onclick=OnClickSpeed></div>
+            <div class="btn" style="margin-left: 4px; height: 30px; line-height: 30px; width: 100px;" onclick=OnClickImportPassLevelXmlText>导入通过代码</div>
+        </div>
+       
+        <div style="height: 100%; display: flex; align-items: center;">
+            <div tooltip="关闭" class="btn" style="width:35px;height:39px;background:url(@/textures/code_32bits.png#91 76 35 39);" onclick=CloseWindow></div>
+        </div> 
+    </div>
+    <Blockly ref="blockly" class="blockly" v-bind:ToolBoxXmlText="ToolBoxXmlText"></Blockly>
+</template>
+
+<script type="text/lua">
+local BlocklyEl = nil;
+
+Speed = 1;
+
+-- 组件解析完成
+function OnReady()
+    BlocklyEl = GetRef("blockly");
+    BlocklyEl:LoadFromXmlNodeText(_G.WorkspaceXmlText);
+
+    Speed = _G.Speed or 1;
+end
+
+local function GetCode()
+    if (not BlocklyEl) then return end
+    local rawcode, prettycode = BlocklyEl:GetCode();
+    return rawcode;
+end
+
+function OnClickSpeed()
+    Speed = Speed + 1;
+	if (Speed > 5) then Speed = 1 end
+    if (type(rawget(_G, "SetSpeed")) == "function") then _G.SetSpeed(Speed) end
+end
+
+function OnClickRun()
+    if (type(rawget(_G, "Run")) == "function") then _G.Run(GetCode(), BlocklyEl and BlocklyEl:GetStatementBlockCount()) end
+end
+
+function OnClickRestart()
+    if (type(rawget(_G, "restart")) == "function") then _G.restart() end
+end
+
+function OnClickImportPassLevelXmlText()
+    if (not _G.PassLevelXmlText or not BlocklyEl) then return end
+    BlocklyEl:LoadFromXmlNodeText(_G.PassLevelXmlText);
+end
+
+</script>
+
+<style>
+.container {
+    height: 100%; 
+    width: 100%; 
+    padding: 0px 2px 2px 2px;
+    background-color: #a37c2d;
+}
+
+.header {
+    height: 40px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0px 10px;
+}
+
+.blockly {
+    position: absolute; 
+    left: 0px; 
+    right: 0px; 
+    top: 40px; 
+    bottom: 0px;
+}
+
+.btn {
+    background-color: #cccccc;
+}
+</style>

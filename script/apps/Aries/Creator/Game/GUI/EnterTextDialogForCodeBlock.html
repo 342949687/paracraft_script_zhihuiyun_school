@@ -1,0 +1,85 @@
+﻿<!-- "script/apps/Aries/Creator/Game/GUI/EnterTextDialogForCodeBlock.html" -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title></title>
+</head>
+<body>
+<pe:mcml>
+<script refresh="false" type="text/npl" src="EnterTextDialog.lua"><![CDATA[
+EnterTextDialog = commonlib.gettable("MyCompany.Aries.Game.GUI.EnterTextDialog");
+EnterTextDialog.OnInit()
+function OnClose()
+    Page:CloseWindow();
+end
+
+function GetButtonStyle(index)
+    local style = "position: relative;width:432px;height:30px;color:%s;font-size:%s;base-font-size:%s;text-align:%s;background:"
+    local source = EnterTextDialog.GetButtonsDS()
+    if source == nil then
+        return style
+    end
+
+    local data = source[index] or {}
+    local color = data.color or "#ffffff"
+    local font_size = data.size or "20px"
+    local text_align = data.align or "center"
+    style = string.format(style, color, font_size, font_size, text_align)
+    
+    return style
+end
+]]></script>
+<div style="width:480px;" class="mc_panel">
+<div style="margin:12px;">
+    <div style="color:#ffffff;margin-bottom:7px;base-font-size:20px; font-size: 20px;">
+        <%=EnterTextDialog.GetText()%>
+    </div>
+    <div>
+        <pe:if condition='<%=EnterTextDialog.IsSingleLine()%>'>
+            <input type="text" EmptyText='<%=L"点这里输入"%>' uiname="EnterTextDialog.text" name="text" style="height:28px;"/>
+        </pe:if>
+        <pe:if condition='<%=EnterTextDialog.IsMultiLine()%>'>
+            <div class="mc_paper_panel" style="padding:6px;margin-bottom:6px;margin-right:6px;">
+                <textarea rows="10" UseSystemControl="true" uiname="EnterTextDialog.text_multi" name="text_multi" EmptyText='<%=L"点击这里输入(Ctrl+V可以粘贴)"%>' VerticalScrollBarStep="40" />
+            </div>
+        </pe:if>
+        <pe:if condition='<%=EnterTextDialog.IsSelectText()%>'>
+            <select name="text_select" uiname="EnterTextDialog.text_select" AllowUserEdit="true" style="width:264px;height:28px;" DataSource='<%=EnterTextDialog.options%>'>
+            </select>
+        </pe:if>
+        <pe:if condition='<%=EnterTextDialog.IsButtons()%>'>
+            <pe:repeat DataSource="<%=EnterTextDialog.GetButtonsDS()%>">
+                <pe:repeatitem>
+                    <pe:container ClickThrough="true" style="margin-left: 10px; margin-bottom:8px;width:432px;height:30px;background: url();">
+                        <div style='<%=GetButtonStyle(Eval("index"))%>'><%=Eval("text")%></div>
+                        <input type="button" zorder="-1" uiname='<%="EnterTextDialog.button_"..Eval("index")%>' style='width:432px;height:30px;background:url(Texture/Aries/Creator/Theme/GameCommonIcon_32bits.png#179 89 21 21:8 8 8 8)' name='<%=Eval("index")%>' value='' onclick="EnterTextDialog.OnClickButton"/>
+                    </pe:container>
+
+                </pe:repeatitem>
+            </pe:repeat>
+        </pe:if>
+    </div>
+    <pe:if condition='<%=not EnterTextDialog.IsButtons()%>'>
+        <div>
+            <input type="button" uiname="EnterTextDialog.OK" name="OK" DefaultButton="true" align="right" style="margin-right:0px;margin-top:6px;width:84px;" class="mc_light_grey_button_with_fillet" onclick="EnterTextDialog.OnOK" value='<%=L"确定"%>' />
+        </div>
+    </pe:if>
+</div>
+<%
+    function SetFocus()
+        local t = Page:FindControl("text")
+        if(t) then
+            t:Focus();
+        end	
+    end
+    SetFocus()
+    local mytimer = commonlib.Timer:new({callbackFunc = function(timer)
+	    SetFocus()
+    end})
+    mytimer:Change(200);
+%>
+</div>
+</pe:mcml>
+</body>
+</html>

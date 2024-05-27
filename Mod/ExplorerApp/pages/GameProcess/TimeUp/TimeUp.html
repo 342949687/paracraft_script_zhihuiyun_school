@@ -1,0 +1,108 @@
+<html>
+<body>
+<pe:mcml>
+    <script refresh="false" type="text/npl" src="SetCoins.lua">
+        <![CDATA[
+            TimeUp = NPL.load('./TimeUp.lua')
+
+            Password = NPL.load("(gl)Mod/ExplorerApp/pages/Password/Password.lua")
+            MainPage = NPL.load("(gl)Mod/ExplorerApp/pages/MainPage.lua")
+
+            TimeUp:SetPage()
+
+            function container()
+                local style = Mod.WorldShare.Utils.FixCenter(273, 244)
+                return style .. ';background:url(Texture/Aries/Creator/Theme/GameCommonIcon_32bits.png#267 89 34 34:8 8 8 8)';
+            end
+
+            function close()
+                TimeUp:ClosePage()
+            end
+
+            function buy()
+                TimeUp:ClosePage()
+                Password:ShowPage()
+            end
+
+            function goback()
+                TimeUp:ClosePage()
+                MainPage:ShowPage()
+            end
+        ]]>
+    </script>
+    <style type="text/scss">
+        {
+            strip = {
+                height = 40,
+                padding = 10
+            },
+            strip_title = {
+                ['text-align'] = 'center',
+                ['font-weight'] = 'bold',
+                ['font-size'] = 15,
+                ['base-font-size'] = 15
+            },
+            close = {
+                width = 26,
+                height = 26,
+                position = 'relative',
+                align = 'right',
+                ['margin-top'] = -23
+            },
+            close_button = {
+                background = 'Texture/Aries/Creator/Theme/GameCommonIcon_32bits.png#363 59 26 26:7 7 7 7',
+                width = 26,
+                height = 26
+            },
+            area = {
+                ['padding-top'] = 40,
+                ['padding-left'] = 30,
+                ['padding-right'] = 30,
+            },
+            word = {
+                ['text-align'] = 'center',
+                height = 100
+            },
+            buy = {
+                color = '#ffffff',
+                position = 'relative',
+                align = 'left',
+                width = 88,
+                height = 32,
+                ['text-align'] = 'center',
+                ['padding-top'] = 4,
+                background = 'Texture/Aries/Creator/keepwork/explorer_32bits.png#61 131 16 16:3 3 3 3'
+            },
+            goback = {
+                color = '#ffffff',
+                position = 'relative',
+                align = 'right',
+                width = 88,
+                height = 32,
+                ['text-align'] = 'center',
+                ['padding-top'] = 4,
+                background = 'Texture/Aries/Creator/keepwork/explorer_32bits.png#61 131 16 16:3 3 3 3'
+            },
+        }
+    </style>
+    <div width="100%" height="100%">
+        <div class="default" width="273" height="244" style="<%= container() %>">
+            <div class="strip">
+                <div class="strip_title"><%=L'游戏时间到'%></div>
+                <div class="close">
+                    <!-- <input onclick="close()" class="close_button" type="button"/> -->
+                </div>
+            </div>
+            <div style="height:1px;" width="100%" class="mc_line"></div>
+            <div class="area">
+                <div class="word"><%=L'金币不足，你可以去购买金币'%></div>
+                <div>
+                    <input type="button" class="buy" value="<%=L'去购买'%>" onclick="buy"/>
+                    <input type="button" class="goback" value="<%=L'返回主页'%>" onclick="goback"/>
+                </div>
+            </div>
+        </div>
+    </div>
+</pe:mcml>
+</body>
+</html>

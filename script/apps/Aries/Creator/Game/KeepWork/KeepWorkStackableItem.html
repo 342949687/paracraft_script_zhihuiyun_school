@@ -1,0 +1,305 @@
+﻿<!-- "script/apps/Aries/Inventory/Pages/KeepWorkStackableItem.html" -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>KeepWorkStackableItem, by Andy, 2009/8/5</title>
+</head>
+<body>
+<pe:mcml>
+<script type="text/npl" src="KeepWorkStackableItem.lua" refresh="true"><![CDATA[
+local pageCtrl = document:GetPageCtrl();
+--local ItemPage = MyCompany.Aries.Inventory.PurchaseStackableItem;
+local KeepWorkStackableItemPage = MyCompany.Aries.Creator.Game.KeepWork.KeepWorkStackableItemPage
+local ItemManager = Map3DSystem.Item.ItemManager;
+local hasGSItem = ItemManager.IfOwnGSItem;
+local VIP = commonlib.gettable("MyCompany.Aries.VIP");
+
+local haqi_RMB_Currency = System.options.haqi_RMB_Currency
+local haqi_GameCurrency = System.options.haqi_GameCurrency
+
+KeepWorkStackableItemPage.OnInit();
+
+local default_count = pageCtrl:GetRequestParam("count");
+default_count = tonumber(default_count) or 1;
+local price = 0;
+local pbuyprice = 0;
+local gsItem = System.Item.ItemManager.GetGlobalStoreItemInMemory(gsid);
+local item_data = KeepWorkStackableItemPage.GetItemData()
+
+local max_count = item_data.rule.storage > 0 and item_data.rule.storage or 999; 
+if(gsItem) then
+    local bhas,_,_,count = hasGSItem(gsid);
+    if(not gsItem.template.maxcount or gsItem.template.maxcount<=0) then
+        max_count = item_data.rule.storage > 0 and item_data.rule.storage or 999;
+    else
+        max_count = math.min(math.max(gsItem.template.maxcount - (count or 0),0), 9999999);
+    end
+end
+
+function GetCountDesc()
+    return format("输入购买数量(1-%d)", max_count);
+end
+
+local last_bean = System.App.profiles.ProfileManager.GetUserInfoInMemory();
+
+if(gsItem) then
+	name = gsItem.template.name;
+	price = gsItem.ebuyprice;
+    pbuyprice = gsItem.count;
+else
+    name = "unknown";
+    price = 0;
+    pbuyprice = 0;
+end
+
+local mymoney = 0;
+local my_p_money = 0;
+local bhas,_,_,count = hasGSItem(984);
+if (bhas and count) then
+    my_p_money = count;
+end
+
+local ProfileManager = System.App.profiles.ProfileManager;
+local myInfo = ProfileManager.GetUserInfoInMemory(ProfileManager.GetNID());
+
+if(myInfo) then
+    mymoney = myInfo.emoney;
+end
+
+function IsKids()
+    if (System.options.version=="kids")then
+        return true
+    else
+        return false
+    end
+end
+
+function GetBuyDesc1()
+    return KeepWorkStackableItemPage.GetBuyDesc1()
+end
+
+function GetBuyDesc2()
+    return "";    
+end
+
+defaultDesc1 = GetBuyDesc1();
+defaultDesc2 = GetBuyDesc2();
+
+function OnOK()
+    KeepWorkStackableItemPage.OnOK()
+end
+
+function pageCtrl.OnClose()
+    --ItemPage.StopTimer();
+end
+
+--ItemPage.StartTimer(pageCtrl.name, gsid);
+
+function OnCancel()
+    pageCtrl:CloseWindow();
+end
+
+function OnInitValue()
+    local count = default_count;
+    if(count <= 1) then
+        count = 1;
+    elseif(count > max_count) then
+        count = max_count;
+    end
+    if (IsKids()) then
+        pageCtrl:SetValue("count", count);
+        pageCtrl:SetValue("buydesc1", GetBuyDesc1());
+    else
+        pageCtrl:SetValue("countTeen", count);
+        pageCtrl:SetValue("buydesc1Teen", GetBuyDesc1());
+    end
+end
+function OnDecrease()
+    local count;
+    if (IsKids()) then
+        count = pageCtrl:GetValue("count");
+    else
+        count = pageCtrl:GetValue("countTeen");
+    end
+    count = tonumber(count);
+    if(count) then
+        if(count <= 1) then
+            count = 1;
+        elseif(count > max_count) then
+            count = max_count;
+        else
+            count = count - 1;
+        end
+        KeepWorkStackableItemPage.setBuyNum(count)
+
+        if (IsKids()) then
+            pageCtrl:SetValue("count", count);
+            pageCtrl:SetValue("buydesc1", GetBuyDesc1());
+        else
+            pageCtrl:SetValue("countTeen", count);
+            pageCtrl:SetValue("buydesc1Teen", GetBuyDesc1());
+        end
+    end
+    
+end
+
+function OnIncrease()
+    local count;
+    if (IsKids()) then
+        count = pageCtrl:GetValue("count");
+    else
+        count = pageCtrl:GetValue("countTeen");
+    end
+    count = tonumber(count);
+    if(count) then
+        if(count < 1) then
+            count = 1;
+        elseif(count >= max_count) then
+            count = max_count;
+        else
+            count = count + 1;
+        end
+
+        KeepWorkStackableItemPage.setBuyNum(count)
+        if (IsKids()) then
+            pageCtrl:SetValue("count", count);
+            pageCtrl:SetValue("buydesc1", GetBuyDesc1());
+        else
+            pageCtrl:SetValue("countTeen", count);
+            pageCtrl:SetValue("buydesc1Teen", GetBuyDesc1());
+        end
+    end
+end
+function OnKeyUp()
+    local count;
+    if (IsKids()) then
+        count = pageCtrl:GetValue("count");
+    else
+        count = pageCtrl:GetValue("countTeen");
+    end
+    count = tonumber(count) or 1;
+    if(count < 1)then
+        count = 1;
+        if (IsKids()) then
+            pageCtrl:SetValue("count", count);
+            pageCtrl:SetValue("buydesc1", GetBuyDesc1());
+        else
+            pageCtrl:SetValue("countTeen", count);
+            pageCtrl:SetValue("buydesc1Teen", GetBuyDesc1());
+        end
+    elseif(count > max_count)then
+        count = max_count;
+        if (IsKids()) then
+            pageCtrl:SetValue("count", count);
+            pageCtrl:SetValue("buydesc1", GetBuyDesc1());
+        else
+            pageCtrl:SetValue("countTeen", count);
+            pageCtrl:SetValue("buydesc1Teen", GetBuyDesc1());
+        end
+    else
+        if (IsKids()) then
+            pageCtrl:SetValue("buydesc1", GetBuyDesc1());
+        else
+            pageCtrl:SetValue("buydesc1Teen", GetBuyDesc1());
+        end
+    end
+end
+
+function canChooseNums()
+    return KeepWorkStackableItemPage.canChooseNums()
+end
+
+function getBuyBtDesc()
+    return KeepWorkStackableItemPage.getBuyBtDesc()
+end
+
+function ClosePage()
+    pageCtrl:CloseWindow();
+end
+function getGoodName()
+    return KeepWorkStackableItemPage.getGoodName()
+end
+
+function getIcon()
+    return item_data.icon
+end
+
+function IsEnough()
+    return KeepWorkStackableItemPage.IsEnough()
+end
+-- tricky code to decrease the count actually the min value
+--OnDecrease();
+
+OnInitValue()
+]]></script>
+<div style="width: 396px;height: 274px; background: url(Texture/Aries/Creator/keepwork/Mall/tipbj_32bits.png#0 0 32 32:8 8 8 8);">
+    <div style="margin-top: 10px;">
+        <pe:if condition='<%=canChooseNums() %>'>
+            <div style="margin-left: 14px;position:relative;color: #ffffff;">
+                <%=getGoodName()%>
+            </div>
+        </pe:if>
+
+        <pe:if condition='<%=not canChooseNums() %>'>
+            <div style="position:relative;color: #ffffff;text-align: center;">
+                <%=getGoodName()%>
+            </div>
+        </pe:if>
+        <input type="button" class="mc_big_button" value="" style="margin-left:364px;width:19px;height:20px;background: url(Texture/Aries/Creator/keepwork/Mall/tipX_19X20_32bits.png#0 0 19 20)" onclick="OnCancel()"/>
+    </div>
+
+    <div style="width:396px;height:180px;">
+        <div style="width:396px;height:145px;">
+            <pe:if condition='<%=canChooseNums() %>'>
+                <div style="float:right;margin-left:15px;margin-top:20px;width:114px;height:114px;margin:21px;background:url(Texture/Aries/Creator/keepwork/Mall/kuang2_114X144_32bits.png#0 0 114 114);">
+                   <div style="position:relative;width:114px">
+                        <div style="position:relative;margin-left:0px;margin-top:5px;">
+                            <img zorder="0" src='<%=getIcon()%>'width="114" height="57"/>
+                        </div>                              
+                    </div>
+                </div>
+                <div style="float:right;width:180px;height:32px;margin-top:20px;margin-left:25px;background:;">
+                    <input type="button" value='' style="float: left; width:40px;height:38px;color:#ffffff;font-size:30;background:url(Texture/Aries/Creator/keepwork/Mall/btn_del_40X38_32bits.png#0 0 40 38)" onclick="OnDecrease()"/>
+                    <div style="float: left;margin-top: 1px; width: 94px;height: 32px; background: url(Texture/Aries/Creator/keepwork/Mall/shuzishuru_32X32_32bits.png#0 0 32 32:8 8 8 8);">
+                        <label name="count" value="1" onkeyup="OnKeyUp()" style="color:#000000;text-align:center;width:40px;height:25px;margin-top:5;margin-left: 28px;"/>
+                    </div>
+                    
+                    <input type="button" value='' style="float: left;width:40px;height:38px;color:#ffffff;font-size:26;background:url(Texture/Aries/Creator/keepwork/Mall/btn_add_40X38_32bits.png#0 0 40 38)" onclick="OnIncrease()"/>
+                    <!-- <div style="margin-left:8px;margin-top:10px;color:#666666;font-size:14px;"><%=GetCountDesc() %></div> -->
+                </div>
+            </pe:if>
+            <pe:if condition='<%=not canChooseNums() %>'>
+                <div style="float:right;padding-top:20px;margin-left:140px;width:114px;height:114px;margin:21px;background:url(Texture/Aries/Creator/keepwork/Mall/kuang2_114X144_32bits.png#0 0 114 114);">
+                    <div style="position:relative;width:114px">
+                         <div style="position:relative;margin-left:0px;margin-top:5px;">
+                             <img zorder="0" src='<%=getIcon()%>'width="114" height="57"/>
+                         </div>                              
+                     </div>
+                 </div>
+            </pe:if>
+        </div>
+        <br/>
+        <div style="margin-left:0px;margin-top:0px;color:#f0f0f0;text-align: center;">
+            <label name="buydesc1" style="width:396px; height:60px;font-size:12pt;" value='<%=Eval("defaultDesc1")%>'/>
+            <br/>
+            <label name="buydesc2" style="width:396px;height:60px;font-size:12pt;" value='<%=Eval("defaultDesc2")%>'/>
+        </div>
+    </div>
+    <div style="width:466px;height:32px;margin-top:0px;margin-left:59px">
+        <pe:goalpointer listen="purchase_confirm" style="position:relative;margin-left:70px;width:90px;height:32px;"></pe:goalpointer>
+        <input type="button" value="下次再说" style="float: left; margin-left:0px;width:100px;height:38px;background: url(Texture/Aries/Creator/keepwork/Window/button/btn_huise_32bits.png#0 0 38 64:16 16 16 16);" onclick="OnCancel()"/>
+        <pe:if condition='<%=IsEnough() %>'>
+            <input type="button" value="<%=getBuyBtDesc()%>" style="float: left;margin-left:80px;width:100px;height:38px;background: url(Texture/Aries/Creator/keepwork/Window/button/btn_huangse_32bits.png#0 0 38 64:16 16 16 16);" onclick="OnOK()"/>
+        </pe:if>
+        <pe:if condition='<%=not IsEnough() %>'>
+            <!-- <div style="float: left;margin-left:80px;width:100px;height:38px; background: url(Texture/Aries/Creator/keepwork/Window/button/btn_huise_32bits.png#0 0 38 64:16 16 16 16);">
+                <div style="margin-left: 23px;margin-top: 7px;"><%=getBuyBtDesc()%></div>
+            </div> -->
+            <input type="button" value="<%=getBuyBtDesc()%>" style="margin-left:80px;width:100px;height:38px;background: url(Texture/Aries/Creator/keepwork/Window/button/btn_huise_32bits.png#0 0 38 64:16 16 16 16);"/>
+        </pe:if>
+    </div>
+</div>
+</pe:mcml> 
+</body>
+</html>

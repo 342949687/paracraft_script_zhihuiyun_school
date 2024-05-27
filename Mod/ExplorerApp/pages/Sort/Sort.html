@@ -1,0 +1,74 @@
+<html>
+<body>
+<pe:mcml>
+    <script refresh="false" type="text/npl" src="Sort.lua">
+        Sort = NPL.load('./Sort.lua')
+        Utils = NPL.load('(gl)Mod/WorldShare/helper/Utils.lua')
+        Translation = commonlib.gettable("MyCompany.Aries.Game.Common.Translation")
+
+        Sort:SetPage()
+
+        function container()
+            return format("margin-left:%s;margin-top: %s;", Sort.position.x - 12, Sort.position.y + 25)
+        end
+
+        function close()
+            Sort:ClosePage()
+        end
+
+        function select_item(index)
+            Sort:SetSortIndex(index)
+        end
+
+        function get_sort_list()
+            return Sort:GetSortList()
+        end
+
+        function get_english_style(styleStr)
+            if Translation.GetCurrentLanguage() == 'enUS' then
+                return styleStr
+            else
+                return ''
+            end
+        end
+    </script>
+    <style type="text/mcss">
+        {
+            area = {
+                width = 62,
+                height = 130,
+                background = 'Texture/Aries/Creator/keepwork/explorer_32bits.png#244 4 64 102:7 7 4 4',
+                padding = 10,
+                ['text-align'] = 'center'
+            },
+            area_click = {
+                position = 'relative'
+            },
+            item = {
+                color = '#ffffff'
+                background = '',
+                ['margin-top'] = 3,
+                ['margin-left'] = -3
+            },
+            item_click = {
+                position = 'relative',
+                width = 40,
+                height = 20,
+                ['margin-top'] = 6,
+            }
+        }
+    </style>
+    <div width="100%" height="100%">
+        <div class="area_click" width="100%" height="100%" onclick="close()"></div>
+        <div class="area" style="<%= container() .. get_english_style('width:120px;') %>">
+            <pe:repeat DataSource="<%=get_sort_list()%>">
+                <pe:repeatitem>
+                    <div class="item_click" style="<%= get_english_style('width:98px;') %>" name="<%=Eval('index')%>" onclick="select_item"></div>
+                    <div class="item"><%=Eval('value')%></div>
+                </pe:repeatitem>
+            </pe:repeat>
+        </div>
+    </div>
+</pe:mcml>
+</body>
+</html>

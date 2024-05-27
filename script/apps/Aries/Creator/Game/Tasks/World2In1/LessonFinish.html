@@ -1,0 +1,40 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<body>
+<pe:mcml>
+<script refresh="true" type="text/npl" src=".lua" ><![CDATA[
+    local LessonFinish = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/World2In1/LessonFinish.lua");
+    LessonFinish.OnInit()
+    function ClosePage()
+        Page:CloseWindow();
+    end
+    function GetText()
+        return string.format([[太棒了！%s，你完成了%s!]],System.User.NickName,LessonFinish.strTitle)
+    end
+    function GetUserName()
+        return commonlib.GetLimitLabel(System.User.NickName,11)
+    end
+    function GetTitle()
+        return LessonFinish.strTitle
+    end
+]]></script>
+<pe:container alignment="_fi" width="100%" height="100%" style=" background-color: #00000080;">
+    <pe:container alignment="_ct" style="margin-left:-640px;margin-top:-360px;background: ;">
+        <div style="margin-top: -220px;margin-left: 140px; width: 1024x; height: 751px; background: url(Texture/Aries/Creator/keepwork/macro/lessonbox/finish_1024X751_32bits.png#0 0 1024 751);">
+            <pe:container uiname="lesson_finish_desc_parent_node" style="margin-top: 600px; width: 1024px; height: 120px; font-weight: bold; background: ">
+                <pe:container uiname="lesson_finish_desc_node" style="background: ;">
+                    <div style="float: left; margin-left: 0px; height: 60px;color:#eca927;font-size: 30px;base-font-size:30px;">太棒了！</div>
+                    <div style="float: left; margin-left: 0px; height: 60px;color:#ffffff;font-size: 30px;base-font-size:30px;"><%=GetUserName()%></div>
+                    <div style="float: left; margin-left: 0px; height: 60px;color:#eca927;font-size: 30px;base-font-size:30px;">，你完成了</div>
+                    <div style="float: left; margin-left: 0px; height: 60px;color:#ffffff;font-size: 30px;base-font-size:30px;"><%=GetTitle()%></div> 
+                </pe:container>  
+                <!-- <div style="position: relative; margin-left: 840px; height: 60px;color:#eca927;font-size: 30px;base-font-size:30px;">！</div> -->
+            </pe:container>  
+        </div>    
+        <input type="button" style="margin-left: 520px; margin-top: 30px; width:253px;height:83px;background: url(Texture/Aries/Creator/keepwork/macro/lessonbox/ok_253X83_32bits.png#0 0 253 83);" onclick="ClosePage()"/>
+        <pe:label name="close_cutdown" style="margin-top: 36px; margin-left: -78px;height:  60px; position: relative;color: #000000; font-size: 46px; base-font-size:46px;font-weight: bold;"></pe:label>
+    </pe:container>    
+</pe:container>
+</pe:mcml>
+</body>
+</html>
