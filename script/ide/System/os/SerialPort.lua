@@ -29,6 +29,10 @@ local SerialPort = commonlib.inherit(commonlib.gettable("System.Core.ToolBase"),
 
 SerialPort:Signal("dataReceived");
 SerialPort:Signal("lineReceived");
+SerialPort.isUseRateControl = true;
+SerialPort.maxSendCount = 1024;
+-- assume 1/3 of the baud rate is the actual upload rate.
+SerialPort.uploadRateFactor = 1/3; 
 
 local thisFilename = "script/ide/System/os/SerialPort.lua";
 local allports = {};
@@ -43,7 +47,7 @@ function SerialPort:init(filename, baud_rate)
 	local shortName, deviceName = filename:match("^([^:]+):?(.*)");
 	self.filename = shortName or "com1";
 	self.deviceName = deviceName;
-	self.baud_rate = baud_rate;
+	self.baud_rate = baud_rate or 115200;
 	return self;
 end
 
@@ -54,7 +58,6 @@ end
 function SerialPort:GetFilename()
 	return self.filename;
 end
-
 
 -- @return true if opened
 function SerialPort:open()
@@ -84,11 +87,60 @@ function SerialPort:close()
 	end
 end
 
+function SerialPort:UpdateRemainingBytes(newBytes)
+	self.totalBytesSent = (self.totalBytesSent or 0) + (newBytes or 0);
+	local lastTime = self.lastCheckTime or commonlib.TimerManager.GetCurrentTime();
+	self.lastCheckTime = commonlib.TimerManager.GetCurrentTime();
+	local maxBytesSent = (self.lastCheckTime - lastTime) / 1000 * (self.baud_rate / 8 * self.uploadRateFactor);
+	self.remainingBytes = math.max(0, (self.remainingBytes or 0)- maxBytesSent);
+	self.remainingBytes = self.remainingBytes + (newBytes or 0);
+	return self.remainingBytes;
+end
+
+-- @return remaining bytes to be sent. return 0 if all bytes are sent.
+function SerialPort:GetRemainingBytes()
+	if(self.remainingBytes and self.remainingBytes > 0) then
+		return self:UpdateRemainingBytes();
+	else
+		return 0;
+	end
+end
+
 local send_msg = {filename="com1", cmd="send"};
 function SerialPort:send(data)
-	send_msg.filename = self.filename;
-	send_msg.data = data;
-	NPL.activate("script/serialport.cpp", send_msg)
+	if(self.isUseRateControl) then
+		if(data) then
+			self.queuedData = self.queuedData or {};
+			while(#data >self.maxSendCount) do
+				local first_data = data:sub(1, self.maxSendCount);
+				data = data:sub(self.maxSendCount+1, #data);
+				self.queuedData[#self.queuedData + 1] = first_data;
+			end
+			self.queuedData[#self.queuedData + 1] = data;
+		end
+		if((self:GetRemainingBytes()) >= self.maxSendCount) then
+			commonlib.TimerManager.SetTimeout(function(timer)  
+				self:send();
+			end, 100);
+			return
+		else
+			data = table.remove(self.queuedData, 1)
+		end
+	end
+	if(data) then
+		send_msg.filename = self.filename;
+		send_msg.data = data;
+		local count = #data;
+		self:UpdateRemainingBytes(count);
+		-- LOG.std(nil, "debug", "SerialPort", "send %d bytes", count);
+		NPL.activate("script/serialport.cpp", send_msg)
+
+		if(self.isUseRateControl and #self.queuedData > 0) then
+			commonlib.TimerManager.SetTimeout(function(timer)  
+				self:send();
+			end, 100);
+		end
+	end
 end
 
 function SerialPort:OnReceive(data)

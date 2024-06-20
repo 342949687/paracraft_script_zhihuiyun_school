@@ -1198,7 +1198,7 @@ local all_block_list = {
     
     {
         type = "fillet", 
-        message0 = L"圆角 %1 半径 %2",
+        message = L"圆角 %1 半径 %2",
         arg = {
             {
                 name = "axis_axis_plane",
@@ -1776,8 +1776,8 @@ local all_block_list = {
 
     {
         type = "newEmptyTable", 
-        message0 = L"{%1}",
-        arg0 = {
+        message = L"{%1}",
+        arg = {
             {
                 name = "value",
                 type = "input_value_list",

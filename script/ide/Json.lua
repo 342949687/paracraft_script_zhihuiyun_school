@@ -21,7 +21,7 @@ name3 = commonlib.Json.Null()
 }
 
 local json = commonlib.Json.Encode(t)
-print (json) 
+print(json) 
 --> {"name1":"value1","name3":null,"name2":[1,false,true,23.54,"a \u0015 string", {}]}
 
 local t = commonlib.Json.Decode(json)
@@ -69,6 +69,8 @@ local math_floor = math.floor;
 local math_max = math.max;
 local type = type;
 local error = log;
+local Null = nil;
+
 local assert = function(bSucceed)
 	if(not bSucceed) then
 		log("warning: json parsing assert\n")

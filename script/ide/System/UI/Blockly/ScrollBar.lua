@@ -64,13 +64,13 @@ function ScrollBar:Render(painter)
     painter:SetPen("#ffffff");
     -- painter:SetPen("#000000");
     if (self:IsHorizontal()) then
-        self.__width__, self.__height__ = math.floor(width * width / (__content_width_unit_count__ * UnitSize + width)), ScrollBarSize;
-        self.__offset_x__, self.__offset_y__ = toolboxWidth + math.floor(width * __content_offset_x_unit_count__ * UnitSize / (__content_width_unit_count__ * UnitSize + width)), height - ScrollBarSize - 1;
+        self.__width__, self.__height__ = math.floor(width * width / __content_width_unit_count__ * UnitSize), ScrollBarSize;
+        self.__offset_x__, self.__offset_y__ = toolboxWidth + math.floor((width - self.__width__) * __content_offset_x_unit_count__  / __content_width_unit_count__ ), height - ScrollBarSize - 1;
         -- print(4, self.__offset_x__, self.__offset_y__, self.__width__, self.__height__)
         painter:DrawRect(toolboxWidth, height - ScrollBarSize - 2, width, ScrollBarSize + 2);
     else
-        self.__width__, self.__height__ = ScrollBarSize, math.floor(height * height / (__content_height_unit_count__ * UnitSize + height));
-        self.__offset_x__, self.__offset_y__ = toolboxWidth + width - ScrollBarSize - 1, math.floor(height * (1 - __content_offset_y_unit_count__ * UnitSize / (__content_height_unit_count__ * UnitSize + height)));
+        self.__width__, self.__height__ = ScrollBarSize, math.floor(height * height / (__content_height_unit_count__ * UnitSize));
+        self.__offset_x__, self.__offset_y__ = toolboxWidth + width - ScrollBarSize - 1, math.floor((height - self.__height__) * (1 - __content_offset_y_unit_count__  / __content_height_unit_count__));
         painter:DrawRect(toolboxWidth + width - ScrollBarSize - 2, 0, ScrollBarSize + 2, height);
         -- print(5, self.__offset_x__, self.__offset_y__, self.__width__, self.__height__)
     end
@@ -107,7 +107,9 @@ function ScrollBar:OnMouseDown(event)
         else
             self.__draging__ = false;
             self.__offset_x__ = x;
-            local __content_offset_x_unit_count__ = ((self.__content_width_unit_count__ or 0) + (self.__view_width_unit_count__ or 0)) * (self.__offset_x__ - self.__toolbox_width__) / ((self.__view_width_unit_count__  or 0)* UnitSize);
+            self.__offset_x__ = math.max(self.__toolbox_width__, self.__offset_x__);
+            self.__offset_x__ = math.min(self.__offset_x__, self.__track_width__ - self.__width__);
+            local __content_offset_x_unit_count__ = (self.__content_width_unit_count__ or 0) * (self.__offset_x__ - self.__toolbox_width__) / (self.__track_width__ - self.__toolbox_width__ - self.__width__);
             __content_offset_x_unit_count__ = math.max(__content_offset_x_unit_count__, 0);
             __content_offset_x_unit_count__ = math.min(__content_offset_x_unit_count__, (self.__content_width_unit_count__ or 0));
             local __offset_x_unit_count__ = __content_offset_x_unit_count__ + (self.__content_left_unit_count__ or 0); 
@@ -122,7 +124,9 @@ function ScrollBar:OnMouseDown(event)
         else
             self.__draging__ = false;
             self.__offset_y__ = y;
-            local __content_offset_y_unit_count__ = ((self.__content_height_unit_count__ or 0) + (self.__view_height_unit_count__ or 0)) * (1 - self.__offset_y__ / (self.__track_height__));
+            self.__offset_y__ = math.max(0, self.__offset_y__);
+            self.__offset_y__ = math.min(self.__offset_y__, self.__track_height__ - self.__height__);
+            local __content_offset_y_unit_count__ = self.__content_height_unit_count__ * (1 - self.__offset_y__ / (self.__track_height__ - self.__height__));
             __content_offset_y_unit_count__ = math.max(__content_offset_y_unit_count__, 0);
             __content_offset_y_unit_count__ = math.min(__content_offset_y_unit_count__, (self.__content_height_unit_count__ or 0));
             local __offset_y_unit_count__ = __content_offset_y_unit_count__ + (self.__content_top_unit_count__ or 0); 
@@ -144,7 +148,7 @@ function ScrollBar:OnMouseMove(event)
         self.__offset_x__ = self.__draw_offset_x__ + __offset_x__;
         self.__offset_x__ = math.max(self.__toolbox_width__, self.__offset_x__);
         self.__offset_x__ = math.min(self.__offset_x__, self.__track_width__ - self.__width__);
-        local __content_offset_x_unit_count__ = (self.__content_width_unit_count__ + self.__view_width_unit_count__) * (self.__offset_x__ - self.__toolbox_width__) / (self.__view_width_unit_count__ * UnitSize);
+        local __content_offset_x_unit_count__ = (self.__content_width_unit_count__) * (self.__offset_x__ - self.__toolbox_width__) / (self.__track_width__ - self.__toolbox_width__ - self.__width__);
         __content_offset_x_unit_count__ = math.max(__content_offset_x_unit_count__, 0);
         __content_offset_x_unit_count__ = math.min(__content_offset_x_unit_count__, self.__content_width_unit_count__);
         local __offset_x_unit_count__ = __content_offset_x_unit_count__ + self.__content_left_unit_count__; 
@@ -155,7 +159,7 @@ function ScrollBar:OnMouseMove(event)
         self.__offset_y__ = self.__drag_offset_y__ + __offset_y__;
         self.__offset_y__ = math.max(0, self.__offset_y__);
         self.__offset_y__ = math.min(self.__offset_y__, self.__track_height__ - self.__height__);
-        local __content_offset_y_unit_count__ = (self.__content_height_unit_count__ + self.__view_height_unit_count__) * (1 - self.__offset_y__ / (self.__track_height__));
+        local __content_offset_y_unit_count__ = self.__content_height_unit_count__ * (1 - self.__offset_y__ / (self.__track_height__ - self.__height__));
         __content_offset_y_unit_count__ = math.max(__content_offset_y_unit_count__, 0);
         __content_offset_y_unit_count__ = math.min(__content_offset_y_unit_count__, self.__content_height_unit_count__);
         local __offset_y_unit_count__ = __content_offset_y_unit_count__ + self.__content_top_unit_count__; 

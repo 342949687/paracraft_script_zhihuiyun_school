@@ -113,7 +113,7 @@ function EscFramePage.ShowPage(bShow)
             local width, height = 390, 350
             EscFramePage.bForceHide = bShow == false;
             local url = "script/apps/Aries/Creator/Game/Areas/EscFramePage.html"
-            if System.options.channelId_431 then
+            if System.options.isEducatePlatform then
                 url = "script/apps/Aries/Creator/Game/Educate/Other/EscFramePage.431.html"
             elseif System.options.isPapaAdventure then
                 url = "script/apps/Aries/Creator/Game/Areas/EscFrameTutorialPage.html"

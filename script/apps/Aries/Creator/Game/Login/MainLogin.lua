@@ -98,7 +98,7 @@ function MainLogin:UpdateIcon()
 		return
 	end
 
-	if (System.options.channelId_431) then
+	if (System.options.isEducatePlatform) then
 		ParaEngine.GetAttributeObject():SetField("Icon",'lancher_educate.ico')
 		return
 	end
@@ -130,7 +130,6 @@ function MainLogin:next_step(state_update)
 	local state = self.state;
 	if(state_update) then
 		commonlib.partialcopy(state, state_update);
-
 		if(not state.IsLoginModeSelected) then
 			state.HasSignedIn = false;
 		end
@@ -189,6 +188,102 @@ function MainLogin:next_step(state_update)
 	end
 end
 
+--判断是否多开应用
+function MainLogin:CheckMoreProcess(callback)
+	if (System.os.GetPlatform() ~= "win32") then
+		if (callback and type(callback) == "function") then
+			callback(true);
+		end
+		return
+	end
+	local curProcessId = System.os.GetCurrentProcessId()
+	local LuaCallbackHandler = NPL.load("(gl)script/ide/PlatformBridge/LuaCallbackHandler.lua");
+	local cmdStr = [[wmic process where name="ParaEngineClient.exe" get processid,executablepath,name]]
+	ParaGlobal.ShellExecute("popen",cmdStr,"isAsync",LuaCallbackHandler.createHandler(function(msg)
+		local vals_arr = {};
+		local out = msg.ret;
+		local arr1 = commonlib.split(out,"\n")
+		for j=#arr1,1,-1 do
+			if arr1[j]=="" then
+				table.remove(arr1,j)
+			else
+				arr1[j] = arr1[j]:gsub("^[\"\'%s]+", ""):gsub("[\"\'%s]+$", "") --去掉字符串首尾的空格、引号
+			end
+		end
+		local retMap = {}
+		if #arr1 > 0 then
+			local keys = commonlib.split(arr1[1],"(%s+)")
+			for i=2,#arr1 do
+				local datas =  commonlib.split(arr1[i],"(%s+)") or {}
+				if #datas == #keys then
+					local temp = {}
+					for j = 1,#datas do
+						local key = string.lower(keys[j])
+						local value = ""
+						if key== "processid" then
+							value =tonumber(datas[j])
+						else
+							value = ParaMisc.EncodingConvert("gb2312", "utf-8", datas[j])
+						end
+						temp[key] = value
+					end
+					retMap[#retMap + 1] =temp
+				end
+			end
+		end
+		local curProcedata
+		local pathMaps = {}
+		for i=1,#retMap do
+			if (curProcessId == retMap[i].processid) then
+				curProcedata = retMap[i]
+			else
+				local executablepath = retMap[i].executablepath or "";
+				pathMaps[executablepath] = true
+			end
+		end
+		if (curProcedata and curProcedata.executablepath and pathMaps[curProcedata.executablepath]) then
+			if (callback and type(callback) == "function") then
+				callback(false,curProcedata);
+			end
+			return
+		end
+		if (callback and type(callback) == "function") then
+			callback(true);
+		end
+	end));
+end
+--[[
+	self.m_bNeedUpdate = bNeedUpdate;
+				self.m_latestVersion = latestVersion;
+				self.m_curVersion = curVersion;
+				self.m_bAllowSkip = bAllowSkip;
+]]
+function MainLogin:ShowUpdatePage(bShowUpdatePage)
+	if not self._updater then
+		return
+	end
+	if self.m_bNeedUpdate and not self.m_bAllowSkip then
+		self._updater:Download(true);
+		return
+	end
+	if (bShowUpdatePage) then
+		local params = {
+			curVersion = self.m_curVersion,
+			latestVersion = self.m_latestVersion,
+			gamename = "Paracraft",
+			miniVersion = self._updater:getMiniVersion(),
+			updater = self._updater,
+			bAllowSkip = self.m_bAllowSkip,
+		}
+	
+		local ChangeVersion = NPL.load("(gl)script/apps/Aries/Creator/Game/Login/ClientUpdate/ChangeVersion.lua");
+		ChangeVersion.ShowPage(params,function()
+			self._updater:Download(true);
+		end)
+	end
+	
+end
+
 function MainLogin:UpdateCoreClient()
 	if (System.os.GetPlatform() == "win32" and
 		ParaEngine.GetAppCommandLineByParam("use_dev_ftp_updater", "") == "true") then
@@ -236,91 +331,12 @@ function MainLogin:UpdateCoreClient()
 	if (not testCoreClient and platform == "win32" and not System.os.IsWindowsXP()) then
 		local gamename = "Paracraft";
 		gamename = GameLogic.GetFilters():apply_filters('GameName', gamename);
-		
-
-		if (System.options.isChannel_430) then -- 430windows版，还是下载到本目录
-			NPL.load("(gl)script/apps/Aries/Creator/Game/Login/ClientUpdater430.lua");
-			local ClientUpdater430 = commonlib.gettable("MyCompany.Aries.Game.MainLogin.ClientUpdater430");
-			local _updater = ClientUpdater430:new({gamename = gamename});
-
-			GameLogic.GetFilters():apply_filters("ShowClientUpdaterNotice");
-
-			_updater:Check(function(bNeedUpdate, latestVersion, curVersion, bAllowSkip, needAppStoreUpdate)
-				GameLogic.GetFilters():apply_filters("HideClientUpdaterNotice");
-				LOG.std(nil, "info", "MainLogin:UpdateCoreClient", "bNeedUpdate: %s", bNeedUpdate);
-
-				if (bNeedUpdate == nil) then -- 表示检查更新失败
-					self:next_step({IsUpdaterStarted = true});
-					GameLogic.AddBBS(nil, L"检查更新失败");
-				elseif (bNeedUpdate) then -- 不是是最新版，作为局域网客户端开启，随时准备进行同步
-					GameLogic.GetFilters():apply_filters(
-						"start_lan_client",
-						{
-							realLatestVersion = latestVersion,
-							isAutoInstall = not bAllowSkip,
-							needShowDownloadWorldUI = not bAllowSkip,
-							onUpdateError = function()
-								self:next_step({IsUpdaterStarted = true});
-							end
-						}
-					);
-
-					if (bAllowSkip) then
-						self:next_step({IsUpdaterStarted = true});
-						_updater:checkNeedSlientDownload(); -- 局域网内，可以跳过更新的情况下，去看看是否需要静默更新
-					else
-						NPL.load("(gl)script/apps/Aries/Creator/Game/Login/ClientUpdateDialog.lua");
-						local ClientUpdateDialog = commonlib.gettable("MyCompany.Aries.Game.MainLogin.ClientUpdateDialog")
-
-						ClientUpdateDialog.Show(
-							latestVersion,
-							curVersion,
-							gamename,
-							function()
-								local ret = GameLogic.GetFilters():apply_filters(
-									'check_is_downloading_from_lan',
-									{
-										needShowDownloadWorldUI = true,
-										installIfAlldownloaded = true
-									}
-								);
-
-								if (ret and ret._hasStartDownloaded) then --点击更新按钮后，再查一遍是否已经再局域网开始更新了
-									LOG.std(nil, "info", "MainLogin:UpdateCoreClient", "已经开始局域网更新了");
-									return;
-								end
-
-								_updater:Download(true);
-							end
-						);
-					end
-				elseif (needAppStoreUpdate) then -- 需要跳转应用商店更新(windows不会走到此分支)
-					self:next_step({IsUpdaterStarted = true});
-					--TODO
-					--显示跳转更新UI
-				else
-					--已经是最新版了，开启服务器
-					GameLogic.GetFilters():apply_filters(
-						"start_lan_server",
-						{
-							realLatestVersion = latestVersion,
-							_updater = _updater
-						}
-					);
-
-					self:next_step({IsUpdaterStarted = true});
-				end
-			end);
-
-			return;
-		end
-
 		self:next_step({IsUpdaterStarted = true});
 
 		-- set to true (default to false, since the login interface will check mini-version anyway and we allow offline paracraft)
 		-- for all major windows system we will check for latest version, but will not force update 
 		-- instead it just pops up a dialog and ask user to use launcher Paracraft.exe to update.  
-		local checkVersionForWin32 = System.options.channelId_431;
+		local checkVersionForWin32 = not System.options.isPapaAdventure
 		
 		if (checkVersionForWin32 and not System.options.isAB_SDK and
 			ParaEngine.GetAppCommandLineByParam("noclientupdate", "") == "") then
@@ -328,19 +344,23 @@ function MainLogin:UpdateCoreClient()
 			NPL.load("(gl)script/apps/Aries/Creator/Game/Login/ClientUpdater430.lua");
 			local ClientUpdater430 = commonlib.gettable("MyCompany.Aries.Game.MainLogin.ClientUpdater430");
 			local _updater = ClientUpdater430:new({gamename = gamename});
-
 			local second = 12
 			local updateCheckTimer = commonlib.TimerManager.SetTimeout(function()
-				LOG.std(nil, "waring", "MainLogin.UpdateCoreClient", "channelId_431 CheckClientUpdate timeout,second:%s", second);
+				LOG.std(nil, "waring", "MainLogin.UpdateCoreClient", "CheckClientUpdate timeout,second:%s", second);
 				self:next_step({IsUpdaterStarted = true});
 				GameLogic.AddBBS(nil, L"检查更新失败");
 			end,second*1000)
-
+			self._updater = _updater
 			_updater:Check(function(bNeedUpdate, latestVersion, curVersion, bAllowSkip, needAppStoreUpdate)
 				if (updateCheckTimer) then
 					updateCheckTimer:Change()
 					updateCheckTimer = nil;
 				end
+				self.m_bNeedUpdate = bNeedUpdate;
+				self.m_latestVersion = latestVersion;
+				self.m_curVersion = curVersion;
+				self.m_bAllowSkip = bAllowSkip;
+				print("update client version==============",bNeedUpdate, latestVersion, curVersion, bAllowSkip, needAppStoreUpdate)
 				if (System.options.launcherVer and System.options.launcherVer >= 5) then
 					if (bNeedUpdate == nil) then --表示检查更新失败
 						GameLogic.AddBBS(nil, L"检查更新失败");
@@ -358,19 +378,33 @@ function MainLogin:UpdateCoreClient()
 								needAppStoreUpdate
 							);
 						end
-
-						NPL.load("(gl)script/apps/Aries/Creator/Game/Login/ClientUpdateDialog.lua");
-						local ClientUpdateDialog = commonlib.gettable("MyCompany.Aries.Game.MainLogin.ClientUpdateDialog")
 						
-						ClientUpdateDialog.Show(
-							latestVersion,
-							curVersion,
-							gamename,
-							function()
-								_updater:Download(true);
-							end,
-							bAllowSkip
-						);
+						--多开不能更新，会出现问题
+						self:CheckMoreProcess(function(result,processData)
+							if result then
+								self:ShowUpdatePage()
+								if System.options.isEducatePlatform then
+									local MainLoginLoginPage = Mod.WorldShare.Store:Get('page/Mod.WorldShare.cellar.MainLogin.Login')
+									if MainLoginLoginPage then
+										MainLoginLoginPage:Refresh(0.1)
+									end
+								else
+									local MainLoginExtraPage = Mod.WorldShare.Store:Get('page/Mod.WorldShare.cellar.MainLogin.Extra')
+									if MainLoginExtraPage then
+										MainLoginExtraPage:Refresh(0.1)
+									end
+								end
+							else
+								local appName = L"帕拉卡社区版"
+								if System.options.channelId_431 then
+									appName = L"智慧教育客户端"
+								end
+								if System.options.isShenzhenAi5 then
+									appName = L"深教AI4客户端"
+								end
+								_guihelper.MessageBox(L"更新失败了，"..appName..L"开了多个窗口了，请关闭其他窗口后再试。(如果正在编辑世界，请保存)");
+							end
+						end)					
 					elseif (needAppStoreUpdate) then -- 需要跳转应用商店更新(windows不会走到此分支)
 						
 					else
@@ -563,7 +597,13 @@ function MainLogin:AutoAdjustGraphicsSettings()
 end
 
 function MainLogin:SetWindowTitle()
-	local titlename = System.options.channelId_431 and GameLogic.GetFilters():apply_filters('GameName', L"帕拉卡智慧教育") or GameLogic.GetFilters():apply_filters('GameName', L"帕拉卡 Paracraft")
+	local titlename = GameLogic.GetFilters():apply_filters('GameName', L"帕拉卡 Paracraft")
+	if System.options.channelId_431 then
+		titlename = GameLogic.GetFilters():apply_filters('GameName', L"帕拉卡智慧教育")
+	end
+	if System.options.isShenzhenAi5 then
+		titlename = GameLogic.GetFilters():apply_filters('GameName', L"深教AI4客户端")
+	end
 	local version = GameLogic.options.GetClientVersion()
 	local desc = GameLogic.GetFilters():apply_filters('GameDescription', L"3D动画编程创作工具")
 	if System.options.isPapaAdventure then
@@ -575,7 +615,7 @@ function MainLogin:SetWindowTitle()
 		end
 	end
 	System.options.WindowTitle = string.format("%s -- ver %s", titlename,version);
-	if System.options.channelId_431 then
+	if System.options.isEducatePlatform then
 		ParaEngine.SetWindowText(System.options.WindowTitle);
 		if System.options.isOffline then
 			ParaEngine.SetWindowText(System.options.WindowTitle .. L" (离线模式)");
@@ -753,14 +793,14 @@ end
 
 -- call this before any UI is drawn
 function MainLogin:AutoAdjustUIScalingForTouchDevice(callbackFunc)
-	if(System.options.IsTouchDevice) then
+	if(System.options.IsTouchDevice or System.os.GetPlatform() == "mac") then
 		NPL.load("(gl)script/ide/System/Windows/Screen.lua");
 		local Screen = commonlib.gettable("System.Windows.Screen");
 		Screen:ChangeUIDesignResolution(1280, 720, callbackFunc)
 	end
 end
 
-function MainLogin:SetFutureLoaworld(kpProjectId,isLoad)
+function MainLogin:SetFutureLoadworld(kpProjectId,isLoad)
 	self.kpProjectId = kpProjectId
 	if isLoad then
 		self:LoadPapaAdventure(isLoad)
@@ -807,19 +847,14 @@ function MainLogin:GetDownLoadUrl()
 end
 
 function MainLogin:ShowLoginModePage()
-	if (System.os.IsEmscripten()) then
-		NPL.load("(gl)script/apps/Aries/Creator/Game/Emscripten/Emscripten.lua");
-	end
-	
 	self:AutoAdjustUIScalingForTouchDevice(function()
 		-- self:CheckShowTouchVirtualKeyboard();
 	end);
-	
 	if (System.options.cmdline_world and System.options.cmdline_world ~= "") then
 		if System.options.isPapaAdventure then
 			local futureId = tonumber(System.options.cmdline_world)
 			if futureId and futureId > 0 then
-				self:SetFutureLoaworld(futureId)
+				self:SetFutureLoadworld(futureId)
 			else
 				self:next_step({IsLoginModeSelected = true});
 				return;
@@ -829,10 +864,8 @@ function MainLogin:ShowLoginModePage()
 			return;
 		end
 	end
-
 	NPL.load("(gl)script/apps/Aries/Creator/Game/game_logic.lua");
     local GameLogic = commonlib.gettable("MyCompany.Aries.Game.GameLogic")
-
 	if (not System.options.isCodepku) then
 		local KeepWorkItemManager = NPL.load("(gl)script/apps/Aries/Creator/HttpAPI/KeepWorkItemManager.lua");
 		KeepWorkItemManager.StaticInit();
@@ -843,16 +876,13 @@ function MainLogin:ShowLoginModePage()
 		--local ClassManager = NPL.load("(gl)script/apps/Aries/Creator/Game/Network/Admin/ClassManager/ClassManager.lua");
 		--ClassManager.StaticInit();
 	end
-
 	if(not System.options.isSchool) then
 		NPL.load("(gl)script/apps/Aries/Creator/Game/game_options.lua");
 		local options = commonlib.gettable("MyCompany.Aries.Game.GameLogic.options")
 		options:SetSchoolMode();
 	end
-
 	NPL.load('(gl)Mod/WorldShare/cellar/JumpAppStoreDialog/JumpAppStoreDialog.lua');
 	local JumpAppStoreDialog = commonlib.gettable('Mod.WorldShare.cellar.JumpAppStoreDialog');
-
 	-- big 2023.8.14: Temporary logic, will be removed in subsequent versions.
 	local platform = System.os.GetPlatform()
     if (platform ~= 'win32' and not System.os.IsEmscripten()) then
@@ -889,9 +919,10 @@ function MainLogin:ShowLoginModePage()
 		self:next_step({IsLoginModeSelected = true}); 
 		return
 	end
-	local isShowDefaultLoginPage = GameLogic.GetFilters():apply_filters("zhihuiyun.common.login", {})
-
-	if isShowDefaultLoginPage then
+	local isShowDefaultLoginPage
+	if System.options.ZhyChannel and System.options.ZhyChannel == "zhy_competition_course" then
+		isShowDefaultLoginPage = GameLogic.GetFilters():apply_filters("zhihuiyun.common.login")
+	else
 		isShowDefaultLoginPage = GameLogic.GetFilters():apply_filters("cellar.main_login.show_login_mode_page", {})
 	end
 	if(isShowDefaultLoginPage) then
@@ -930,13 +961,13 @@ function MainLogin:CheckNeedUpdate(callback)
 	local _updater = ClientUpdater430:new({gamename = gamename});
 	_updater:Check(function(bNeedUpdate, latestVersion, curVersion, bAllowSkip, needAppStoreUpdate)
 		if callback and type(callback) == "function" then
-			callback(bNeedUpdate);
+			callback(bNeedUpdate,bAllowSkip);
 		end
 	end)
 end
 
 function MainLogin:WriteProtocolToFile()
-	if (not System.options.channelId_431) then
+	if (not System.options.isEducatePlatform) then
 		return
 	end
 	local filename = "temp/palaka_protocol.txt"
@@ -952,7 +983,7 @@ function MainLogin:WriteProtocolToFile()
 end
 
 function MainLogin:LoadProtocolFromFile()
-	if (not System.options.channelId_431) then
+	if (not System.options.isEducatePlatform) then
 		return
 	end
 	local filename = "temp/palaka_protocol.txt"
@@ -1048,11 +1079,15 @@ function MainLogin:CheckLoadWorldFromCmdLine(bForceLoad)
 	local cmdline_world = System.options.cmdline_world;
 	local noclientupdate = ParaEngine.GetAppCommandLineByParam("noclientupdate", "") == "true"
 	local bRet = (cmdline_world and cmdline_world ~= "" and (not self.cmdWorldLoaded or bForceLoad)) or (cmdline_world and cmdline_world:match("^/?text2world"))
-	if (System.options.channelId_431 and (cmdline_world and cmdline_world ~= "") and not noclientupdate) then
+	if (System.options.isEducatePlatform and (cmdline_world and cmdline_world ~= "") and not noclientupdate) then
 		LOG.std(nil, "info", "MainLogin", "save temp cmdline: %s", cmdline_world);
-		self:CheckNeedUpdate(function(bNeedUpdate)
+		self:CheckNeedUpdate(function(bNeedUpdate,bAllowSkip)
 			if(bNeedUpdate) then
-				self:WriteProtocolToFile()
+				if bAllowSkip then
+					self:CheckLoadWorldFromCmdLineImp(bForceLoad);
+				else
+					self:WriteProtocolToFile()
+				end
 			else
 				self:CheckLoadWorldFromCmdLineImp(bForceLoad);
 			end
@@ -1171,23 +1206,18 @@ end
 
 function MainLogin:PrepareApp()
 	local isOffline = ParaEngine.GetAppCommandLineByParam("Offline", "false") == "true"
-	if System.options.isPapaAdventure or isOffline then
+	if System.options.isDevEnv or System.options.isPapaAdventure or isOffline then
 		self:next_step({PrepareApp = true});
 		return
 	end
 	if((System.options.cmdline_world or "") == "") then
 		NPL.load("(gl)script/apps/Aries/Creator/Game/Login/PrepareApp/PrepareApp.lua");
 		local PrepareApp = commonlib.gettable("MyCompany.Aries.Game.PrepareApp");
-		if true then --System.options.isDevMode
-			if System.os.GetPlatform()~="win32" then
-				PrepareApp.LoadScripts()
-				self:next_step({PrepareApp = true});
-			else
-				PrepareApp.start()
-			end
-		else
+		if System.os.GetPlatform()~="win32" then
 			PrepareApp.LoadScripts()
 			self:next_step({PrepareApp = true});
+		else
+			PrepareApp.start()
 		end
 	else
 		self:next_step({PrepareApp = true});

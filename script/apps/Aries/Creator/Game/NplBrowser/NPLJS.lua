@@ -35,14 +35,36 @@ NPL.load("(gl)script/ide/System/Windows/Screen.lua");
 local Encoding = commonlib.gettable("System.Encoding");
 local NplBrowserPlugin = commonlib.gettable("NplBrowser.NplBrowserPlugin");
 local NPLJS = commonlib.inherit(commonlib.gettable("System.Core.ToolBase"), NPL.export());
-local about_blank_url = "about:blank";
+local HttpEnv = ParaEngine.GetAppCommandLineByParam("http_env", "ONLINE"); -- ONLINE -- RELEASE -- LOCAL
+
+local http_origins = {
+    ["ONLINE"] = "https://webparacraft.keepwork.com",
+    ["RELEASE"] = "https://emscripten.keepwork.com",
+    ["LOCAL"] = "http://127.0.0.1:8088/npl/webparacraft",
+};
+
+local url_suffixs = {
+    ["ONLINE"] = ".html",
+    ["RELEASE"] = ".dev.html",
+    ["LOCAL"] = ".local.html",
+};
+local http_origin = http_origins[string.upper(HttpEnv)];
+local url_suffix = url_suffixs[string.upper(HttpEnv)];
+
+NPLJS:Signal("OnReceiveCameraData")
+NPLJS:Signal("OnStartWebPage");
+NPLJS:Signal("OnStartCamera");
 
 function NPLJS:ctor()
     self:Reset();
 end
 
 function NPLJS:Reset()
-    self.m_url = about_blank_url;
+    self.m_webview_x = 0;
+    self.m_webview_y = 0;
+    self.m_webview_width = 0;
+    self.m_webview_height = 0;
+    self.m_url = NplBrowserPlugin.about_blank_url;
     self.m_msg_callback = {};
     self.m_msgid_callback = {};
     self.m_msgid = 0;
@@ -64,9 +86,18 @@ function NPLJS:Reset()
 end
 
 function NPLJS:Open(url, callback, x, y, width, height)
-    if (url == about_blank_url) then return end
+    if (url == NplBrowserPlugin.about_blank_url) then return end
+    x = x or 0;
+    y = y or 0;
+    width = width or 0;
+    height = height or 0;
 
     local callback_wrap = function()
+        if (self.m_webview_x ~= x or self.m_webview_y ~= y or self.m_webview_width ~= width or self.m_webview_height ~= height) then
+            width = math.max(width, self.m_webview_width);
+            height = math.max(height, self.m_webview_height);
+            self:SetSize(x, y, width, height);
+        end
         if (type(callback) == "function") then 
             callback(self) 
         end
@@ -86,13 +117,34 @@ function NPLJS:Open(url, callback, x, y, width, height)
 
     self.m_url = url;
     self.m_loading = true;
-    NplBrowserPlugin.Start({id = self:GetID(), url = self:GetUrl(), x = x or 0, y = y or 0, width = width or 0, height = height or 0});
-    NplBrowserPlugin.Open({id = self:GetID(), url = self:GetUrl(), visible = true, x = x or 0, y = y or 0, width = width or 0, height = height or 0});
+    self.m_webview_x = x;
+    self.m_webview_y = y;
+    self.m_webview_width = width;
+    self.m_webview_height = height;
+    NplBrowserPlugin.Start({id = self:GetID(), url = self:GetUrl(), x = x, y = y, width = width, height = height});
+    NplBrowserPlugin.Open({id = self:GetID(), url = self:GetUrl(), visible = true, x = x, y = y, width = width, height = height});
     self.m_onload_timer = commonlib.Timer:new({callbackFunc = function()
         self:SendMsg("load");
     end});
 
     self.m_onload_timer:Change(200, 200);
+end
+
+function NPLJS:Hide()
+    NplBrowserPlugin.ChangePosSize({id = self:GetID(), x = 0, y = 0, width = 0, height = 0});
+end
+
+function NPLJS:Show()
+    NplBrowserPlugin.ChangePosSize({id = self:GetID(), x = self.m_webview_x or 0, y = self.m_webview_y or 0, width = self.m_webview_width or 400, height = self.m_webview_height or 300});
+end
+
+function NPLJS:SetSize(x, y, width, height)
+    if (self.m_webview_x == x and self.m_webview_y == y and self.m_webview_width == width and self.m_webview_height == height) then return end
+    self.m_webview_x = x or self.m_webview_x or 0;
+    self.m_webview_y = y or self.m_webview_y or 0;
+    self.m_webview_width = width or self.m_webview_width or 400;
+    self.m_webview_height = height or self.m_webview_height or 300;
+    NplBrowserPlugin.ChangePosSize({id = self:GetID(), x = self.m_webview_x, y = self.m_webview_y, width = self.m_webview_width, height = self.m_webview_height});
 end
 
 function NPLJS:Close()
@@ -105,7 +157,7 @@ function NPLJS:IsLoaded()
 end
 
 function NPLJS:OnLoad()
-    if (self.m_loaded) then return end
+    if (self.m_loaded) then return self:SendMsg("load"); end
     print("============NPLJS:OnLoad==========");
     self.m_loaded = true;
     if (self.m_onload_timer) then
@@ -174,15 +226,16 @@ function NPLJS:EmitMsg(msgname, msgdata, msgid)
     end
 end
 
-function NPLJS:SendMsg(msgname, msgdata, msgid, callback, retry, timeout)
+function NPLJS:SendMsg(msgname, msgdata, msgid, callback, retry, timeout, base64)
     if (msgid == nil) then msgid = self:GetNextMsgId() end
     if (type(callback) == "function") then self.m_msgid_callback[msgid] = callback end
+    if (base64 == nil or base64) then msgdata = Encoding.base64(commonlib.Json.Encode(msgdata)) end
 
     if (retry) then
         self.m_retry_callbacks[msgid] = {
             callback = function() 
                 print("Retry SendMsg msgname!!!", "msgname:" .. msgname, "msgid:", msgid);
-                self:SendMsg(msgname, msgdata, msgid, callback, retry, timeout) 
+                self:SendMsg(msgname, msgdata, msgid, callback, retry, timeout, base64) 
             end, 
             expired = ParaGlobal.timeGetTime() + (timeout or 5000),
         };
@@ -192,8 +245,7 @@ function NPLJS:SendMsg(msgname, msgdata, msgid, callback, retry, timeout)
     NplBrowserPlugin.NPL_Activate(self:GetID(), self:GetFilename(), {
         msgid = msgid,
         msgname = msgname,
-        msgdata = Encoding.base64(commonlib.Json.Encode(msgdata)),
-        -- msgdata = msgdata,
+        msgdata = msgdata,
         request_reply = retry,
     });
 end
@@ -230,19 +282,61 @@ end
 -- @param filepath: camera image filepath default to temp/camera_snap.png
 -- @param {x, y, width, height, filepath, callback}
 function NPLJS:GetCameraVideoImages(options)
+    if (System.os.GetPlatform() == "android" and System.os.CompareParaEngineVersion('1.8.1.0')) then
+        if (self.checkCameraTimer) then
+            self.checkCameraTimer:Change();
+            self.checkCameraTimer = nil;
+        end
+        if (RequestAndroidPermission and RequestAndroidPermission.HasPermission) then
+            -- 7 is camera permission.
+            if (not RequestAndroidPermission.HasPermission(7)) then
+                if (RequestAndroidPermission.RequestPermission) then
+                    local tryTimes = 0;
+                    self.checkCameraTimer = commonlib.Timer:new({
+                        callbackFunc = function()
+                            if (RequestAndroidPermission.HasPermission(7) or tryTimes > 10000) then
+                                self.checkCameraTimer:Change();
+                                self:GetCameraVideoImages(options);
+                            end
+                            tryTimes = tryTimes + 1;
+                        end
+                    });
+                    self.checkCameraTimer:Change(200, 200);
+
+                    RequestAndroidPermission.RequestPermission(7);
+                end
+                return;
+            end
+        end
+    end
+
     options = options or {};
     local x, y, width, height = self:ScaleCameraPosition(options);
 
     local __self__ = self;
-    local url = "https://webparacraft.keepwork.com/camera/index.html";
+    local url = http_origin .. "/camera/index" .. url_suffix;
     if (options.debug) then url = "http://127.0.0.1:8088/npl/webparacraft/camera/index.local.html" end
+    if (options.offline or options.camera_url) then 
+        if (not options.site_url) then
+            return NPLJS:StartWebServer(function(site_url)
+                options.site_url = site_url;
+                NPLJS:GetCameraVideoImages(options);
+            end);
+        end
+        url = options.site_url .. "camera.html";
+    end
+    -- if (options.camera_url) then
+    --     if (string.find(options.camera_url, "http://", 1, true) == 1 and string.find(url, "https://", 1, true)) then
+    --         url = string.gsub(url, "https://", "http://");
+    --     end
+    -- end
 
     local callback = options.callback or function(msgdata)  end
     local filepath = options.filepath or "temp/camera_snap.png";
 
     local msg_callback = function(base64_image_data)
         local CommonLib = NPL.load("Mod/GeneralGameServerMod/CommonLib/CommonLib.lua");
-        if (base64_image_data and base64_image_data ~= "") then
+        if (type(base64_image_data) == "string" and base64_image_data ~= "") then
             base64_image_data = string.gsub(base64_image_data, "data:image/png;base64,", "");
             local image_data = Encoding.unbase64(base64_image_data);
             CommonLib.WriteFile(filepath, image_data);
@@ -252,11 +346,23 @@ function NPLJS:GetCameraVideoImages(options)
         end
     end
 
+
     __self__:Open(url, function() 
         options.callback = nil;
+        if (System.os.GetPlatform() == "mac") then
+            local uiScales = System.Windows.Screen:GetUIScaling();
+            options.width = options.width / System.options.default_ui_scaling[1];
+            options.height = options.height / System.options.default_ui_scaling[1];
+        end
+
         __self__.m_camera_opened = true;
-        __self__:SendMsg("CameraSnap", options, nil, nil, true, 500);
-        __self__:OnMsg("CameraSnapReply", msg_callback);
+        __self__:SendMsg("CameraSnap", options, nil, nil, true, 500, false);
+        __self__:OnMsg("CameraSnapReply", msg_callback);  -- clik snap logic
+        __self__:OnMsg("CameraStart", function(msgdata)
+            local camera_id = type(msgdata) == "table" and msgdata.camera_id or nil;
+            local device_id = type(msgdata) == "table" and msgdata.device_id or nil;
+            self:OnStartCamera(camera_id, device_id);
+        end);
     end, x, y, width, height);
 end
 
@@ -269,18 +375,23 @@ function NPLJS:GetCameraImageData(options)
     -- local callback = options.callback or function(msgdata)  end
     local callback = function(msgdata)
         if (options.format ~= "raw" and options.filename and msgdata and msgdata.data ~= "") then
-            local base64_image_data = string.gsub(msgdata.data, "data:image/" .. options.format .. ";base64,", "");
-            local image_data = Encoding.unbase64(base64_image_data);
-            local CommonLib = NPL.load("Mod/GeneralGameServerMod/CommonLib/CommonLib.lua");
-            CommonLib.WriteFile(options.filename, image_data);
-            msgdata.filename = options.filename;
+            if(type(msgdata.data) == "string") then
+                local base64_image_data = string.gsub(msgdata.data, "data:image/" .. options.format .. ";base64,", "");
+                local image_data = Encoding.unbase64(base64_image_data);
+                local CommonLib = NPL.load("Mod/GeneralGameServerMod/CommonLib/CommonLib.lua");
+                CommonLib.WriteFile(options.filename, image_data);
+                msgdata.filename = options.filename;
+            else
+                LOG.std(nil, "error", "NPLJS:GetCameraImageData", "msgdata.data is not string");
+            end
         end
+        self:OnReceiveCameraData(msgdata);
         if (type(options.callback) == "function") then
             options.callback(msgdata);
         end
     end
-    if (not self.m_camera_opened) then return callback(nil) end
-    self:SendMsg("CameraSnapData", options, nil, callback, true, 500);
+    if (not self.m_camera_opened) then return callback({camera_id = options.camera_id}) end
+    self:SendMsg("CameraSnapData", options, nil, callback, true, 500, false);
 end
 
 -- @param callback: function({{name:"", label:"", score: 0.f}}) end
@@ -289,7 +400,7 @@ function NPLJS:GetCameraObjectDetection(options)
     options = options or {};
 
     local __self__ = self;
-    local url = "https://webparacraft.keepwork.com/object-detection/index.html";
+    local url = http_origin .. "/object-detection/index" .. url_suffix;
     if (options.debug) then url = "http://127.0.0.1:8088/npl/webparacraft/object-detection/index.html" end
 
     local x, y, width, height = self:ScaleCameraPosition(options);
@@ -301,14 +412,14 @@ function NPLJS:GetCameraObjectDetection(options)
         __self__:SendMsg("CameraObjectDetection", options, nil, nil, true, 500);
         __self__:OnMsg("CameraObjectDetectionReply", callback);
     end, x, y, width, height);
-	
+    
     -- System.PushState({name = "GetCameraObjectDetection", OnEscKey = function() __self__:Close() end});
 end
 
 function NPLJS:ScaleCameraPosition(options)
     local uiScales = System.Windows.Screen:GetUIScaling();
-    local scale_x = uiScales[1];
-    local scale_y = uiScales[2];
+    local scale_x = options.scale_x or options.scale or uiScales[1];
+    local scale_y = options.scale_y or options.scale or uiScales[2];
     local x = options.x or 0;
     local y = options.y or 0;
     local width = options.width or 400;
@@ -316,7 +427,7 @@ function NPLJS:ScaleCameraPosition(options)
     options.x = 0;
     options.y = 0 ;
     options.width = width * scale_x;
-    options.height = height* scale_y;
+    options.height = height * scale_y;
     return x* scale_x, y* scale_y, width * scale_x, height * scale_y;
 end
 
@@ -354,7 +465,7 @@ function NPLJS:GetCameraPoseDetection(options)
 
     LOG.std(nil, "info", "NPLJS:GetCameraPoseDetection", options);
     local __self__ = self;
-    local url = "https://webparacraft.keepwork.com/tfjs/index.html";
+    local url = http_origin .. "/tfjs/index" .. url_suffix;
     if (options.debug) then url = "http://127.0.0.1:8088/npl/webparacraft/tfjs/index.html" end
 
     local callback = options.callback or function(msgdata) end
@@ -370,9 +481,8 @@ function NPLJS:GetCameraPoseDetection(options)
         __self__:OnMsg("TFJS_POSE_REPLY", callback);
     end, x, y, width, height);
 
-	-- System.PushState({name = "GetCameraPoseDetection", OnEscKey = function() __self__:Close() end});
+    -- System.PushState({name = "GetCameraPoseDetection", OnEscKey = function() __self__:Close() end});
 end
-
 
 function NPLJS:GetCameraHandPoseDetection(options)
     -- /capture -debug -interval=2000 pose start 
@@ -381,7 +491,7 @@ function NPLJS:GetCameraHandPoseDetection(options)
 
     LOG.std(nil, "info", "NPLJS:GetCameraHandPoseDetection", options);
     local __self__ = self;
-    local url = "https://webparacraft.keepwork.com/tfjs/index.html";
+    local url = http_origin .. "/tfjs/index.html";
     if (options.debug) then url = "http://127.0.0.1:8088/npl/webparacraft/tfjs/index.html" end
 
     local callback = options.callback or function(msgdata) end
@@ -397,9 +507,55 @@ function NPLJS:GetCameraHandPoseDetection(options)
     -- System.PushState({name = "GetCameraPoseDetection", OnEscKey = function() __self__:Close() end});
 end
 
+-- /capture webpage -url https://qiniu-public.keepwork.com/official-home-page/2-1.1.mp4 
+function NPLJS:GetWebPageImage(options)
+    options = options or {};
+    local x, y, width, height = self:ScaleCameraPosition(options);
+
+    LOG.std(nil, "info", "NPLJS:GetWebPageImage", options);
+    echo(options)
+    local __self__ = self;
+    -- local url = http_origin .. "/webpage/video.html";
+    local url = http_origin .. "/webpage/index" .. url_suffix;
+    if (options.debug) then url = "http://127.0.0.1:8088/npl/webparacraft/webpage/index.local.html" end
+
+    local callback = function(msgdata) 
+        self:OnStartWebPage();
+        if (type(options.callback) == "function") then
+            options.callback(msgdata);
+        end
+    end
+
+    __self__:Open(url, function()
+        options.callback = nil;
+        LOG.std(nil, "info", "SendMsg WebPageSnap");
+        __self__.m_camera_opened = true;
+        __self__:SendMsg("WebPageSnap", options, nil, nil, true, 500);
+        __self__:OnMsg("WebPageSnapReply", callback);
+    end, x, y, width, height);
+end
+
+function NPLJS:StartWebServer(callback)
+    NPL.load("(gl)script/apps/WebServer/WebServer.lua");
+    local site_url = WebServer:site_url();
+    if (site_url ~= nil) then
+        callback(site_url);
+    else 
+        WebServer:Start("script/apps/WebServer/admin");
+        self.m_start_web_server_timer = self.m_start_web_server_timer or commonlib.TimerManager.SetInterval(function()
+            local site_url = WebServer:site_url();
+            if (site_url ~= nil) then
+                self.m_start_web_server_timer:Change();
+                self.m_start_web_server_timer = nil;
+                callback(site_url);
+            end
+        end, 100);
+    end
+end
+
 NPLJS:InitSingleton();
 
 NPL.this(function()
-	local msg = NplBrowserPlugin.TranslateJsMessage(msg)
+    local msg = NplBrowserPlugin.TranslateJsMessage(msg)
     NPLJS:RecvMsg(msg);
 end, {filename="NPLJS"});

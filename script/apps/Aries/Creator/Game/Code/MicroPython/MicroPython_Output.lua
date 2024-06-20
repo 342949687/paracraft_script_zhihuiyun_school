@@ -75,7 +75,7 @@ NPL.export({
 		return string.format('servo_%s.write_angle(%s)\n', self:getFieldAsString('PIN'), self:getFieldAsString('angle'));
 	end,
 	ToMicroPython = function(self)
-		self:GetBlockly():AddUnqiueHeader(string.format('servo_%s = Servo(%s, min_us=500, max_us=2500, actuation_range=180)', self:getFieldAsString('PIN'), self:getFieldAsString('PIN')));
+		self:GetBlockly():AddUniqueHeader(string.format('servo_%s = Servo(%s, min_us=500, max_us=2500, actuation_range=180)', self:getFieldAsString('PIN'), self:getFieldAsString('PIN')));
 		return string.format('servo_%s.write_angle(%s)\n', self:getFieldAsString('PIN'), self:getFieldAsString('angle'));
 	end,
 	examples = {{desc = "", canRun = true, code = [[
@@ -377,7 +377,7 @@ music.play(['c4:1', 'e', 'g', 'c5', 'e5', 'g4'])
 	ToMicroPython = function(self)
 		local pin = self:getFieldAsString('PIN');
 		local analogIn = string.gsub("pXX = MPythonPin(XX, PinMode.OUT)\n", "XX", pin);
-		self:GetBlockly():AddUnqiueHeader(analogIn);
+		self:GetBlockly():AddUniqueHeader(analogIn);
 		return string.format('p%s.write_digital(%s)\n', pin, self:getFieldAsString('value'));
 	end,
 	examples = {{desc = "", canRun = false, code = [[
@@ -431,7 +431,7 @@ music.play(['c4:1', 'e', 'g', 'c5', 'e5', 'g4'])
 	ToMicroPython = function(self)
 		local pin = self:getFieldAsString('PIN');
 		local analogIn = string.gsub("pXX = MPythonPin(XX, PinMode.PWM)\n", "XX", pin);
-		self:GetBlockly():AddUnqiueHeader(analogIn);
+		self:GetBlockly():AddUniqueHeader(analogIn);
 		return string.format('p%s.write_analog(%s)\n', pin, self:getFieldAsString('pwm'));
 	end,
 	examples = {{desc = "", canRun = false, code = [[
@@ -555,7 +555,7 @@ parrot.set_speed(parrot.MOTOR_1, -(60))
 			self:getFieldAsString('name'), self:getFieldAsString('PIN'), self:getFieldAsString('count'));
 	end,
 	ToMicroPython = function(self)
-		self:GetBlockly():AddUnqiueHeader(string.format('%s = neopixel.NeoPixel(Pin(Pin.P%s), n=%s, bpp=3, timing=1)', 
+		self:GetBlockly():AddUniqueHeader(string.format('%s = neopixel.NeoPixel(Pin(Pin.P%s), n=%s, bpp=3, timing=1)', 
 			self:getFieldAsString('name'), self:getFieldAsString('PIN'), self:getFieldAsString('count')));
 		return "\n";
 	end,

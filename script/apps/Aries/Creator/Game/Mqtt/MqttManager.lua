@@ -27,6 +27,7 @@ function MqttManager:AddProject(name,callback)
     MqttApi.CreateProject({
         name = name
     }, function(err,data)
+        self:PrintApiInfo("AddProject",err,data)
         if err == 200 then
             if callback then
                 callback(true,data)
@@ -41,6 +42,7 @@ end
 
 function MqttManager:LoadProjectList(callback)
     MqttApi.GetProjects({}, function(err,data)
+        self:PrintApiInfo("LoadProjectList",err,data)
         if err == 200 then
             if callback then
                 callback(true,data)
@@ -57,6 +59,7 @@ function MqttManager:DeleteProject(id,callback)
     MqttApi.DeleteProject({
         router_params = {id = id},
     }, function(err,data)
+        self:PrintApiInfo("DeleteProject",err,data)
         if err == 200 then
             if callback then
                 callback(true,data)
@@ -74,6 +77,7 @@ function MqttManager:UpdateProject(id,name,callback)
         router_params = {id = id},
         name = name
     }, function(err,data)
+        self:PrintApiInfo("UpdateProject",err,data)
         if err == 200 then
             if callback then
                 callback(true,data)
@@ -92,6 +96,7 @@ function MqttManager:LoadTopicList(curPage,iotProjectId,callback)
 		["x-page"] = curPage or 1,
         iotProjectId = iotProjectId,
     }, function(err,data)
+        self:PrintApiInfo("LoadTopicList",err,data)
         if err == 200 then
             if callback then
                 callback(true,data)
@@ -109,6 +114,7 @@ function MqttManager:AddTopic(iotProjectId,desc,callback)
         iotProjectId = iotProjectId,
         desc = desc
     }, function(err,data)
+        self:PrintApiInfo("AddTopic",err,data)
         if err == 200 then
             if callback then
                 callback(true,data)
@@ -125,6 +131,7 @@ function MqttManager:DeleteTopic(topicId,callback)
     MqttApi.DeleteTopic({
         router_params = {id = topicId},
     }, function(err,data)
+        self:PrintApiInfo("DeleteTopic",err,data)
         if err == 200 then
             if callback then
                 callback(true,data)
@@ -142,6 +149,7 @@ function MqttManager:UpdateTopic(topicId,desc,callback)
         router_params = {id = topicId},
         desc = desc
     }, function(err,data)
+        self:PrintApiInfo("UpdateTopic",err,data)
         if err == 200 then
             if callback then
                 callback(true,data)
@@ -158,6 +166,7 @@ function MqttManager:ClearTopic(topicId,callback)
     MqttApi.ClearTopic({
         router_params = {id = topicId},
     }, function(err,data)
+        self:PrintApiInfo("ClearTopic",err,data)
         if err == 200 then
             if callback then
                 callback(true,data)
@@ -177,6 +186,7 @@ function MqttManager:LoadDeviceList(curPage,iotProjectId,callback)
 		["x-page"] = curPage or 1,
         iotProjectId = iotProjectId,
     }, function(err,data)
+        self:PrintApiInfo("LoadDeviceList",err,data)
         if err == 200 then
             if callback then
                 callback(true,data)
@@ -195,6 +205,7 @@ function MqttManager:AddDevice(iotProjectId,name,callback)
         iotProjectId = iotProjectId,
         desc = name
     }, function(err,data)
+        self:PrintApiInfo("AddDevice",err,data)
         if err == 200 then
             if callback then
                 callback(true,data)
@@ -211,6 +222,7 @@ function MqttManager:DeleteDevice(deviceId,callback)
     MqttApi.DeleteDevice({
         router_params = {id = deviceId},
     }, function(err,data)
+        self:PrintApiInfo("DeleteDevice",err,data)
         if err == 200 then
             if callback then
                 callback(true,data)
@@ -227,6 +239,7 @@ function MqttManager:LoadTopicDataList(topicId,callback)
     MqttApi.GetTopicData({
         router_params = {id = topicId},
     }, function(err,data)
+        self:PrintApiInfo("LoadTopicDataList",err,data)
         if err == 200 then
             if callback then
                 callback(true,data)
@@ -237,4 +250,13 @@ function MqttManager:LoadTopicDataList(topicId,callback)
             callback(false)
         end
     end)
+end
+
+function MqttManager:PrintApiInfo(name,err,data)
+    if not System.options.isDevMode then
+        return
+    end
+    print("PrintApiInfo=====",(name or ""))
+    print("PrintApiInfo1=========",err)
+    echo(data,true)
 end

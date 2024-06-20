@@ -54,7 +54,7 @@ function MqttCreateDevice.OnClickAddDevice()
     end
     page:CloseWindow()
     MqttManager.getInstance():AddDevice(MqttCreateDevice.iotProjectId,name,function(success,data)
-        echo(data,true)
+        -- echo(data,true)
         if success then
             GameLogic.AddBBS(nil,L"创建成功")
             MqttMainPage.LoadProjectList()

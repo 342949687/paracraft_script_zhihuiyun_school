@@ -43,7 +43,7 @@ NPL.export({
 	end,
 	PostProcess = function(self, lines)
 		-- insert headers that begins with //setup into void setup() function. 
-		-- e.g. self:GetBlockly():AddUnqiueHeader("//setup Serial.begin(115200);\n");
+		-- e.g. self:GetBlockly():AddUniqueHeader("//setup Serial.begin(115200);\n");
 		local nIndex = 1;
 		local setupLines = {}
 		local setupFunctionIndex = -1;
@@ -75,7 +75,7 @@ NPL.export({
 		end
 
 		-- insert headers that begins with //replace fromName toName to replace delay function with the newName function. 
-		-- e.g. self:GetBlockly():AddUnqiueHeader("//replace delay sleep");
+		-- e.g. self:GetBlockly():AddUniqueHeader("//replace delay sleep");
 		local nIndex = 1;
 		while(nIndex <= #lines) do
 			local line = lines[nIndex];
@@ -122,6 +122,39 @@ NPL.export({
 		local input = self:getFieldAsString('input')
 		return string.format('void loop(){\n%s}\n', input);
 	end,
+	PostProcess = function(self, lines)
+		-- insert headers that begins with //loop into void loop() function. 
+		-- e.g. self:GetBlockly():AddUniqueHeader("//loop Update();\n");
+		local nIndex = 1;
+		local loopLines = {}
+		local loopFunctionIndex = -1;
+		local indent = self:GetBlockly().Const.Indent
+		while(nIndex <= #lines) do
+			local line = lines[nIndex];
+			if(line and line:match("^//loop ")) then
+				line = line:gsub("^//loop ", "")
+				line = indent..line;
+				loopLines[#loopLines + 1] = line;
+				table.remove(lines, nIndex);
+			else
+				if(line and line:match("^void loop()")) then
+					loopFunctionIndex = nIndex;
+				end
+				nIndex = nIndex + 1;
+			end
+		end
+		if(#loopLines > 0) then
+			if(loopFunctionIndex < 0) then
+				lines[#lines + 1] = "void loop(){\n}\n"
+				loopFunctionIndex = #lines;
+			end
+			-- insert loopLines at loopFunctionIndex to lines
+			local loopFunc = lines[loopFunctionIndex] 
+			local nFromPos = #("void loop(){\n")
+			loopFunc = loopFunc:sub(1, nFromPos)..table.concat(loopLines)..loopFunc:sub(nFromPos, -1);
+			lines[loopFunctionIndex] = loopFunc;
+		end
+	end,
 	examples = {{desc = "", canRun = true, code = [[
 ]]}},
 	},
@@ -150,10 +183,11 @@ NPL.export({
 	end,
 	ToArduino = function(self)
 		local text = self:GetValueAsString('obj')
-		self:GetBlockly():AddUnqiueHeader("//setup Serial.begin(115200);");
+		text = string.gsub(text, "^'(.*)'$", '"%1"')
+		self:GetBlockly():AddUniqueHeader("//setup Serial.begin(115200);");
 		return string.format('Serial.println(%s);\n', text);
 	end,
-	examples = {{desc = L"", canRun = true, code = [[
+	examples = {{desc = "", canRun = true, code = [[
 ]]}},
 },
 });

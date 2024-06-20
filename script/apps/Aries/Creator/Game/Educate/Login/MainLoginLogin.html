@@ -9,7 +9,8 @@
                     local MySchool = NPL.load('(gl)Mod/WorldShare/cellar/MySchool/MySchool.lua')
                     local RegisterModal = NPL.load('(gl)Mod/WorldShare/cellar/RegisterModal/RegisterModal.lua')
                     local LoginModal = NPL.load('(gl)Mod/WorldShare/cellar/LoginModal/LoginModal.lua')
-
+                    NPL.load("(gl)script/apps/Aries/Creator/Game/Login/MainLogin.lua")
+                    local GameMainLogin = commonlib.gettable('MyCompany.Aries.Game.MainLogin')
                     -- service
                     local KeepworkServiceSession = NPL.load('(gl)Mod/WorldShare/service/KeepWorkService/KeepworkServiceSession.lua')
                     local EventTrackingService = NPL.load('(gl)Mod/WorldShare/service/EventTracking.lua')
@@ -615,7 +616,7 @@
                         local phone_number = get_page():GetValue('phone_number')
 
                         if not Validated:Phone(phone_number) then
-                            _guihelper.MessageBox(L'*手机号格式错误')
+                            _guihelper.MessageBox(L'请输入5-11位手机号')
                             return
                         end
 
@@ -790,6 +791,17 @@
                 local ClassCodeLogin = NPL.load("(gl)script/apps/Aries/Creator/Game/Educate/ClassCode/ClassCodeLogin.lua")
                 ClassCodeLogin.ShowView();
             end
+
+
+            function IsShowUpdate()
+                local platform = System.os.GetPlatform();   
+                local isShowUpdate = GameMainLogin.m_bNeedUpdate == true and platform == "win32"  
+                return isShowUpdate
+            end
+
+            function OnClickUpdateBtn()
+                GameMainLogin:ShowUpdatePage(true)
+            end
             </script>
             <style type='text/mcss'>
                 {
@@ -809,7 +821,7 @@
             <pe:container alignment="_fi" zorder='-2' onclick = "onclickBackground" width="100%" height="100%" style="background-color:#E3EEFD00; ">
             </pe:container>
             <pe:container alignment='_rt' zorder='-1' style='width:120px;height:60px;position: relative; margin-top: 80px;margin-right: 100px;background-color:#fff60000;'>
-                <pe:if condition="<%= not get_is_modal()%>">
+                <pe:if condition="<%= not get_is_modal() and not System.options.isShenzhenAi5 %>">
                     <div  style='width: 120px;margin-left: 0px;'>
                         <input type='button' onclick='on_click_educate_net' style='margin-left: 40px;width: 40px; height: 40px; background: url(Texture/Aries/Creator/paracraft/Educate/Login/wangzhan_40x40_32bits.png#0 0 40 40)'/>
                         <div style = " width: 120px;text-align: center;font-size: 8px;color: #0E1627;">
@@ -1211,6 +1223,39 @@
             <pe:container alignment='_rb' style="background: url();">
                 <pe:if condition="<%= not get_is_modal()%>">
                     <div style="width: 400px; height: 105px;">
+                        <pe:if condition="<%=IsShowUpdate()%>">
+                            <div style="float: left; 
+                                width: 116px; 
+                                margin-left: 60px;
+                                height: 60px;">
+                                <input type="button" 
+                                    icon="Texture/Aries/Creator/paracraft/Educate/Login/update_18x24_32bits.png;0 0 18 24"
+                                    icon_off_y="0"
+                                    icon_off_x="-22"
+                                    icon_width="21"
+                                    icon_height="26"
+                                    onclick="OnClickUpdateBtn" 
+                                    value='<%= L"更新" %>' 
+                                    style="position: relative;
+                                        spacing: 20px;                                        
+                                        height: 60px;
+                                        width: 116px;
+                                        text-offset-x:12;
+                                        font-size: 20px;
+                                        font-weight: bold;
+                                        color: #ffffff;
+                                        background:url(Texture/Aries/Creator/paracraft/Educate/CreateWorld/daquedin_46x46_32bits.png#0 0 46 46:16 16 16 16)" />
+                                <kp:redtip style="position:relative;margin-left:106px;margin-top:-1px;" value="true" ></kp:redtip>
+                            </div>
+                        </pe:if>
+                        <pe:if condition="<%=not IsShowUpdate()%>">
+                            <div style="float: left; 
+                                margin-left: 60px;
+                                width: 116px; 
+                                height: 60px;">
+                            </div>
+                        </pe:if>
+                        
                         <input type="button" 
                             icon="Texture/Aries/Creator/paracraft/Educate/Login/icon_switch_21x26_32bits.png;0 0 21 26"
                             icon_off_y="0"
@@ -1219,8 +1264,9 @@
                             icon_height="26"
                             onclick="OnClickLocalMode" 
                             value='<%= L"本地模式" %>' 
-                            style="spacing: 20px;
-                                margin-left: 170px;
+                            style="float: left;
+                                spacing: 20px;
+                                margin-left: 20px;
                                 height: 60px;
                                 min-width: 160px;
                                 text-offset-x:12;

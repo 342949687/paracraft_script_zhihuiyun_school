@@ -19,6 +19,10 @@ commonlib.setfield("MyCompany.Aries.Game.Code.Arduino", Arduino);
 Arduino.isAutoCreateMovieEntity = false
 -- if we are using virtual port only.
 Arduino.isVirtualPortOnly = true;
+-- since we use arduino-cli to upload, real serial port is never used, we will not show serial connector. 
+-- for log monitor use the one provided by arduino-cli. 
+Arduino.isShowSerialConnector = false;
+
 local all_cmds = {}
 local cmdsMap = {};
 local default_categories = {
@@ -71,15 +75,23 @@ function Arduino.GetAllCmds()
 	return all_cmds;
 end
 
+function Arduino.CheckShowSerialConnector()
+	if(Arduino.isShowSerialConnector) then
+		SerialPortConnector.Show();
+	end
+end
+
 function Arduino.EditorChangeCodeEntity(entity)
-	SerialPortConnector.Show();
+	Arduino.CheckShowSerialConnector()
+	
 	if(entity) then
 		SerialPortConnector.SetCurrentPortByName(entity:GetDisplayName(), Arduino.isVirtualPortOnly)
 	end
 end
 
 function Arduino.OnOpenCodeEditor(entity)
-	SerialPortConnector.Show();
+	Arduino.CheckShowSerialConnector()
+
 	if(entity) then
 		SerialPortConnector.SetCurrentPortByName(entity:GetDisplayName(), Arduino.isVirtualPortOnly)
 	end
@@ -91,10 +103,10 @@ end
 function Arduino.CompileCode(code, filename, codeblock)
 	local name = codeblock:GetEntity():GetDisplayName();
 
-	if(SerialPortConnector.IsConnected()) then
+	if(SerialPortConnector.IsConnected() or not Arduino.isShowSerialConnector) then
 		local block_name = codeblock:GetBlockName();
 
-		if(not CodeBlockWindow.IsVisible()) then
+		if(not CodeBlockWindow.IsVisible() or not Arduino.isShowSerialConnector) then
 			SerialPortConnector.SetCurrentPortByName(codeblock:GetEntity():GetDisplayName(), Arduino.isVirtualPortOnly)
 		end
 
@@ -103,26 +115,12 @@ function Arduino.CompileCode(code, filename, codeblock)
 		compiler:SetAllowFastMode(true);
 		return compiler:Compile(code);
 	else
-		SerialPortConnector.Show();
+		Arduino.CheckShowSerialConnector()
 
 		-- tricky: if the code block's display name is not empty, we will try and wait for available virtual port
-		
 		if(SerialPortConnector.SetCurrentPortByName(name, Arduino.isVirtualPortOnly)) then
 			if(SerialPortConnector.IsConnected()) then
 				return Arduino.CompileCode(code, filename, codeblock)
-			end
-		end
-
-		if(name and name ~= "" and codeblock:GetEntity():IsPowered()) then
-			if(not SerialPortConnector.HasVirtualPort(name)) then
-				commonlib.TimerManager.SetTimeout(function()  
-					if(SerialPortConnector.HasVirtualPort(name)) then
-						local entity = codeblock:GetEntity()
-						if(entity and entity:IsPowered()) then
-							entity:Restart();
-						end
-					end
-				end, 300)
 			end
 		else
 			return nil, L"没有找到虚拟串口，请先添加Arduino智能模组"
@@ -227,44 +225,75 @@ function Arduino.UploadWithArduinoCli()
 		NPL.load("(gl)script/apps/Aries/Creator/Game/Code/Arduino/ArduinoConfigPage.lua");
 		local ArduinoConfigPage = commonlib.gettable("MyCompany.Aries.Game.Code.ArduinoConfigPage");
 		ArduinoConfigPage.FetchValidArduinoCliPath(function(exe_full_path)
+			-- use relative path to support non-English install location. 
+			Arduino.isUseRelativePath = true;
+			if(Arduino.isUseRelativePath) then
+				local writablePath = ParaIO.GetWritablePath()
+				if(exe_full_path:sub(1, #writablePath) == writablePath) then
+					exe_full_path = exe_full_path:sub(#writablePath+1, -1)
+					local prePath = ""
+					for w in exe_full_path:gmatch("[/\\]") do
+						prePath = prePath.."..\\"
+					end
+					if(filename:sub(1, #writablePath) == writablePath) then
+						filename = prePath..filename:sub(#writablePath+1, -1)
+					end
+				end
+			end
+
 			local parentExeDir = string.gsub(exe_full_path, "[^/\\]+$", "");
 			if(exe_full_path and filename) then
 				SerialPortConnector.DisconnectAll();
 				local boardname = ArduinoConfigPage.GetBoardName();
 				local port = ArduinoConfigPage.GetPort();
+				if(not port or port == "") then
+					port = "COM1"
+				end
 				local library = ArduinoConfigPage.GetLibrary();
 				local cmd = string.format([[
 @echo off
 echo "building with local arduino-cli ..." >con
 pushd "%s"
 echo "compiling ..." >con
-"%s" --config-file .\arduino-cli.yaml compile --library %s --fqbn %s %s
+"%s" --config-file .\arduino-cli.yaml compile --library %s --fqbn %s %s > output.txt 2>&1
 IF %%ERRORLEVEL%% NEQ 0 (
 	echo "compile failed"
     echo "compile failed" >con
-	timeout /t 5 >nul
+	REM timeout /t 5 >nul
 ) ELSE (
 	echo "compile succeed"
     echo "compile succeed" >con
 
 	echo "uploading via %s ..." >con
-	"%s" --config-file .\arduino-cli.yaml upload -p %s --fqbn %s %s
+	"%s" --config-file .\arduino-cli.yaml upload -p %s --fqbn %s %s >> output.txt 2>&1
 	IF %%ERRORLEVEL%% NEQ 0 (
 		echo "upload failed"
 		echo "upload failed" >con
 	) ELSE (
-		echo "upload succeed"
-		echo "upload succeed" >con
+		REM timeout /t 2 >nul
+		REM echo "upload succeed"
+		REM echo "upload succeed" >con
 	)
 )
 popd
-]], parentExeDir, exe_full_path, library, boardname, filename, port, exe_full_path, port, boardname, filename)
+]], parentExeDir, ArduinoConfigPage.run_name, library, boardname, filename, port, ArduinoConfigPage.run_name, port, boardname, filename)
+
+				LOG.std(nil, "info", "Arduino", "running arduino-cli cmd:\n%s\n", cmd);
 
 				local function OnResult_(result)
+					local filename = parentExeDir.."output.txt";
+					local file = ParaIO.open(filename, "r");
+					if(file:IsValid()) then
+						local text = file:GetText();
+						file:close();
+						result = text;
+					else
+						LOG.std(nil, "error", "Arduino", "failed to open output file: %s ", filename);
+					end
 					if(result) then
 						-- remove colored text in console 
 						result = string.gsub(result, "\27%[%d+m", "");
-						GameLogic.GetCodeGlobal():logAdded(result); 
+						GameLogic.GetCodeGlobal():log(result); 
 					end 
 				end
 				local isAsyncRun = false;
@@ -282,6 +311,10 @@ popd
 			end
 		end)
 	else
-		_guihelper.MessageBox(L"请在windows PC平台上上传")
+		_guihelper.MessageBox(L"你的版本只支持虚拟仿真。请下载Windows PC客户端上传硬件。是否现在下载？", function(res)
+			if(res and res == _guihelper.DialogResult.Yes) then
+				ParaGlobal.ShellExecute("open", "https://paracraft.cn/download", "", "", 1);
+			end
+		end, _guihelper.MessageBoxButtons.YesNo);
 	end
 end

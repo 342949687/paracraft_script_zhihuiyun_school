@@ -957,6 +957,9 @@ function DefaultTheme:Load()
 	self:LoadHeadDisplayStyle();
 	NPL.load("(gl)script/kids/3DMapSystemUI/MiniGames/SwfLoadingBarPage.lua");
 	Map3DSystem.App.MiniGames.SwfLoadingBarPage.url="script/apps/Aries/Creator/Game/Login/SwfLoadingBarPage.mc.html";
+	if (System.options.ZhyChannel and System.options.ZhyChannel ~= "") or System.options.isZhihuiyunSchoolPackage then
+		Map3DSystem.App.MiniGames.SwfLoadingBarPage.url="script/apps/Aries/Creator/Game/Login/SwfLoadingBarPage.zhy.html";
+	end
 
 	NPL.load("(gl)script/ide/TooltipHelper.lua");
 	local BroadcastHelper = commonlib.gettable("CommonCtrl.BroadcastHelper");

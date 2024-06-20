@@ -141,7 +141,7 @@ function RedSummerCampMainPage.Show()
 		SysInfoStatistics.checkGetSysInfoAndUpload()
 	end,500)
 
-	if System.options.channelId_431 then
+	if System.options.isEducatePlatform then
 		local EducateMainPage = NPL.load("(gl)script/apps/Aries/Creator/Game/Educate/EducateMainPage.lua")
         EducateMainPage.ShowPage()
 		return
@@ -199,6 +199,12 @@ function RedSummerCampMainPage.Show()
 		Game.Exit()
 	end
 
+	if System.options.isCommunity then
+		local CommunityMainPage = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/Community/CommunityMainPage.lua")
+        CommunityMainPage.Show(true)
+		return
+	end
+
 	if page then
 		page:CloseWindow(true)
 		RedSummerCampMainPage.OnClose()
@@ -229,7 +235,6 @@ function RedSummerCampMainPage.Show()
 			-- app_key = MyCompany.Aries.Creator.Game.Desktop.App.app_key, 
 			DesignResolutionWidth = 1280,
 			DesignResolutionHeight = 720,
-			isTopLevel = true,
 			directPosition = true,
 				align = "_fi",
 				x = 0,
@@ -280,21 +285,25 @@ function RedSummerCampMainPage.Show()
 					return sort_a < sort_b;
 				end)
 			end
-			page:SetValue("notic_text1", RedSummerCampMainPage.GetAutoNoticeText())
+			if page then
+				page:SetValue("notic_text1", RedSummerCampMainPage.GetAutoNoticeText())
+			end
 			-- RedSummerCampMainPage.Timer = commonlib.Timer:new({callbackFunc = function(timer)
 			-- 	RedSummerCampMainPage.StartNoticeAnim()
 			-- end})
 			-- RedSummerCampMainPage.Timer:Change(notice_time, nil);
 		end)
 	else
-		page:SetValue("notic_text1", RedSummerCampMainPage.GetAutoNoticeText())
+		if page then
+			page:SetValue("notic_text1", RedSummerCampMainPage.GetAutoNoticeText())
+		end
 		RedSummerCampMainPage.Timer = commonlib.Timer:new({callbackFunc = function(timer)
 			RedSummerCampMainPage.StartNoticeAnim()
 		end})
 		RedSummerCampMainPage.Timer:Change(notice_time, nil);
 	end
 
-	local isVerified = GameLogic.GetFilters():apply_filters('store_get', 'user/isVerified');
+	local isVerified = true--GameLogic.GetFilters():apply_filters('store_get', 'user/isVerified');
 	local hasJoinedSchool = true--GameLogic.GetFilters():apply_filters('store_get', 'user/hasJoinedSchool');
 	if not isVerified or not hasJoinedSchool then
 		local func = function()

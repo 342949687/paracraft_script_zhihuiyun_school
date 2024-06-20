@@ -49,9 +49,15 @@ function ItemBlockModel:GetItemModelInHandOffset()
 	return self.inhandOffset or default_inhand_offset;
 end
 
--- whether filename is a block template file. 
+-- whether filename is a block template file, both ply and blocks.xml are considered template file 
 function ItemBlockModel:IsBlockTemplate(filename)
-	return filename and filename:match("%.blocks%.xml$") and true;
+	if(filename) then
+		if(filename:match("%.blocks%.xml$")) then
+			return true;
+		elseif(filename:match("%.ply$") and self.id ~= block_types.names.LiveModel) then
+			return true;
+		end
+	end
 end
 
 -- load the model as block templates into the world.
@@ -86,9 +92,12 @@ function ItemBlockModel:TryCreate(itemStack, entityPlayer, x,y,z, side, data, si
 	local local_filename = itemStack:GetDataField("tooltip");
 	local filename = local_filename;
 	if(filename) then
-		if (not self:IsBlockTemplate(filename) and filename:match("^temp/onlinestore/")) then
+		if (not self:IsBlockTemplate(filename) and (filename:match("^temp/onlinestore/") or filename:match("^temp/personnalstore/"))) then
 			filename = commonlib.Encoding.Utf8ToDefault(filename)
 			local _filename = "onlinestore/"..filename:match("[^/\\]+$")
+			if filename:match("^temp/personnalstore/") then
+				_filename = "personnalstore/"..filename:match("[^/\\]+$")
+			end
 			if(ParaIO.DoesFileExist(Files.GetWritablePath()..filename, true)) then
 				if ParaIO.CopyFile(Files.GetWritablePath()..filename, Files.WorldPathToFullPath(_filename), true) then
 					itemStack:SetTooltip(commonlib.Encoding.DefaultToUtf8(_filename))

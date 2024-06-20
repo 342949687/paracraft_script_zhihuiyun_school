@@ -27,8 +27,8 @@ end
     <input type="button" uiname="SerialPortConnector.saveAndClose" name="close" tooltip='<%=L"关闭"%>' onclick="SerialPortConnector.Close()" class="mc_close_button" style="position:relative;" align="right" />
     <div style="margin:5px">
         <pe:if condition="<%=not SerialPortConnector.IsConnected() or SerialPortConnector.mode == 'connect'%>">
-            <select style="float:left;width:80px;height:22px;font-size:12px;margin-right:5px;" name="portName" AllowUserEdit="false" onselect="OnSelectPort" DataSource='<%=SerialPortConnector.GetPortNameDS()%>' />
-            <input type="button" uiname="SerialPortConnector.connect"  style="" value='<%=L"连接设备"%>' name="btnConnect" class="defaultbutton" onclick="Connect" onselect="SerialPortConnector.OnSelectPort" />
+            <select onBeforeClickDropDownButton="SerialPortConnector.onBeforeClickDropDownButton" style="float:left;width:80px;height:22px;font-size:12px;margin-right:5px;" name="portName" AllowUserEdit="false" onselect="SerialPortConnector.OnSelectPort" DataSource='<%=SerialPortConnector.GetPortNameDS()%>' />
+            <input type="button" uiname="SerialPortConnector.connect"  style="" value='<%=L"连接设备"%>' name="btnConnect" class="defaultbutton" onclick="Connect" />
             <div style="float:left;color:#00ff00;margin-left:5px;"><%=GetConnectedCountText() or ""%></div>
         </pe:if>
         <pe:if condition="<%=SerialPortConnector.IsConnected() and SerialPortConnector.mode ~= 'connect'%>">

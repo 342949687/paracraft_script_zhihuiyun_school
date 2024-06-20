@@ -80,15 +80,15 @@ function BlockManager.GetCustomCureentBlockEntity()
     return entity;
 end
 
-function BlockManager.GetCustomCurrentBlockPath()
-    local entity = BlockManager.GetCustomCureentBlockEntity();
-    if (not entity) then return"CustomCurrentBlock" end
+function BlockManager.GetCustomCurrentBlockPath(entity)
+    entity = entity or BlockManager.GetCustomCureentBlockEntity();
+    if (not entity) then return "CustomCurrentBlock" end
 	local bx, by, bz = entity:GetBlockPos();
     return tostring(bx) .. "_" .. tostring(by) .. "_" .. tostring(bz);
 end
 
-function BlockManager.LoadCustomCurrentBlockEntity()
-    local entity = BlockManager.GetCustomCureentBlockEntity();
+function BlockManager.LoadCustomCurrentBlockEntity(entity)
+    entity = entity or BlockManager.GetCustomCureentBlockEntity();
     local filepath = BlockManager.GetCustomCurrentBlockPath();
     if (not entity or not entity.GetCustomBlockText) then return end
     local text = entity:GetCustomBlockText();
@@ -100,10 +100,10 @@ function BlockManager.LoadCustomCurrentBlockEntity()
     BlockManager.SetCurrentLanguage(oldCurrentLanguage);
 end
 
-function BlockManager.SaveCustomCureentBlockEntity()
-    local entity = BlockManager.GetCustomCureentBlockEntity();
+function BlockManager.SaveCustomCureentBlockEntity(entity)
+    entity = entity or BlockManager.GetCustomCureentBlockEntity();
     if (entity and entity.SetCustomBlockText) then
-        local CustomCategoryAndBlockMap = BlockManager.GetCustomCurrentBlockCategoryAndBlockMap();
+        local CustomCategoryAndBlockMap = BlockManager.GetCustomCurrentBlockCategoryAndBlockMap(entity);
         entity:SetCustomBlockText(commonlib.serialize_compact(CustomCategoryAndBlockMap))
     end
 end
@@ -139,10 +139,10 @@ function BlockManager.GetCategoryAndBlockMap(path)
     return AllCategoryAndBlockMap[path]; 
 end
 
-function BlockManager.GetCustomCurrentBlockCategoryAndBlockMap()
-    local path = BlockManager.GetCustomCurrentBlockPath();
+function BlockManager.GetCustomCurrentBlockCategoryAndBlockMap(entity)
+    local path = BlockManager.GetCustomCurrentBlockPath(entity);
     if (not AllCategoryAndBlockMap[path]) then
-        BlockManager.LoadCustomCurrentBlockEntity();
+        BlockManager.LoadCustomCurrentBlockEntity(entity);
     end
     return BlockManager.GetCategoryAndBlockMap(path);
 end
@@ -295,6 +295,7 @@ function BlockManager.NewBlock(block)
         type = block.type,
         category = block.category,
         color = block.color,
+        group = block.group,
         hideInToolbox = block.hideInToolbox,
         output = block.output,
         previousStatement = block.previousStatement,
@@ -303,6 +304,9 @@ function BlockManager.NewBlock(block)
         arg = block.arg,
         code_description = block.code_description,
         xml_text = block.xml_text,
+        folded_xml_text = block.folded_xml_text,
+        is_folded = block.is_folded,
+        is_folded_draggable = block.is_folded_draggable,
         code = block.code,
         headerText = block.headerText,
         headers = block.headers,

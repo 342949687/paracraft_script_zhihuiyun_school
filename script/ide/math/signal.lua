@@ -6,9 +6,10 @@ Use Lib:
 -------------------------------------------------------
 NPL.load("(gl)script/ide/math/signal.lua");
 local signal = commonlib.gettable("mathlib.signal");
+echo(signal.DiscreteCosineTransform(mathlib.matrix:new(8,8, 255)));
 -------------------------------------------------------
 ]]
-
+NPL.load("(gl)script/ide/math/matrix.lua");
 local signal = commonlib.gettable("mathlib.signal");
 
 
@@ -82,4 +83,49 @@ function signal.stft(x, window_size, hop_size, window_type)
 		X[m] = frame;
 	end
 	return X;
+end
+
+-- compute discrete cosine transform of a matrix, such as used in JPEG image procecssing. usually 8x8 matrix
+function signal.DiscreteCosineTransform(matrix)
+	local pi = math.pi;
+	local m =  m or (#matrix)
+	local n = n or (#(matrix[1]))
+    
+	-- dct will store the discrete cosine transform
+	local dct = {}
+    for i = 1, m do
+        dct[i] = {}
+    end
+
+    local ci, cj, dct1, sum
+
+    for i = 1, m do
+        for j = 1, n do
+            -- ci and cj depends on frequency as well as
+            -- number of row and columns of specified matrix
+            if i == 1 then
+                ci = 1 / math.sqrt(m)
+            else
+                ci = math.sqrt(2) / math.sqrt(m)
+            end
+            if j == 1 then
+                cj = 1 / math.sqrt(n)
+            else
+                cj = math.sqrt(2) / math.sqrt(n)
+            end
+
+            -- sum will temporarily store the sum of cosine signals
+            sum = 0
+            for k = 1, m do
+                for l = 1, n do
+                    dct1 = matrix[k][l] * 
+                           math.cos((2 * (k-1) + 1) * (i - 1) * pi / (2 * m)) * 
+                           math.cos((2 * (l-1) + 1) * (j - 1) * pi / (2 * n))
+                    sum = sum + dct1
+                end
+            end
+            dct[i][j] = ci * cj * sum
+        end
+    end
+	return dct;
 end

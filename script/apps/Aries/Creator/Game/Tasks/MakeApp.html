@@ -24,8 +24,8 @@
 
                     -- ios
                     function ios()
-                        if System.options.channelId_431 then
-                            _guihelper.MessageBox(L"此功能在智慧教育客户端中不可用");
+                        if System.options.isEducatePlatform then
+                            _guihelper.MessageBox(L"此功能在当前客户端中不可用");
                             return
                         end
                         if (get_platform() ~= "mac") then
@@ -83,8 +83,8 @@
 
                     -- android
                     function android()
-                        if System.options.channelId_431 then
-                            _guihelper.MessageBox(L"此功能在智慧教育客户端中不可用");
+                        if System.options.isEducatePlatform then
+                            _guihelper.MessageBox(L"此功能在当前客户端中不可用");
                             return
                         end
                         if (get_platform() ~= "win32") then

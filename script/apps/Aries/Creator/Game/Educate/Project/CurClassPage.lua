@@ -25,6 +25,8 @@ function CurClassPage.ShowView(data)
     if page and page:IsVisible() then
         return
     end
+    local view_width = 0
+    local view_height = 0
     CurClassPage.ServerData = data
     CurClassPage.HandleData()
     EducateClassManager.SetClassData(data)
@@ -35,16 +37,16 @@ function CurClassPage.ShowView(data)
         isShowTitleBar = false,
         DestroyOnClose = true,
         style = CommonCtrl.WindowFrame.ContainerStyle,
-        allowDrag = true,
+        allowDrag = false,
         enable_esc_key = true,
         zorder = 1,
         directPosition = true,
-        withBgMask=true,
-        align = "_ct",
-        x = -640/2,
-        y = -393/2,
-        width = 640,
-        height = 393,
+        --withBgMask=true,
+        align = "_fi",
+        x = -view_width/2,
+        y = -view_height/2,
+        width = view_width,
+        height = view_height,
         isTopLevel = true,
     };
     System.App.Commands.Call("File.MCMLWindowFrame", params);
@@ -80,6 +82,7 @@ function CurClassPage.HandleData()
     if not CurClassPage.ServerData or not CurClassPage.ServerData.sectionContents then
         return
     end
+    -- echo(CurClassPage.ServerData,true)
     for index = 1, #CurClassPage.ServerData.sectionContents do
         local lesson_data = CurClassPage.ServerData.sectionContents[index]
         lesson_data.index = index
@@ -92,12 +95,27 @@ function CurClassPage.OnOpen(index)
     index = index and tonumber(index)
     if CurClassPage.LessonsData and CurClassPage.LessonsData[index] then
         local select_data = CurClassPage.LessonsData[index]
-        -- contentType 类型: 1.视频, 2.交互视频, 3.pdf, 4.图片, 5.长图文(html), 6.作品赏析, 7.创作模板
+        -- echo(select_data,true)
+        
         if select_data.contentType == 6 then
             CurClassPage.LoadWorld(select_data)
             CurClassPage.CloseView()
-        elseif select_data.contentType == 7 then
-            CurClassPage.ForkWorld(select_data)
+            return
+        end
+        local classData = {
+            classAt = CurClassPage.ServerData.startAt,
+            classroomId = CurClassPage.ServerData.id,
+            lessonName=CurClassPage.ServerData.lesson and CurClassPage.ServerData.lesson.name or "",
+            lessonPackageName=CurClassPage.ServerData.lessonPackage and CurClassPage.ServerData.lessonPackage.name or "",
+            materialName=select_data.name,
+            sectionContentId=select_data.id, 
+        }
+        if select_data.contentType == 7 and select_data.content then
+            classData.forkProjectId = select_data.forkProjectId
+            classData.projectName = select_data.content.homeworkName
+            classData.isVisibility = select_data.content.isVisibility
+            local ClassContentPage =  NPL.load("(gl)script/apps/Aries/Creator/Game/Educate/Project/ClassContentPage.lua")
+            ClassContentPage.ShowView(classData)
         end
     end
 end
@@ -159,7 +177,7 @@ function CurClassPage.ForkWorld(data)
         local fork_project_id = data.forkProjectId
         if fork_project_id and tonumber(fork_project_id) > 0 then
             local cmd = format(
-                "/createworld -name \"%s\" -parentProjectId %d -update -fork %d",
+                "/createworld -name \"%s\" -parentProjectId %d -update -fork %d -mode admin",
                 worldName,
                 fork_project_id,
                 fork_project_id

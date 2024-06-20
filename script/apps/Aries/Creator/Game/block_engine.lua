@@ -198,7 +198,7 @@ function BlockEngine.OnLoadBlockRegion()
 	if(BlockEngine:IsRemote()) then
 		return;
 	end
-	LOG.std(nil, "system", "BlockEngine", "loading block region %d %d", msg.x, msg.y);
+	LOG.std(nil, "info", "BlockEngine", "loading block region %d %d", msg.x, msg.y);
 
 	local startChunkX, startChunkY, startChunkZ = msg.x*32, 0, msg.y*32;
 	local endChunkX, endChunkY, endChunkZ = startChunkX+32-1, 15, startChunkZ+32-1;
@@ -208,7 +208,7 @@ function BlockEngine.OnLoadBlockRegion()
 	region:LoadFromFile();
 	if(results.count and results.count>0) then
 		
-		LOG.std(nil, "system", "BlockEngine", "calling onload for %d blocks in region %d %d", results.count, msg.x, msg.y);
+		LOG.std(nil, "info", "BlockEngine", "calling onload for %d blocks in region %d %d", results.count, msg.x, msg.y);
 
 		local results_x, results_y, results_z, results_tempId, results_data = results.x, results.y, results.z, results.tempId, results.data;
 		for i = 1, results.count do
@@ -231,7 +231,7 @@ function BlockEngine.OnUnLoadBlockRegion()
 		end
 	end
 	if(not BlockEngine:IsRemote()) then
-		LOG.std(nil, "system", "BlockEngine", "unloading block region %d %d", msg.x, msg.y);
+		LOG.std(nil, "info", "BlockEngine", "unloading block region %d %d", msg.x, msg.y);
 	end
 end
 

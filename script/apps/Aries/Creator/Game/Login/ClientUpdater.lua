@@ -261,7 +261,7 @@ function ClientUpdater:Download(callbackFunc)
 	print("hyz update log--------ClientUpdater 132",self.appname)
 	if (System.os.IsEmscripten()) then
 		ClientUpdater.Download_callbackFunc = function(...)
-			ParaEngine.GetAttributeObject():CallField("FlushDiskIO");
+			GameLogic.FlushDiskIO()
 			callbackFunc(...);
 		end
 	else

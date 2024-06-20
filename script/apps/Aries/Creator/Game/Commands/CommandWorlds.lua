@@ -39,7 +39,7 @@ Commands["save"] = {
 		end
 		local function callback()
 			if (GameLogic.GetFilters():apply_filters('is_signed_in'))  then
-				if System.options.channelId_431 or System.options.channelId_tutorial then
+				if System.options.isEducatePlatform or System.options.channelId_tutorial then
 					GameLogic.QuickSave();
 				else
 					GameLogic.GetFilters():apply_filters(

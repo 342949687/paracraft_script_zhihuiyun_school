@@ -41,11 +41,15 @@ other files...
 		local filename = commonlib.Encoding.Utf8ToDefault(cmd_text);
 		local ext = filename:match("%.(%w+)$");
 		ext = ext and ext:lower();
+		if not GameLogic.options.CanDropFile then
+			GameLogic.AddBBS(nil,L"拖入文件失败，当前世界禁止拖入文件")
+			return
+		end
 		if(ext == "zip" or ext == "pkg" or ext == "p3d") then
 			DragDropHandlers.handleZipFile(filename);
 		elseif(filename:match("%.blocks%.stream%.xml$")) then
 			DragDropHandlers.handleBlockStreamFile(filename)
-		elseif(ext == "fbx" or ext == "glb" or ext == "gltf" or ext == "x" or ext == "bmax" or filename:match("%.blocks%.xml$")) then
+		elseif(ext == "fbx" or ext == "glb" or ext == "gltf" or ext == "x"  or ext == "ply" or ext == "bmax" or filename:match("%.blocks%.xml$")) then
 			DragDropHandlers.handleModelFile(filename, ext);
 		end
 	end,

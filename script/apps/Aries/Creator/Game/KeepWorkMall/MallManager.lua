@@ -176,7 +176,6 @@ function MallManager:SearchMallList(curPage,keyword,sortName,sortOrder,callbackF
 	keepwork.mall.searchGoods(params,function(err,msg,data)
 		if data and next(data) ~= nil then
 			self.mall_search_list[key] = data;
-			echo(data,true)
 			if type(callbackFunc) == "function" then
 				callbackFunc(self.mall_search_list[key],key);
 			end
@@ -239,7 +238,6 @@ function MallManager:LoadCollectList(curPage,sortName,sortType,keyword,callbackF
 		if err == 200 and type(data) == "table" then
 			self.mall_collection_list[key] = data or {};
 			print("LoadMallCollectList=================")
-			echo(data,true)
 			if type(callbackFunc) == "function" then
 				callbackFunc(self.mall_collection_list[key],key);
 			end
@@ -529,7 +527,7 @@ function MallManager:GetMallSearchHistory()
 end
 
 -- 个人
-function MallManager:UpLoadFile(name,filename,callback)
+function MallManager:UpLoadFile(filename,callback)
 	local userId = GameLogic.GetFilters():apply_filters('store_get', 'user/userId');
 	if not userId then
 		return
@@ -642,7 +640,7 @@ function MallManager:SyncWorldTemplate(name,filename,callbackFunc)
 	local fileDir,postfix = string.match(filename,"(.+)%.(.+)$");
 	local model_type = modelTypes[postfix] or "bmax"
 	-- print("SyncWorldTemplate===============",model_type)
-	self:UpLoadFile(name,filename,function(url,size)
+	self:UpLoadFile(filename,function(url,size)
 		if url then
 			-- print("add model =====",name,model_type,size,url)
 			MallApi.getInstance():AddMineModel(name,model_type,size,url,function(err,data)
@@ -674,6 +672,55 @@ function MallManager:SyncWorldTemplate(name,filename,callbackFunc)
 	end)
 end
 
+function MallManager:UpdateModelByFile(model_data,filename,callbackFunc)
+	if not filename or filename == "" then
+		GameLogic.AddBBS(nil,L"替换失败，文件不存在")
+		return
+	end
+	if not ParaIO.DoesFileExist(filename) then
+		GameLogic.AddBBS(nil,L"替换失败，文件不存在")
+		return
+	end
+	if not model_data or next(model_data) == nil then
+		GameLogic.AddBBS(nil,L"替换失败，模型数据不存在")
+		return
+	end
+	local model_id = model_data.id
+	local fileDir,postfix = string.match(filename,"(.+)%.(.+)$");
+	local model_type = modelTypes[postfix] or "bmax"
+	self:UpLoadFile(filename,function(url,size)
+		if url then
+			self:UpdateModelUrl(model_id,url,function(err,data)
+				if err == 200 then
+					if type(callbackFunc) == "function" then
+						local newData = model_data
+						newData.modelUrl = url
+						callbackFunc(err,newData);
+					end
+					return
+				end
+				if err==400 then
+					if(type(data) == "string") then
+						data = commonlib.Json.Decode(data) or data;
+					end
+					if data and data.message then
+						GameLogic.AddBBS(nil,data.message,nil,"255 0 0")
+					else
+						GameLogic.AddBBS(nil,L"修改个人模型失败",nil,"255 0 0")
+					end
+				end
+				if err == 401 then
+					LOG.std(nil, "info", "MallManager", "UpdateModelByFile", "token is invalid");
+				else
+					LOG.std(nil, "info", "MallManager", "UpdateModelByFile", "err ======== %s", tostring(err));
+				end
+			end)
+		else
+			GameLogic.AddBBS(nil,L"替换模型失败，原因：文件上传失败")
+		end
+	end)
+end
+
 function MallManager:UpdateModel(model_id,name,callbackFunc)
 	if not model_id or not name then
 		return
@@ -693,6 +740,30 @@ function MallManager:UpdateModel(model_id,name,callbackFunc)
 			GameLogic.AddBBS(nil,L"修改失败")
 			if type(callbackFunc) == "function" then
 				callbackFunc(false)
+			end
+		end
+	end)
+end
+
+function MallManager:UpdateModelUrl(model_id,url,callbackFunc)
+	if not model_id or not url then
+		return
+	end
+	if url == "" then
+		GameLogic.AddBBS(nil,L"链接不能为空")
+		return
+	end
+	MallApi.getInstance():UpdateModelUrl(model_id,url,function(err,data)
+		if err == 200 then
+			GameLogic.AddBBS(nil,L"修改成功")
+			echo(data,true)
+			if type(callbackFunc) == "function" then
+				callbackFunc(err,data)
+			end
+		else
+			GameLogic.AddBBS(nil,L"修改失败")
+			if type(callbackFunc) == "function" then
+				callbackFunc(err,data)
 			end
 		end
 	end)
@@ -728,6 +799,22 @@ function MallManager:LoadPersonalList(curpage,sortName,sortOrder,keyword,callbac
 			LOG.std(nil, "info", "MallManager", "LoadPersonalList", "err ======== %s", tostring(err));
 		end
 	end)
+end
+
+function MallManager:CheckUniqueName(name,callbackFunc)
+	local params = {
+        ["x-per-page"] = 1000,
+        ["x-page"] = 1,
+    }
+    if name and name ~= "" then
+        params.name = name
+    end
+	keepwork.mall.modelList(params,function(err,msg,data)
+        print("err====================",err)
+        if type(callbackFunc) == "function" then
+            callbackFunc(err,data);
+        end
+    end)
 end
 
 

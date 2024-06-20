@@ -1698,6 +1698,10 @@ function SystemSettingsPage.OnClearMemory()
 end
 
 function SystemSettingsPage.OnOpenBackupFolder()
+	if (System.os.GetPlatform() == "emscripten") then
+		_guihelper.MessageBox(L"网页版不支持备份。");
+		return;
+	end
 	GameLogic.world_revision:OnOpenRevisionDir();
 end
 

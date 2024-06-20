@@ -34,6 +34,9 @@ function UrlProtocolHandler:GetParacraftProtocol(cmdline)
 	if System.options.channelId_431 and cmdline and cmdline:find("paracraft://") then
 		cmdline = cmdline:gsub("paracraft://","palakaedu://")
 	end
+	if System.options.isShenzhenAi5 and cmdline and cmdline:find("paracraft://") then
+		cmdline = cmdline:gsub("paracraft://","palakaai://")
+	end
 	-- the c++ ConvertToCanonicalForm may replace : with space for standard command line
 	local preCmdLine = cmdline
 	local regStr = self:GetProtocolName().."%W?//(.*)$"
@@ -118,11 +121,18 @@ function UrlProtocolHandler:ParseCommand(cmdline)
 
 		local world_cmd_text = urlProtocol:match("world/cmd%((.+)%)");
 		if (world_cmd_text) then
+			local is_edu_do_works = urlProtocol:match("cmd%(/edu_do_works");
 			local is_loadworld = urlProtocol:match("cmd/loadworld");
+
 			urlProtocol = urlProtocol:gsub("world/cmd%(.+%)", "");
 			if (is_loadworld) then
 				local WorldShareCommand = NPL.load('(gl)Mod/WorldShare/command/Command.lua');
 				WorldShareCommand:PushAfterLoadWorldCommand(world_cmd_text or '');
+			elseif (is_edu_do_works) then
+				world_cmd_text = world_cmd_text:gsub("/edu_do_works", "")
+				world_cmd_text = world_cmd_text:gsub("^%s+", "")
+				System.options.cmdline_world = "edu_do_works/" .. world_cmd_text;
+				print("pbb System.options.cmdline_world",System.options.cmdline_world)
 			else
 				System.options.cmdline_cmd = world_cmd_text;
 			end
@@ -141,6 +151,12 @@ function UrlProtocolHandler:ParseCommand(cmdline)
 				local CommandManager = commonlib.gettable("MyCompany.Aries.Game.CommandManager");
 				CommandManager:RunCommand(cmd_text);
 			end
+		end
+
+		local secretkey = urlProtocol:match("secretkey=\"(%w+)\""); --智慧教育
+		if (secretkey) then
+			--print("pbb ---------------->secretkey",secretkey)
+			System.options.cmdline_secretkey = secretkey;
 		end
 
 		-- paracraft://cmd/loadworld/[url or filename or id]
@@ -202,9 +218,11 @@ reg add "HKCU\Software\Classes\paracraft.world.v1\shell\open\command" /ve /d "\"
 del "%~dp0path.txt"
 ]]
 	if ParaEngine.GetAttributeObject():GetField("DefaultFileAPIEncoding", "")=="utf-8" then
-		cmdStr = "chcp 65001 > nul\n"..cmdStr
+		cmdStr = "chcp 65001 >nul\n"..cmdStr
+		--	chcp 65001 requires \r\n in windows. 
+		cmdStr = cmdStr:gsub("\r?\n", "\r\n");
 	end
-	if System.options.channelId_431 then
+	if System.options.isEducatePlatform then
 		cmdStr = cmdStr:gsub("paracraft",self:GetProtocolName())
 	end
 	local res = System.os.runAsAdmin(cmdStr);
@@ -214,6 +232,9 @@ end
 function UrlProtocolHandler:GetProtocolName()
 	if System.options.channelId_431 then
 		return "palakaedu"
+	end
+	if System.options.isShenzhenAi5 then
+		return "palakaai"
 	end
 	if System.options.isPapaAdventure then
 		return "papa"
@@ -298,7 +319,7 @@ function UrlProtocolHandler:CheckInstallUrlProtocol()
 		print("CheckInstallUrlProtocol isFristLaunch",isFristLaunch,"customInstallUrlProtocol",customInstallUrlProtocol)
 	end
 	
-	if not customInstallUrlProtocol or System.options.channelId_431 then --isFristLaunch 不需要跟着版本
+	if not customInstallUrlProtocol or System.options.isEducatePlatform then --isFristLaunch 不需要跟着版本
 		if(System.os.GetPlatform() == "win32" and not (System.options and (System.options.isFromQQHall or System.options.isSchool))) then
 			local bFound, exeName = self:HasUrlProtocol()
 			if System.options.isDevMode then
@@ -317,7 +338,7 @@ function UrlProtocolHandler:CheckInstallUrlProtocol()
 					-- end, _guihelper.MessageBoxButtons.YesNo);
 				end
 			else
-				if System.options.channelId_431 then
+				if System.options.isEducatePlatform then
 					self:RegisterUrlProtocol();
 					GameLogic.AddBBS(nil,L"为了方便您体验更完整的帕拉卡学习创作服务，正在安装URL协议，用于浏览器打开3D世界，是否现在安装？（可能需要管理员权限）")
 					return

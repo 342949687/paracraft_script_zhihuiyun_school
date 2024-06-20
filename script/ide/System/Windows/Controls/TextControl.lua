@@ -51,6 +51,7 @@ TextControl:Property({"EmptyText", nil, "GetEmptyText", "SetEmptyText", auto=tru
 TextControl:Property({"language", nil, "Language", "SetLanguage", auto=true})
 TextControl:Property({"m_bMoveViewWhenAttachWithIME", false, "isMoveViewWhenAttachWithIME", "setMoveViewWhenAttachWithIME"});
 TextControl:Property({"bAutoVirtualKeyboard", false, "isAutoVirtualKeyboard", "setAutoVirtualKeyboard"});
+TextControl:Property({"canPaste", true, "IsCanPaste", "SetCanPaste"});
 
 
 --TextControl:Signal("SizeChanged",function(width,height) end);
@@ -1329,7 +1330,18 @@ function TextControl:del(mark)
     --self:finishChange(priorState);
 end
 
+function TextControl:SetCanPaste(canPaste)
+	self.canPaste = canPaste;
+end
+
+function TextControl:IsCanPaste()
+	return self.canPaste;
+end
+
 function TextControl:paste(mode)
+	if not self:IsCanPaste() then
+		return;
+	end
 	local clip = ParaMisc.GetTextFromClipboard();
 	if(clip and self:IsAutoTabToSpaces()) then
 		clip = clip:gsub("\t", TAB_CHAR);
@@ -2099,7 +2111,7 @@ function TextControl:LanguageFormat(lineItem, lineNum)
 				local count = #(lineItem.highlightBlocks);
 				if(count == 0) then
 					if(token.spos > 1) then
-						self:AddHighLightBlock(lineItem, 1, token.spos);
+						self:AddHighLightBlock(lineItem, 1, token.spos-1);
 					end
 				else
 					local lastItem = lineItem.highlightBlocks[count];
@@ -2380,6 +2392,7 @@ function TextControl:DropTextAtCurrentLine(code, forceOnNewLine)
 			end
 		end
 		self:InsertTextInCursorPos(code);
+		self:userTyped(self);
 
 		-- set focus to control. 
 		local window = self:GetWindow();

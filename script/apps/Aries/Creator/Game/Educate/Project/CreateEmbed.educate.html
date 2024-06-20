@@ -53,7 +53,7 @@
                         end
                         if do_modify then
                             -- 客户端处理铭感词
-                            local temp = MyCompany.Aries.Chat.BadWordFilter.FilterString(temp_modify_worldname);
+                            local temp = MyCompany.Aries.Chat.BadWordFilter.FilterString2(temp_modify_worldname);
                             if temp~=temp_modify_worldname then 
                                 _guihelper.MessageBox(L"该世界名称不可用，请重新设定");
                                 return
@@ -684,7 +684,8 @@
                            currentSelectedWorld.kpProjectId and
                            type(currentSelectedWorld.kpProjectId) == 'number' and
                            currentSelectedWorld.kpProjectId ~= 0 then
-                           ShareWorld:ShowWorldCode(currentSelectedWorld.kpProjectId,2)
+                           local WorldSharePage = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/ShareWorld/WorldSharePage.lua") 
+                           WorldSharePage.ShowView(currentSelectedWorld)
                         end
                     end
 

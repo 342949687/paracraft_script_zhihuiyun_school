@@ -13,6 +13,7 @@ MallPage.Show();
 
 local pe_gridview = commonlib.gettable("Map3DSystem.mcml_controls.pe_gridview");
 local MallUtils = NPL.load("(gl)script/apps/Aries/Creator/Game/KeepWorkMall/MallUtils.lua");
+local MallMainPage = NPL.load("(gl)script/apps/Aries/Creator/Game/KeepWorkMall/MallMainPage.lua");
 --Page
 NPL.load("(gl)script/apps/Aries/Creator/Game/KeepWorkMall/MallManager.lua");
 local MallManager = commonlib.gettable("MyCompany.Aries.Game.KeepWorkMall.MallManager");
@@ -118,11 +119,33 @@ function MallPage.OnInit(pageCtrl)
         MallManager.getInstance():LoadMallMenuList(function(data)
             MallPage.menu_data_sources = data;
             MallPage.HandleMenuDataSource()
+            local menuIndex = MallPage.GetCodeMenuIndex()
             MallPage.menu_select_index = -1
             MallPage.curPage = 1
-            MallPage.OnChangeMenu(1)
+            if menuIndex > 0 then
+                MallPage.OnChangeMenu(menuIndex)
+            else
+                MallPage.OnChangeMenu(1)
+            end
         end)
     end
+
+end
+
+function MallPage.GetCodeMenuIndex()
+    if not MallMainPage.bFromCodeBlock then
+        return -1
+    end
+    local index = -1
+    if MallPage.menu_data_sources and next(MallPage.menu_data_sources) ~= nil then
+        for i = 1,#MallPage.menu_data_sources do
+            if MallPage.menu_data_sources[i].name == "代码" then
+                index = i
+                break
+            end
+        end
+    end
+    return index
 end
 
 function MallPage.InitData(bSearch)
@@ -338,6 +361,10 @@ end
 function MallPage.LoadMallListImp()
     local menuId,menuName,menuType,menuData = MallPage.GetMenuData()
     local sortName, sortType = MallPage.GetSortData()
+    if not sortName then
+        sortName = "useCount"
+        sortType = "desc"
+    end
     local dataNum = #MallPage.data_hits
     if menuType and menuType == "search" then
         local search_text = menuData.name

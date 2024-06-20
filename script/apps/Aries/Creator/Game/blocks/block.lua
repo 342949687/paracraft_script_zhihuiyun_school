@@ -1898,3 +1898,12 @@ function block:SetTransparent(bEnabled)
 	self:UpdateAttribute("attFlag", self:RecomputeAttribute());
 end
 
+-- TODO: this is not working yet.
+function block:SetMirrorSurface(bEnabled)
+	self:BeginModify();
+	if(not self.lastCategoryID) then
+		self.lastCategoryID = self.categoryID or 0;
+	end
+	self.categoryID = bEnabled and 9 or self.lastCategoryID;
+	self:UpdateAttribute("categoryID", self.categoryID or 0);
+end

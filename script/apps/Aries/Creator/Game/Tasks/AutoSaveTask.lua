@@ -52,6 +52,11 @@ function AutoSave:ShowPage()
 			width = 0,
 			height = 48,
 	}
+	if System.options.isEducatePlatform then
+		params.url = "script/apps/Aries/Creator/Game/Educate/Project/AutoSaveTask.431.html";
+		params.align = "_fi"
+		params.height = 0
+	end
 	GameLogic.world_revision:SetStageLocked(true)
 	System.App.Commands.Call("File.MCMLWindowFrame", params);
 	params._page.OnClose = function()

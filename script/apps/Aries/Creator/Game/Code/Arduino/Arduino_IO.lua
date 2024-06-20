@@ -63,7 +63,7 @@ NPL.export({
 	end,
 	ToArduino = function(self)
 		local port = self:getFieldAsString('port')
-		self:GetBlockly():AddUnqiueHeader(string.format("//setup pinMode(%s, OUTPUT);", port));
+		self:GetBlockly():AddUniqueHeader(string.format("//setup pinMode(%s, OUTPUT);", port));
 		return string.format('digitalWrite(%s, %s);\n', port, self:getFieldAsString('value'));
 	end,
 	examples = {{desc = "", canRun = true, code = [[
@@ -110,7 +110,7 @@ NPL.export({
 	end,
 	ToArduino = function(self)
 		local port = self:getFieldAsString('port')
-		self:GetBlockly():AddUnqiueHeader(string.format("//setup pinMode(%s, OUTPUT);", port));
+		self:GetBlockly():AddUniqueHeader(string.format("//setup pinMode(%s, OUTPUT);", port));
 		return string.format('analogWrite(%s, %s);\n', port, self:getFieldAsString('value'));
 	end,
 	examples = {{desc = "", canRun = true, code = [[
@@ -160,7 +160,7 @@ NPL.export({
 	end,
 	ToArduino = function(self)
 		local port = self:getFieldAsString('port')
-		self:GetBlockly():AddUnqiueHeader(string.format("//setup pinMode(%s, INPUT);", port));
+		self:GetBlockly():AddUniqueHeader(string.format("//setup pinMode(%s, INPUT);", port));
 		return string.format('digitalRead(%s)', port);
 	end,
 	examples = {{desc = "", canRun = true, code = [[
@@ -196,7 +196,7 @@ NPL.export({
 	end,
 	ToArduino = function(self)
 		local port = self:getFieldAsString('port')
-		self:GetBlockly():AddUnqiueHeader(string.format("//setup pinMode(%s, INPUT);", port));
+		self:GetBlockly():AddUniqueHeader(string.format("//setup pinMode(%s, INPUT);", port));
 		return string.format('analogRead(%s)', port);
 	end,
 	examples = {{desc = "", canRun = true, code = [[
@@ -231,7 +231,7 @@ NPL.export({
 	previousStatement = true,
 	nextStatement = true,
 	funcName = "WeServo.write",
-	func_description = 'servo_A.write(%s)',
+	func_description = 'servo_%s.write(%s)',
 	ToNPL = function(self)
 		local port = self:getFieldAsString('port')
 		return string.format('servo_%s.write(%s);\n', port, self:getFieldAsString('angle'));
@@ -239,7 +239,7 @@ NPL.export({
 	headerText = "#include<WeELFMini.h>",
 	ToArduino = function(self)
 		local port = self:getFieldAsString('port')
-		self:GetBlockly():AddUnqiueHeader(string.format('WeServo servo_%s(PORT_%s);', port, port));
+		self:GetBlockly():AddUniqueHeader(string.format('WeServo servo_%s(PORT_%s);', port, port));
 		return string.format('servo_%s.write(%s);\n', port, self:getFieldAsString('angle'));
 	end,
 	examples = {{desc = "", canRun = true, code = [[
@@ -248,7 +248,7 @@ NPL.export({
 
 {
 	type = "arduino.We130DCMotor.dc130_A", 
-	message0 = L"5V 130直流电机%1 速度%2",
+	message0 = L"直流电机%1 速度%2",
 	arg0 = {
 		{
 			name = "port",
@@ -274,7 +274,7 @@ NPL.export({
 	previousStatement = true,
 	nextStatement = true,
 	funcName = "We130DCMotor.dc130_A",
-	func_description = 'dc130_A.run(%s)',
+	func_description = 'dc130_%s.run(%s)',
 	ToNPL = function(self)
 		local port = self:getFieldAsString('port')
 		return string.format('dc130_%s.run(%s);\n', port, self:getFieldAsString('velocity'));
@@ -282,7 +282,7 @@ NPL.export({
 	headerText = "#include<WeELFMini.h>",
 	ToArduino = function(self)
 		local port = self:getFieldAsString('port')
-		self:GetBlockly():AddUnqiueHeader(string.format('We130DCMotor dc130_%s(PORT_%s);', port, port));
+		self:GetBlockly():AddUniqueHeader(string.format('We130DCMotor dc130_%s(PORT_%s);', port, port));
 		return string.format('dc130_%s.run(%s);\n', port,  self:getFieldAsString('velocity'));
 	end,
 	examples = {{desc = "", canRun = true, code = [[
@@ -325,7 +325,7 @@ NPL.export({
 	headerText = "#include<WeELFMini.h>",
 	ToArduino = function(self)
 		local port = self:getFieldAsString('port')
-		self:GetBlockly():AddUnqiueHeader(string.format('WeDCMotor dc_%s(M%s);', port, port));
+		self:GetBlockly():AddUniqueHeader(string.format('WeDCMotor dc_%s(M%s);', port, port));
 		return string.format('dc_%s.run(%s);\n', port, self:getFieldAsString('velocity'));
 	end,
 	examples = {{desc = "", canRun = true, code = [[
@@ -356,18 +356,18 @@ NPL.export({
 	previousStatement = true,
 	nextStatement = true,
 	funcName = "WeDCMotor.run2",
-	func_description = 'dc_1.run(%s);\\ndc_2.run(%s);',
+	func_description = 'dc_1.run(%s);dc_2.run(%s);',
 	ToNPL = function(self)
 		local v1 = self:getFieldAsString('velocityRight')
-		local v2 = - self:getFieldAsString('velocityLeft')
-		return string.format('dc_1.run(%s);\n%sdc_2.run(%s);\n', v1, v2);
+		local v2 = "-("..self:getFieldAsString('velocityLeft')..")"
+		return string.format('dc_1.run(%s);\ndc_2.run(%s);\n', v1, v2);
 	end,
 	headerText = "#include<WeELFMini.h>",
 	ToArduino = function(self)
 		local v1 = self:getFieldAsString('velocityRight')
-		local v2 = - self:getFieldAsString('velocityLeft')
-		self:GetBlockly():AddUnqiueHeader("WeDCMotor dc_1(M1);");
-		self:GetBlockly():AddUnqiueHeader("WeDCMotor dc_2(M2);");
+		local v2 = "-("..self:getFieldAsString('velocityLeft')..")"
+		self:GetBlockly():AddUniqueHeader("WeDCMotor dc_1(M1);");
+		self:GetBlockly():AddUniqueHeader("WeDCMotor dc_2(M2);");
 		local block_indent = self:GetIndent();
 		return string.format('dc_1.run(%s);\n%sdc_2.run(%s);\n', v1, block_indent, v2);
 	end,
@@ -385,8 +385,8 @@ NPL.export({
 			options = {
 				{ "前", "+-" },
 				{ "后", "-+" },
-				{ "左", "++" },
-				{ "右", "--" },
+				{ "左", "--" },
+				{ "右", "++" },
 			  }
 		},
 		{
@@ -411,18 +411,18 @@ NPL.export({
 	headerText = "#include<WeELFMini.h>",
 	ToArduino = function(self)
 		local dir = self:getFieldAsString('dir')
-		self:GetBlockly():AddUnqiueHeader("WeDCMotor dc_1(M1);");
-		self:GetBlockly():AddUnqiueHeader("WeDCMotor dc_2(M2);");
+		self:GetBlockly():AddUniqueHeader("WeDCMotor dc_1(M1);");
+		self:GetBlockly():AddUniqueHeader("WeDCMotor dc_2(M2);");
 		local block_indent = self:GetIndent();
 		local v1 = self:getFieldAsString('velocity')
 		local v2 = v1;
 		if(dir == "+-") then
-			v2 = -v2;
+			v2 = "-("..v2..")";
 		elseif(dir == "--") then
-			v1 = -v1;
-			v2 = -v2;
+			v1 = "-("..v1..")";
+			v2 = "-("..v2..")";
 		elseif(dir == "-+") then
-			v1 = -v1;
+			v1 = "-("..v1..")";
 		end
 		return string.format('dc_1.run(%s);\n%sdc_2.run(%s);\n', v1, block_indent, v2);
 	end,
@@ -442,14 +442,14 @@ NPL.export({
 	previousStatement = true,
 	nextStatement = true,
 	funcName = "WeDCMotor.run",
-	func_description = 'dc_1.stop(%s)',
+	func_description = 'dc_1.stop();dc_2.stop();',
 	ToNPL = function(self)
 		return string.format('dc_1.stop();\ndc_2.stop();\n');
 	end,
 	headerText = "#include<WeELFMini.h>",
 	ToArduino = function(self)
-		self:GetBlockly():AddUnqiueHeader("WeDCMotor dc_1(M1);");
-		self:GetBlockly():AddUnqiueHeader("WeDCMotor dc_2(M2);");
+		self:GetBlockly():AddUniqueHeader("WeDCMotor dc_1(M1);");
+		self:GetBlockly():AddUniqueHeader("WeDCMotor dc_2(M2);");
 		local block_indent = self:GetIndent();
 		return string.format('dc_1.stop();\n%sdc_2.stop();\n', block_indent);
 	end,
@@ -495,7 +495,7 @@ NPL.export({
 	ToArduino = function(self)
 		local port = self:getFieldAsString('port')
 		local sensor = self:getFieldAsString('sensor')
-		self:GetBlockly():AddUnqiueHeader(string.format("WeLineFollower linefollower_%s(PORT_%s);", port, port))
+		self:GetBlockly():AddUniqueHeader(string.format("WeLineFollower linefollower_%s(PORT_%s);", port, port))
 		return string.format('linefollower_%s.startRead(%s)', port, sensor);
 	end,
 	examples = {{desc = "", canRun = true, code = [[
@@ -544,7 +544,7 @@ NPL.export({
 	headerText = "#include<WeELFMini.h>",
 	ToArduino = function(self)
 		local value = self:getFieldAsString('value')
-		self:GetBlockly():AddUnqiueHeader([[
+		self:GetBlockly():AddUniqueHeader([[
 WeBluetoothController bluetooth_controller;
 void sleep(unsigned long duration){
 	unsigned long endTime = millis() + duration;
@@ -554,7 +554,8 @@ void update(){
 	bluetooth_controller.loop();
 }
 ]])
-		self:GetBlockly():AddUnqiueHeader("//replace delay sleep");
+		self:GetBlockly():AddUniqueHeader("//replace delay sleep");
+		self:GetBlockly():AddUniqueHeader("//loop update();\n");
 		return string.format('bluetooth_controller.buttonPressed(WeBUTTON_%s)', value);
 	end,
 	examples = {{desc = "", canRun = true, code = [[
@@ -589,7 +590,7 @@ void update(){
 	headerText = "#include<WeELFMini.h>",
 	ToArduino = function(self)
 		local value = self:getFieldAsString('value')
-		self:GetBlockly():AddUnqiueHeader([[
+		self:GetBlockly():AddUniqueHeader([[
 WeBluetoothController bluetooth_controller;
 void sleep(unsigned long duration){
 	unsigned long endTime = millis() + duration;
@@ -599,7 +600,8 @@ void update(){
 	bluetooth_controller.loop();
 }
 ]])
-		self:GetBlockly():AddUnqiueHeader("//replace delay sleep");
+		self:GetBlockly():AddUniqueHeader("//replace delay sleep");
+		self:GetBlockly():AddUniqueHeader("//loop update();\n");
 		return string.format('bluetooth_controller.readAnalog(WeJOYSTICK_%s)', value);
 	end,
 	examples = {{desc = "", canRun = true, code = [[

@@ -66,7 +66,7 @@ function ServerSetting.ShowPage()
 end
 
 function ServerSetting.CheckUserAuth(call_back_func)
-    if false then --System.options.channelId_431
+    if false then
         GameLogic.IsVip("MultiPlayerNetwork", false, function(result)
             if (not result) then
                 GameLogic.AddBBS("vip", L"不可使用联网服务", 16000, "255 0 0")
@@ -325,7 +325,7 @@ end
 
 function ServerSetting.CreateServer()
     local serverManager = ServerManager.GetSingleton();
-    local key = System.options.channelId_431 and "MultiPlayerNetwork" or "Lan40PeopleOnline"
+    local key = System.options.isEducatePlatform and "MultiPlayerNetwork" or "Lan40PeopleOnline"
     local tips = System.options.isHideVip and L"不可创建联网服务" or L"非VIP用户, 不可创建联网服务"
     GameLogic.IsVip(key, false, function(result)
         if (not result) then

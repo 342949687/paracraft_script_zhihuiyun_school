@@ -114,7 +114,7 @@ function PlayerAssetFile:LoadFromXMLFile(filename)
 end
 
 function PlayerAssetFile:FilterCharItems()
-	if not System.options.channelId_431 then
+	if not System.options.isEducatePlatform then
 		return 
 	end
 	assetfiles = commonlib.filter(assetfiles,function (item)
@@ -447,6 +447,23 @@ function PlayerAssetFile:ShowWingAttachment(player, skin, show)
 			end
 		end
 	end
+end
+
+function PlayerAssetFile:GetDefaultAssetFileBySkin(skin)
+	return CustomCharItems:GetDefaultAssetBySkin(skin)
+end
+
+function PlayerAssetFile:CheckDefaultSkinValid(skin)
+	local asset = self:GetDefaultAssetFileBySkin(skin);
+	if asset and asset ~= "" then
+		local defaultSkin = "character/CC/02human/CustomGeoset/actor_kaka.x"
+		local defaultSkin1 = "character/CC/02human/CustomGeoset/actor.x"
+		if System.options.isEducatePlatform then
+			return asset == defaultSkin;
+		end
+		return asset == defaultSkin1;
+	end
+	return true
 end
 
 PlayerAssetFile.Store = {

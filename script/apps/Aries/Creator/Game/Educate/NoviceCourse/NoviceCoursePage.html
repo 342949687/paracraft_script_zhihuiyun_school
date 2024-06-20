@@ -27,6 +27,14 @@
             -- { id = 1082, label = L"火星探险",  icon = "Texture/Aries/Creator/keepwork/RedSummerCamp/courses/icons/ke3_195x100_32bits.png;0 0 195 100",  },
             -- { id = 475, label = L"男孩与苹果树",  icon = "Texture/Aries/Creator/keepwork/RedSummerCamp/courses/icons/ke4_195x100_32bits.png;0 0 195 100",  },
         }
+        if System.options.isShenzhenAi5 then
+        courses = {
+            { id = 29477, label = L"基础操作",  icon = "Texture/Aries/Creator/paracraft/Educate/NoviceCourse/xinrenzhiyin_210x140_32bits.png;0 0 210 140",  },
+            { id = 42701, label = L"建模入门",  icon = "Texture/Aries/Creator/paracraft/Educate/NoviceCourse/jianzhu_210x140_32bits.png;0 0 210 140",  },
+            { id = 42457, label = L"编程入门",  icon = "Texture/Aries/Creator/paracraft/Educate/NoviceCourse/biancheng_210x140_32bits.png;0 0 210 140",  },
+            { id = 42670, label = L"动画入门",  icon = "Texture/Aries/Creator/paracraft/Educate/NoviceCourse/donghua_210x140_32bits.png;0 0 210 140",  },
+        }
+        end
         local KeepWorkItemManager = NPL.load("(gl)script/apps/Aries/Creator/HttpAPI/KeepWorkItemManager.lua");
         local pageCtrl = document:GetPageCtrl();
         local total_papge = math.ceil(#courses / 4)

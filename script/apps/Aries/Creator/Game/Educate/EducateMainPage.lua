@@ -32,6 +32,13 @@ EducateMainPage.tab_buttons = {
     {value = L"新手入门"},
     {value = L"赛事中心"}
 }
+if System.options.isShenzhenAi5 then
+    EducateMainPage.tab_buttons = {
+        {value = L"我的作品"},
+        {value = L"新手入门"},
+    }
+end
+
 EducateMainPage.IsGetLessonData = false
 EducateMainPage.LessonData = nil
 EducateMainPage.IsShowLesson = false
@@ -47,6 +54,7 @@ function EducateMainPage.OnInit()
     GameLogic.GetFilters():add_filter("OnWorldCreate",  EducateMainPage.OnWorldCreated)
     GameLogic.GetFilters():add_filter("CheckInRace",  EducateMainPage.IsInRace)
     GameLogic.GetFilters():add_filter("ImprotP3dFile",  EducateMainPage.ImPortWorld)
+    GameLogic.GetFilters():add_filter("OnBeforeLoadWorld",EducateMainPage.OnBeforeLoadWorld)
 end
 
 function EducateMainPage.ClearFilters()
@@ -55,6 +63,19 @@ function EducateMainPage.ClearFilters()
     GameLogic.GetFilters():remove_filter("OnWorldCreate",  EducateMainPage.OnWorldCreated)
     GameLogic.GetFilters():remove_filter("CheckInRace",  EducateMainPage.IsInRace)
     GameLogic.GetFilters():remove_filter("ImprotP3dFile",  EducateMainPage.ImPortWorld)
+end
+
+function EducateMainPage.OnBeforeLoadWorld()
+    local EducateProject = NPL.load("(gl)script/apps/Aries/Creator/Game/Educate/Project/EducateProject.lua")
+    EducateProject.CloseMenu(true)
+
+    local CurClassPage = NPL.load("(gl)script/apps/Aries/Creator/Game/Educate/Project/CurClassPage.lua")
+    CurClassPage.CloseView()
+
+    local ClassSelectPage = NPL.load("(gl)script/apps/Aries/Creator/Game/Educate/Project/ClassSelectPage.lua")
+    ClassSelectPage.CloseView()
+
+    EducateMainPage.ResetParams()
 end
 
 function EducateMainPage.ImPortWorld(worldPath,bSuccess)
@@ -138,6 +159,9 @@ function EducateMainPage.ShowView()
         BroadcastHelper.Reset();
     end
 
+    local NplBrowserPlugin = commonlib.gettable("NplBrowser.NplBrowserPlugin")
+    NplBrowserPlugin.CloseAllBrowsers()
+
     AudioEngine.Init()
     EducateMainPage.ClosePageWithNoLogout()
     
@@ -167,7 +191,7 @@ function EducateMainPage.ShowView()
             height = -view_height/2,
     };
     EducateMainPage.ReportLoginTime()
-    EducateProject.ShowCreate()
+    -- EducateProject.ShowCreate()
     System.App.Commands.Call("File.MCMLWindowFrame", params);
     if(params._page ) then
         EducateMainPage.page = params._page
@@ -199,7 +223,7 @@ function EducateMainPage.ShowView()
     GameLogic.GetFilters():add_filter("on_start_login", function()
         EducateMainPage.IsFirstLogin = nil
     end);
-    --EducateMainPage.CheckHasSignUpActivity() --旧的赛事下架
+
     if not System.os.IsEmscripten() then
         commonlib.TimerManager.SetTimeout(function()
             EducateMainPage.CheckUpdate()
@@ -454,19 +478,14 @@ end
 
 function EducateMainPage.ChangeTabIndex(name)
     local index = tonumber(name)
-    -- if index and index == 3 then
-    --     EducateMainPage.CheckHasSignUpActivity()
-    --     EducateMainPage.OpenCompeleteUrl()
-    --     return
-    -- end
-    print("ChangeTabIndex=====================")
+    print("ChangeTabIndex=====================",index)
     EducateMainPage.isShowCreateWorld = false
     if index and index > 0 and index ~= EducateMainPage.tab_view_index then
         EducateMainPage.tab_view_index = index
         if index ~= 1 then
             EducateProject.CloseCreate()
-        else
-            EducateMainPage.SetWorldSize()
+        -- else
+        --     EducateMainPage.SetWorldSize()
         end
         if EducateMainPage.tab_view_index == 2 then
             EducateMainPage.curr_course_page = 1
@@ -510,6 +529,9 @@ function EducateMainPage.CheckShowLesson()
                 lessonNode.visible = EducateMainPage.IsShowLesson
                 EducateMainPage.UpdateLessonRedTip(data,EducateMainPage.IsShowLesson)
                 EducateMainPage.CheckLessonAuth(packageId,function(bAuth)
+                    if Game.is_started then
+                        return
+                    end
                     EducateMainPage.IsHaveLessonAuth = bAuth
                     if bAuth then
                         commonlib.TimerManager.SetTimeout(function()
@@ -579,22 +601,31 @@ function EducateMainPage.OnClickLesson()
     ClassSelectPage.ShowView(EducateMainPage.LessonData);
 end
 
+function EducateMainPage.ExitToLogin()
+    local CreateNewWorld = commonlib.gettable("MyCompany.Aries.Game.MainLogin.CreateNewWorld")
+    CreateNewWorld.profile = nil
+    EducateMainPage.ResetParams()
+    System.options.cmdline_world = nil
+    MyCompany.Aries.Game.MainLogin:set_step({HasInitedTexture = true}); 
+    MyCompany.Aries.Game.MainLogin:set_step({IsPreloadedTextures = true}); 
+    MyCompany.Aries.Game.MainLogin:set_step({IsLoadMainWorldRequested = true}); 
+    MyCompany.Aries.Game.MainLogin:set_step({IsCreateNewWorldRequested = true});
+    MyCompany.Aries.Game.MainLogin:next_step({IsLoginModeSelected = false})
+    Mod.WorldShare.MsgBox:Close()
+end
+
 function EducateMainPage.ClosePage()
     if page then
         page:CloseWindow();
         local KeepworkServiceSession = NPL.load('(gl)Mod/WorldShare/service/KeepWorkService/KeepworkServiceSession.lua')
-        KeepworkServiceSession:Logout(nil, function()
-        Mod.WorldShare.MsgBox:Close()
-            local CreateNewWorld = commonlib.gettable("MyCompany.Aries.Game.MainLogin.CreateNewWorld")
-            CreateNewWorld.profile = nil
-            EducateMainPage.ResetParams()
-            System.options.cmdline_world = nil
-            MyCompany.Aries.Game.MainLogin:set_step({HasInitedTexture = true}); 
-            MyCompany.Aries.Game.MainLogin:set_step({IsPreloadedTextures = true}); 
-            MyCompany.Aries.Game.MainLogin:set_step({IsLoadMainWorldRequested = true}); 
-            MyCompany.Aries.Game.MainLogin:set_step({IsCreateNewWorldRequested = true});
-            MyCompany.Aries.Game.MainLogin:next_step({IsLoginModeSelected = false})
-        end)
+        if KeepworkServiceSession:IsSignedIn() then
+            KeepworkServiceSession:Logout(nil, function()
+                GameLogic.GetFilters():apply_filters("OnKeepWorkLogout", true)
+                EducateMainPage.ExitToLogin()
+            end)
+        else
+            EducateMainPage.ExitToLogin()
+        end
         page = nil
     end
 end

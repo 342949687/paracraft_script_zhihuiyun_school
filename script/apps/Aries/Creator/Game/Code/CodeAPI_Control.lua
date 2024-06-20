@@ -141,14 +141,10 @@ end
 -- run function in a new coroutine
 function env_imp:run(mainFunc)
 	if(type(mainFunc) == "function") then
-		local last_co = self.co;
 		local co = CodeCoroutine:new():Init(self.codeblock);
 		co:SetActor(self.actor);
 		co:SetFunction(mainFunc);
 		co:Run();
-		if(last_co) then
-			last_co:SetCurrentCodeContext();
-		end
 	end
 end
 

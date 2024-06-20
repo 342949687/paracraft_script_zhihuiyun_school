@@ -20,6 +20,8 @@ task:Run();
 ]]
 NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/Task.lua");
 NPL.load("(gl)script/apps/Aries/Creator/Game/Common/FastRandom.lua");
+NPL.load("(gl)script/ide/System/Core/Color.lua");
+local Color = commonlib.gettable("System.Core.Color");
 local FastRandom = commonlib.gettable("MyCompany.Aries.Game.Common.CustomGenerator.FastRandom");
 local GameLogic = commonlib.gettable("MyCompany.Aries.Game.GameLogic")
 local BlockEngine = commonlib.gettable("MyCompany.Aries.Game.BlockEngine")
@@ -300,12 +302,92 @@ function BlockTemplate:LoadTemplateFromXmlNode(xmlRoot, filename)
 	end
 end
 
+-- @param filename: *.ply point cloud file
+function BlockTemplate:LoadTemplateFromPly(filename)
+	local file = ParaIO.open(filename, "r");
+	if(file:IsValid()) then
+		local line = file:readline();
+		local vertex_count = 0;
+		local vertex_data = {};
+		while(line) do
+			if(line:match("^element vertex")) then
+				vertex_count = tonumber(line:match("%d+"));
+			elseif(line:match("^end_header")) then
+				break;
+			end
+			line = file:readline();
+		end
+		if(vertex_count > 0) then
+			local vMinX, vMinY, vMinZ = 999999, 999999, 999999;
+			local vMaxX, vMaxY, vMaxZ = -999999, -999999, -999999;
+			for i = 1, vertex_count do
+				line = file:readline();
+				local x, y, z, color = line:match("([%d%.%-]+) ([%d%.%-]+) ([%d%.%-]+)(.*)");
+				if(x and y and z) then
+					x = tonumber(x);
+					y = tonumber(y);
+					z = tonumber(z);
+					vMinX = math.min(vMinX, x);
+					vMinY = math.min(vMinY, y);
+					vMinZ = math.min(vMinZ, z);
+					vMaxX = math.max(vMaxX, x);
+					vMaxY = math.max(vMaxY, y);
+					vMaxZ = math.max(vMaxZ, z);
+
+					local r, g, b = color:match("(%d+) (%d+) (%d+)");
+					if(r) then
+						r = tonumber(r);
+						g = tonumber(g);
+						b = tonumber(b);
+					else
+						r = 255;
+						g = 255;
+						b = 255;
+					end
+					local color16 = Color.convert32_16(Color.RGB_TO_DWORD(r,g,b))
+					-- swap y and z
+					vertex_data[#vertex_data+1] = {x, z, y, color16};
+				end
+			end
+			local vol = (vMaxX - vMinX) * (vMaxY - vMinY) * (vMaxZ - vMinZ);
+			if(vertex_count > 0 and (vertex_count / vol) > 1 and 
+				(vMinX~=math.floor(vMinX+0.5) or vMinY~=math.floor(vMinY+0.5) or vMinZ~=math.floor(vMinZ+0.5) or vMaxX~=math.floor(vMaxX+0.5) or vMaxY~=math.floor(vMaxY+0.5) or vMaxZ~=math.floor(vMaxZ+0.5)) ) then
+				-- iPhone will generate floating point positions, we will scale by a factor.  
+				local scale = vertex_count / vol;
+				LOG.std(nil, "info", "BlockTemplate", "automatically scaling floating point vertex positions by %f", scale);
+				for i = 1, vertex_count do
+					local v = vertex_data[i];
+					v[1] = math.floor(v[1] * scale + 0.5);
+					v[2] = math.floor(v[2] * scale + 0.5);
+					v[3] = math.floor(v[3] * scale + 0.5);
+				end
+			end
+		end
+		file:close();
+		if(vertex_count > 0) then
+			local bx, by, bz = self:GetBlockPosition();
+			local blocks = {};
+			local block_id = block_types.names.ColorBlock;
+			for i = 1, vertex_count do
+				local x, y, z, color16 = unpack(vertex_data[i]);
+				blocks[#blocks+1] = {x, y, z, block_id, color16};
+			end
+			local task = MyCompany.Aries.Game.Tasks.CreateBlock:new({blockX = bx,blockY = by, blockZ = bz, blocks = blocks, bSelect=self.bSelect, nohistory = self.nohistory, isSilent = true})
+			task:Run();
+			return true;
+		end
+	end
+end
+
 -- Load template
 function BlockTemplate:LoadTemplate()
 	local filename = Files.GetFilePath(self.filename);
 	if(not filename) then
 		LOG.std(nil, "warn", "BlockTemplate", "failed to load template from file: %s", self.filename);
 		return;
+	end
+	if(filename:match("%.ply$")) then
+		return self:LoadTemplateFromPly(filename)
 	end
 	local xmlRoot = ParaXML.LuaXML_ParseFile(filename);
 
@@ -441,7 +523,6 @@ function BlockTemplate:GetBlockCountInString(fileData)
 	return count;
 end
 
-
 -- return xml string or nil
 function BlockTemplate:SaveTemplateToString()
 	self.params = self.params or {};
@@ -453,11 +534,10 @@ function BlockTemplate:SaveTemplateToString()
 		self.params.relative_to_player = self.relative_to_player;
 	end
 	local o = {name="pe:blocktemplate", attr = self.params};
-
+	
 	if(not self.blocks) then
 		NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/SelectBlocksTask.lua");
 		local select_task = MyCompany.Aries.Game.Tasks.SelectBlocks.GetCurrentInstance();
-		
 		if(select_task) then
 			local pivot = select_task:GetPivotPoint();
 			if(self.auto_pivot) then
@@ -525,15 +605,92 @@ function BlockTemplate:SaveTemplateToString()
 	return xml_data;
 end
 
+-- export to ply point cloud file 
+function BlockTemplate:SaveToPly()
+	local filename = self.filename;
+	ParaIO.CreateDirectory(filename);
+	local pivot;
+	if(not self.blocks) then
+		self.params = self.params or {};
+		NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/SelectBlocksTask.lua");
+		local select_task = MyCompany.Aries.Game.Tasks.SelectBlocks.GetCurrentInstance();
+		if(select_task) then
+			local pivot = select_task:GetPivotPoint();
+			local x,y,z = select_task:GetSelectionPivot();
+			pivot = {x,y,z}
+			self.blocks = select_task:GetCopyOfBlocks(pivot);
+		else
+			return;
+		end
+	end
+	if(not pivot) then
+		for _, b in ipairs(self.blocks) do
+			local x,y,z = b[1], b[2], b[3]
+			if(not pivot) then
+				pivot = {x,y,z};
+			else
+				pivot[1] = math.min(pivot[1], x);
+				pivot[2] = math.min(pivot[2], y);
+				pivot[3] = math.min(pivot[3], z);
+			end
+		end
+	end
+
+	local blocks = {}
+	local idDataColors = {};
+	for _, b in ipairs(self.blocks) do
+		local x,y,z, block_id, block_data = b[1], b[2], b[3], b[4], b[5];
+		x = x - pivot[1]
+		y = y - pivot[2]
+		z = z - pivot[3]
+		block_data = block_data or 0
+		local dataColors = idDataColors[id];
+		if(not dataColors) then
+			dataColors = {};
+			idDataColors[id] = dataColors;
+		end
+		local color = dataColors[block_data];
+		if(not color) then
+			color = {255, 255, 255};
+			dataColors[block_data] = color;
+
+			local block_template = block_types.get(block_id);
+			if(block_template) then
+				local c = block_template:GetDiffuseColorByData(block_data or 0);
+				if(c) then
+					color[1], color[2], color[3] = Color.DWORD_TO_RGBA(c)
+				end
+			end
+		end
+		-- swap y and z
+		blocks[#blocks+1] = string.format("%d %d %d %d %d %d", x, z, y, color[1], color[2], color[3]);
+	end
+	local file = ParaIO.open(filename, "w");
+	if(file:IsValid()) then
+		file:WriteString(string.format("ply\nformat ascii 1.0\ncomment Created by Paracraft\n"));
+		file:WriteString(string.format("element vertex %d\n", #blocks));
+		file:WriteString("property float x\nproperty float y\nproperty float z\nproperty uchar red\nproperty uchar green\nproperty uchar blue\n");
+		file:WriteString("end_header\n");
+		file:WriteString(table.concat(blocks, "\n"));
+		file:close();
+		LOG.std(nil, "info", "BlockTemplate", "saved to ply file: %s", filename);
+		return true;
+	end
+end
+
 -- Save to template.
 -- self.params: root level attributes
 -- self.filename: 
 -- self.blocks: if nil, the current selection is used. 
 function BlockTemplate:SaveTemplate()
-	local xml_data = self:SaveTemplateToString()
+	local filename = self.filename;
+	if(filename:match("%.ply$")) then
+		return self:SaveToPly();
+	end
 
+	local xml_data = self:SaveTemplateToString()
 	if (xml_data) then
-		local filename = self.filename;
+		
 		ParaIO.CreateDirectory(filename);
 		if #xml_data >= 10240 then
 			local writer = ParaIO.CreateZip(filename, "");

@@ -30,6 +30,7 @@ BlockInputField:Property("Color", "#ffffff");                    -- 颜色
 BlockInputField:Property("BackgroundColor", "#ffffff");          -- 背景颜色
 BlockInputField:Property("Edit", false, "IsEdit");               -- 是否在编辑
 BlockInputField:Property("Validator", nil);                      -- 验证器
+BlockInputField:Property("FieldCode", nil);                      -- 字段代码生成
 BlockInputField:Property("Value", "");                           -- 值
 BlockInputField:Property("DefaultValue", "");                    -- 默认值
 BlockInputField:Property("Label", "");                           -- 显示值
@@ -59,6 +60,7 @@ function BlockInputField:Init(block, option)
     self:SetType(option.type);
     self:SetSelectType(option.selectType);
     self:SetValidator(option.validator);
+    self:SetFieldCode(option.fieldcode);
     
     local text = self:GetOptionText();
     -- 解析值
@@ -353,7 +355,6 @@ function BlockInputField:OnMouseDown(event)
 
     block = block:GetProxyBlock() or block;
     block:OnMouseDown(event);
-
     if ((self == block or block:IsToolBoxBlock()) and blockly:IsTouchMode()) then
         blockly:CaptureMouse(block);
         blockly:SetCurrentBlock(block);
@@ -749,4 +750,14 @@ function BlockInputField:TextToXmlInnerNode(text)
 	else
 		return text;
 	end
+end
+
+function BlockInputField:DisableRun()
+end
+
+function BlockInputField:EnableRun()
+end
+
+function BlockInputField:GetText()
+    return self:GetLabel();
 end

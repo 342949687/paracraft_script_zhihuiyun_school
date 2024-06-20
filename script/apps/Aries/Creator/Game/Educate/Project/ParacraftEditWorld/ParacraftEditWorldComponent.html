@@ -109,9 +109,9 @@
                 
                 <div style='margin-top: -40px; margin-left: 150px;'>
                     <pe:if condition="<%= not IsOfflineMode() %>">
-                        <!-- <pe:if condition='<%= Eval("project") and tonumber(Eval("project")["visibility"]) ~= 1 and has_project_id() %>'>
+                        <pe:if condition='<%= Eval("project") and tonumber(Eval("project")["visibility"]) ~= 1 and has_project_id() %>'>
                             <input type='button'name='<%= Eval("index") %>'onclick='share' style='position: relative; width: 20px;height: 20px;background: url(Texture/Aries/Creator/paracraft/Educate/Project/fenxiang_20x20_32bits.png#0 0 20 20);' />
-                        </pe:if> -->
+                        </pe:if>
                         <input type='button' name='<%=Eval("index")%>' onclick='enter' tooltip='<%=L"进入"%>' class='share_button'uiname='<%="CreateEmbed.enter" .. Eval("index")%>' style='position: relative; margin-left:36px; width: 23px;height: 20px;background: url(Texture/Aries/Creator/paracraft/Educate/Project/jinru_23x20_32bits.png#0 0 23 20);'/>
                     </pe:if>
                     <pe:if condition="<%= IsOfflineMode() %>">

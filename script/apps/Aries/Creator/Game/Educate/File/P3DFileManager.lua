@@ -122,9 +122,38 @@ function P3DFileManager:IsRemoteWorld()
     return currentEnterWorld and currentEnterWorld.kpProjectId and tonumber(currentEnterWorld.kpProjectId) > 0
 end
 
+function P3DFileManager:CheckIsSpecialWorld()
+    -- if not System.options.isEducatePlatform then
+    --     return false
+    -- end
+    local currentEnterWorld = GameLogic.GetFilters():apply_filters('store_get', 'world/currentEnterWorld') or {};
+    -- echo(currentEnterWorld,true)
+    local WorldCommon = commonlib.gettable('MyCompany.Aries.Creator.WorldCommon')
+    local channel = tonumber((WorldCommon.GetWorldTag("channel") or 0))
+    local isVisibility = tonumber((WorldCommon.GetWorldTag("visibility") or 0))
+    local server_channel = currentEnterWorld.channel or 0
+    if (channel ~= 0 or server_channel ~= 0) and ((currentEnterWorld.visibility and currentEnterWorld.visibility and currentEnterWorld.visibility == 1) or isVisibility == 1) then
+        return true
+    end
+    
+    local foldername = currentEnterWorld.foldername or ""
+    --print("foldername=============",foldername)
+    local regexStr = "^exam_world%d+_%d+_%d+_%d+"
+    local regexStr1 = "^%d%d%d%d%d%d%d%d_%d+_%d+"
+    if string.match(foldername,regexStr) or string.match(foldername,regexStr1) then
+        return true
+    end
+    return false
+end
+
 function P3DFileManager:ExportWorldToP3dFile()
     if GameLogic.IsReadOnly() then
         GameLogic.AddBBS("P3DFileManager",L"只读世界暂不支持该功能")
+        return
+    end
+    
+    if self:CheckIsSpecialWorld() then
+        GameLogic.AddBBS("P3DFileManager",L"该世界暂不支持导出p3d文件")
         return
     end
     

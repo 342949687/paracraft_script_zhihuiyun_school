@@ -31,16 +31,26 @@ Commands["install"] = {
 		local options = {};
 		local option, value;
 		while(true) do
-			option, cmd_text = CmdParser.ParseOption(cmd_text);	
+			option, cmd_text = CmdParser.ParseOption(cmd_text);
 			if(not option) then
 				break;
 			elseif(option == "filename") then
 				-- supporting spaces in filename
+				local pre_cmd_text = cmd_text;
 				value, cmd_text = cmd_text:match("^%s*(.+)%s+(https?://.*)$");
-				if(value and value ~= "") then
-					value = value:gsub("[& ]+", "_");
+				if cmd_text then
+					if(value and value ~= "") then
+						value = value:gsub("[& ]+", "_");
+					end
+					options[option] = value;
+				else
+					cmd_text = pre_cmd_text;
+					value, cmd_text = cmd_text:match("^%s*(.+)%s+(worlds/DesignHouse/.*)$");
+					if(value and value ~= "") then
+						value = value:gsub("[& ]+", "_");
+					end
+					options[option] = value;
 				end
-				options[option] = value;
 
 			elseif(option == "md5" or option == "crc32"  or option == "ext" ) then
 				value, cmd_text = CmdParser.ParseString(cmd_text, fromEntity);
@@ -87,7 +97,8 @@ Commands["install"] = {
 				end
 			end
 		elseif((options["bmax"] or options["ext"]) and options["filename"]) then
-			if(url:match("^https?://")) then
+			local isLocal = url:match("^worlds/DesignHouse/") 
+			if(url:match("^https?://") or isLocal) then
 				local filename = options["filename"];
 				local ext = options["ext"] or "bmax";
 				if(ext ~= "bmax" and ext ~= "x" and ext ~= "fbx" and ext ~= "glb" and ext ~= "gltf" and ext ~= "glb" and ext ~= "gltf" and ext ~= "blocks" and ext ~= "liveModel") then
@@ -102,11 +113,15 @@ Commands["install"] = {
 				NPL.load("(gl)script/apps/Aries/Creator/Game/Common/Files.lua");
 				local Files = commonlib.gettable("MyCompany.Aries.Game.Common.Files");
 				local dest = ""
-				if not filename:match("^temp/onlinestore/") then
-					filename = "blocktemplates/"..filename;
-					dest = Files.WorldPathToFullPath(commonlib.Encoding.Utf8ToDefault(filename))
-				else
+				if filename:match("^temp/personnalstore/") or filename:match("^temp/onlinestore/") then
 					dest = Files.GetWritablePath()..commonlib.Encoding.Utf8ToDefault(filename)
+				else
+					filename = "blocktemplates/"..filename;
+					if not isLocal then
+						dest = Files.WorldPathToFullPath(commonlib.Encoding.Utf8ToDefault(filename))
+					else
+						dest = url
+					end
 				end
 				local function TakeBlockModel_(filename)
 					if(options.event ~= "" and options.event ~= nil) then
@@ -315,7 +330,7 @@ e.g. the following generate paracraft-mini.pkg and paracraft-mini.zip according 
 
 Commands["makeapp"] = {
 	name="makeapp", 
-	quick_ref="/makeapp [UImode] [apk|zip|clean] [-android|windows]", 
+	quick_ref="/makeapp [UImode] [apk|zip|clean|ppt] [-android|windows]", 
 	desc=[[make current world into a standalone app.
 It can be windows exe file or android apk file.
 e.g.
@@ -324,6 +339,7 @@ e.g.
 /makeapp zip -android  only zip everything under temp/paracraft_android folder
 /makeapp apk  same as zip -android
 /makeapp clean -android  clean everything under temp/paracraft_android folder
+/makeapp ppt 
 ]], 
 	handler = function(cmd_name, cmd_text, cmd_params)
 		local method, option;
@@ -333,18 +349,40 @@ e.g.
 		if (not UImode or UImode ~='UImode') then
 			cmd_text = beforeCmdText;
 		else
-			if System.options.channelId_431 and not GameLogic.GetFilters():apply_filters('is_signed_in') then
-				GameLogic.GetFilters():apply_filters('check_signed_in', '请先登录', function(result)
-					if result == true then
-						commonlib.TimerManager.SetTimeout(function()
-							NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/MakeAppTask.lua");
-							local MakeApp = commonlib.gettable("MyCompany.Aries.Game.Tasks.MakeApp");
-							local task = MyCompany.Aries.Game.Tasks.MakeApp:new()
-							task:Run(MakeApp.mode.UI);
-						end, 500)
-					end
-				end)
+			local currentEnterWorld = GameLogic.GetFilters():apply_filters('store_get', 'world/currentEnterWorld') or {};
+			local WorldCommon = commonlib.gettable('MyCompany.Aries.Creator.WorldCommon')
+			local channel = tonumber((WorldCommon.GetWorldTag("channel") or 0))
+			if (channel ~= 0)then
+				GameLogic.AddBBS("makeapp", L"生成可执行程序失败，当前世界不允许生成可执行程序", 3000, "255 0 0")
 				return
+			end
+			if currentEnterWorld and currentEnterWorld.channel and currentEnterWorld.channel ~= 0 then
+				GameLogic.AddBBS("makeapp", L"生成可执行程序失败，当前世界不允许生成可执行程序", 3000, "255 0 0")
+				return
+			end
+
+			local foldername = currentEnterWorld.foldername or ""
+			local regexStr = "^exam_world%d+_%d+_%d+_%d+"
+			local regexStr1 = "^%d%d%d%d%d%d%d%d_%d+_%d+"
+			if string.match(foldername,regexStr) then
+				GameLogic.AddBBS("makeapp", L"生成可执行程序失败，当前世界不允许生成可执行程序", 3000, "255 0 0")
+				return
+			end
+			if System.options.isEducatePlatform then
+				local is_signed_in = GameLogic.GetFilters():apply_filters('is_signed_in')
+				if not is_signed_in then
+					GameLogic.GetFilters():apply_filters('check_signed_in', '请先登录', function(result)
+						if result == true then
+							commonlib.TimerManager.SetTimeout(function()
+								NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/MakeAppTask.lua");
+								local MakeApp = commonlib.gettable("MyCompany.Aries.Game.Tasks.MakeApp");
+								local task = MyCompany.Aries.Game.Tasks.MakeApp:new()
+								task:Run(MakeApp.mode.UI);
+							end, 500)
+						end
+					end)
+					return
+				end
 			end
 			NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/MakeAppTask.lua");
 			local MakeApp = commonlib.gettable("MyCompany.Aries.Game.Tasks.MakeApp");
@@ -365,7 +403,9 @@ e.g.
 		local MakeApp = commonlib.gettable("MyCompany.Aries.Game.Tasks.MakeApp");
 		local task = MyCompany.Aries.Game.Tasks.MakeApp:new()
 
-		if (option == 'android') then
+		if(method == "ppt") then
+			task:Run(MakeApp.mode.ppt);
+		elseif (option == 'android') then
 			task:Run(MakeApp.mode.android, method);
 		else
 			task:Run();

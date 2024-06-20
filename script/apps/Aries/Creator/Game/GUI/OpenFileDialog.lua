@@ -46,11 +46,23 @@ function OpenFileDialog.GetFilters(filterName)
 			{L"bmax模型(*.bmax)",  "*.bmax"},
 			{L"ParaX模型(*.x,*.xml)",  "*.x;*.xml"},
 			{L"block模版(*.blocks.xml)",  "*.blocks.xml"},
+			{L"ply点云(*.ply)",  "*.ply"},
 		};
 	elseif(filterName == "bmax") then
 		OpenFileDialog.bBanChinese = true
 		return {
 			{L"bmax模型(*.bmax)",  "*.bmax"},
+		};
+	elseif(filterName == "ply") then
+		OpenFileDialog.bBanChinese = true
+		return {
+			{L"ply点云(*.ply)",  "*.ply"},
+		};
+	elseif(filterName == "gltf") then
+		OpenFileDialog.bBanChinese = true
+		return {
+			{L"gltf模型(*.gltf)",  "*.gltf"},
+			{L"gltf模型(*.glb)",  "*.glb"},
 		};
 	elseif(filterName == "x") then
 		OpenFileDialog.bBanChinese = true
@@ -404,7 +416,7 @@ function OpenFileDialog.OnOpenFileDialog()
 					local filename = fileItem.relativeToRootPath;
 					page:SetValue("text", commonlib.Encoding.DefaultToUtf8(filename));
 				else
-					filename = filename:match("[^/\\]+$")
+					-- filename = filename:match("[^/\\]+$")
 					page:SetValue("text", commonlib.Encoding.DefaultToUtf8(filename));
 				end
 			end

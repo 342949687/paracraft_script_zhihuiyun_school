@@ -352,23 +352,23 @@ end
 
 local PapaUrls = {
 	win32 = {
-		STAGE = "http://adventure-dev.kp-para.cn/client/",
-		RELEASE = "http://adventure-rls.kp-para.cn/client/",
+		STAGE = "https://adventure-dev.kp-para.cn/client/",
+		RELEASE = "https://adventure-rls.kp-para.cn/client/",
 		ONLINE = "https://papa.palaka.cn/client/"
 	},
 	mac = {
-		STAGE = "http://adventure-dev.kp-para.cn/client/",
-		RELEASE = "http://adventure-rls.kp-para.cn/client/",
+		STAGE = "https://adventure-dev.kp-para.cn/client/",
+		RELEASE = "https://adventure-rls.kp-para.cn/client/",
 		ONLINE = "https://papa.palaka.cn/client/"
 	},
 	android = {
-		STAGE = "http://adventure-app-dev.kp-para.cn/client",
-		RELEASE = "http://adventure-app-rls.kp-para.cn/client",
+		STAGE = "https://adventure-app-dev.kp-para.cn/client",
+		RELEASE = "https://adventure-app-rls.kp-para.cn/client",
 		ONLINE = "https://papa-app.palaka.cn/client/"
 	},
 	ios = {
-		STAGE = "http://adventure-app-dev.kp-para.cn/client",
-		RELEASE = "http://adventure-app-rls.kp-para.cn/client",
+		STAGE = "https://adventure-app-dev.kp-para.cn/client",
+		RELEASE = "https://adventure-app-rls.kp-para.cn/client",
 		ONLINE = "https://papa-app.palaka.cn/client/"
 	},
 }
@@ -383,23 +383,23 @@ end
 
 local downUrls = {
 	win32 = {
-		STAGE = "http://adventure-dev.kp-para.cn/download/",
-		RELEASE = "http://adventure-rls.kp-para.cn/download/",
+		STAGE = "https://adventure-dev.kp-para.cn/download/",
+		RELEASE = "https://adventure-rls.kp-para.cn/download/",
 		ONLINE = "https://papa.palaka.cn/download/"
 	},
 	mac = {
-		STAGE = "http://adventure-dev.kp-para.cn/download/",
-		RELEASE = "http://adventure-rls.kp-para.cn/download/",
+		STAGE = "https://adventure-dev.kp-para.cn/download/",
+		RELEASE = "https://adventure-rls.kp-para.cn/download/",
 		ONLINE = "https://papa.palaka.cn/download/"
 	},
 	android = {
-		STAGE = "http://adventure-dev.kp-para.cn/download",
-		RELEASE = "http://adventure-rls.kp-para.cn/download",
+		STAGE = "https://adventure-dev.kp-para.cn/download",
+		RELEASE = "https://adventure-rls.kp-para.cn/download",
 		ONLINE = "https://papa.palaka.cn/download/"
 	},
 	ios = {
-		STAGE = "http://adventure-dev.kp-para.cn/download",
-		RELEASE = "http://adventure-rls.kp-para.cn/download",
+		STAGE = "https://adventure-dev.kp-para.cn/download",
+		RELEASE = "https://adventure-rls.kp-para.cn/download",
 		ONLINE = "https://papa.palaka.cn/download/"
 	},
 }
@@ -414,8 +414,8 @@ function PapaUtils.GetPapaDownUrl()
 end
 
 local paracraftUrls = {
-    STAGE = "http://paracraft-dev.kp-para.cn/download",
-    RELEASE = "http://paracraft-rls.kp-para.cn/download",
+    STAGE = "https://paracraft-dev.kp-para.cn/download",
+    RELEASE = "https://paracraft-rls.kp-para.cn/download",
     ONLINE = "https://paracraft.cn/download",
 }
 

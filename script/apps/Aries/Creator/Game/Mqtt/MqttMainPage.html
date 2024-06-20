@@ -35,6 +35,19 @@
                             MqttMainPage.OnClickProjectUpdate(index)
                         end
                     end
+
+                    function IsLimitProjectName(name)
+                        if name == nil or name == "" then
+                            return false
+                        end
+                        local fontName = "System;12;norm"
+                        local width = _guihelper.GetTextWidth(name, fontName)
+                        return width and width > 100
+                    end
+
+                    function GetLimitProjectName(name)
+                        return commonlib.GetLimitLabelByTextWidth(name,100,"System;12;norm")
+                    end                    
                 ]]>
             </script>
             <style type="text/mcss">
@@ -68,7 +81,15 @@
                                         <Columns>
                                             <div style=" margin-left: 20px;margin-top: 0px; width:620px; height:24px; text-align:center;font-size: 12px;" >
                                                 <div style="float: left; width: 60px; height: 24px; background: url(Texture/Aries/Creator/keepwork/vip/baidiheikuang_32x32_32bits.png:3 3 3 3);"><%=Eval("id")%></div>
-                                                <div style="float: left; width: 160px; height: 24px; background: url(Texture/Aries/Creator/keepwork/vip/baidiheikuang_32x32_32bits.png:3 3 3 3);"><%=Eval("name")%></div>
+                                                <div style="float: left; width: 160px; height: 24px; background: url(Texture/Aries/Creator/keepwork/vip/baidiheikuang_32x32_32bits.png:3 3 3 3);">
+                                                    <pe:if condition='<%=IsLimitProjectName(Eval("name"))%>'>
+                                                        <div style="position: relative; width: 160px; height: 24px;"><%=GetLimitProjectName(Eval("name"))%></div>
+                                                        <div tooltip='<%=Eval("name")%>' style="position: relative; width: 160px; height: 24px;"></div>
+                                                    </pe:if>
+                                                    <pe:if condition='<%=not IsLimitProjectName(Eval("name"))%>'>
+                                                        <%=Eval("name")%>
+                                                    </pe:if>
+                                                </div>
                                                 <div style="float: left; width: 88px; height: 24px; background: url(Texture/Aries/Creator/keepwork/vip/baidiheikuang_32x32_32bits.png:3 3 3 3);"><%=Eval("topicCnt")%></div>
                                                 <div style="float: left; width: 88px; height: 24px; background: url(Texture/Aries/Creator/keepwork/vip/baidiheikuang_32x32_32bits.png:3 3 3 3);"><%=Eval("deviceCnt")%></div>
                                                 <div style="float: left; width: 192px; height: 24px; background: url(Texture/Aries/Creator/keepwork/vip/baidiheikuang_32x32_32bits.png:3 3 3 3);">

@@ -1,0 +1,107 @@
+<!-- script/apps/Aries/Creator/Game/Tasks/Community/Project/ProjectMainPage.html -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<body>
+<pe:mcml>
+<script refresh="true" type="text/npl" src="ProjectMainPage.lua" ><![CDATA[
+    local ProjectMainPage = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/Community/Project/ProjectMainPage.lua")
+    ProjectMainPage.OnInit()
+
+    function OnclickCreate()
+        GameLogic.GetFilters():apply_filters("click_create_new_world")
+    end
+
+    function GetMenuData()
+        return ProjectMainPage.GetMenuData()
+    end
+
+    function GetCategoryDSIndex()
+        return ProjectMainPage.GetCategoryDSIndex()
+    end
+
+    function OnChangeTabview(index)
+        ProjectMainPage.ChangeMenuTab(index)
+    end
+
+    function IsSearching()
+        return true
+    end
+
+    function onSearch()
+        ProjectMainPage.OnClickSearch()
+    end
+
+    function OnChangeSearch()
+        ProjectMainPage.ChangeSearch()
+    end
+
+    function onSearchInputFocusOut()
+        ProjectMainPage.OnSearchInputFocusOut()
+    end
+
+    function GetIframeUrl()
+        return ProjectMainPage.GetIframeUrl()
+    end
+
+    function IsCanSearch()
+        return ProjectMainPage.select_tab == 1 or ProjectMainPage.select_tab == 2
+    end
+]]></script>
+<pe:container style="width:1090px;height:640px;background:url();">       
+    <div style="float:left;width:1090px;height:640px; background-color: #1a1a1a;">
+        <div zorder="1" style="position: relative; width: 1090px; height: 50px; ">
+            <div style="float: left; width: 500px; height: 50px;">
+                <pe:repeat DataSource="<%=GetMenuData()%>" >
+                    <pe:repeatitem style="float:left;width:92px; ">
+                        <pe:if condition='<%=GetCategoryDSIndex() == Eval("index") %>' >
+                            <div style="float: left; width:92px;height:46px; margin-left: 8px; margin-top: 0px;">
+                                <input type="button" value='<%=Eval("value")%>' name='<%=Eval("index")%>' onclick="OnChangeTabview" style="position: relative; font-weight:bold;color:#ffffff;font-size:14px;min-width:92px;height:46px;background:url()" />
+                                <div align="center" style="position: relative; margin-top: 40px; width: 22px; height: 4px; background-color: #404BF5;"></div>
+                            </div>
+                        </pe:if>
+                        <pe:if condition='<%=GetCategoryDSIndex() ~= Eval("index") %>' >
+                            <input type="button" value='<%=Eval("value")%>' name='<%=Eval("index")%>' onclick="OnChangeTabview" style="float: left; font-weight:bold;margin-top: 0px; margin-left: 8px;color:#A8A7B0;font-size:14px;min-width:92px;height:46px;background:url()" />
+                        </pe:if>
+                    </pe:repeatitem>
+                </pe:repeat>
+            </div>
+            <div style="float: left; width: 590px; height: 50px; ">
+                <pe:container visible='false' uiname="search_container" style="position: relative; width: 590px; height: 50px; background: url();">
+                    <div align="right" style='margin-right: 10px; width: 300px; height: 40px; margin-top: 3px; background-color: #252525;'>
+                        <input type='text' name='search_content' spacing='10' EmptyText='<%= L"输入作品名称或ID" %>' EmptyTextColor='#FFFFFFFF' textcolor='#FFFFFFFF'
+                                style='width: 246px; height: 40px; font-size: 12px; base-font-size: 12px; text-valign: center; background:;'/>
+                        <input type='button' 
+                                DefaultButton='true'
+                                name='search_button'
+                                onclick='onSearch'
+                                value='<%= L"搜索" %>'
+                                style='width: 50px; height: 32px;text-offset-y: -3px; font-weight: bold;font-size: 14px; base-font-size: 14px;
+                                        margin-top: 4px;color: #FFFFFFFF;background-color: #333333; 
+                                        background: url(Texture/Aries/Creator/keepwork/community_32bits.png#778 146 32 32:14 14 14 14)'/>
+                    </div>
+                </pe:container>
+                <pe:if condition="<%=IsCanSearch()%>">
+                    <pe:container visible='true' uiname="no_search_container" style="position: relative; width: 590px; height: 50px; background: url();">
+                        <pe:if condition='<%= not Mod.WorldShare.Utils.IsEnglish() %>'>
+                            <input align="right" type="button" value='<%= L"搜索" %>' onclick="OnChangeSearch"  icon="Texture/Aries/Creator/keepwork/community_32bits.png;506 238 16 16" icon_width="16" icon_height="16" icon_off_x="-26"  style=" margin-top: 0px; margin-right: 10px;color:#ffffff;font-size:14px; base-font-size:14px; font-weight: bold; width:50px;height:46px;background:url()" />
+                        </pe:if>
+                        <pe:if condition='<%= Mod.WorldShare.Utils.IsEnglish() %>'>
+                            <input align="right" type="button" value='<%= L"搜索" %>' onclick="OnChangeSearch"  icon="Texture/Aries/Creator/keepwork/community_32bits.png;506 238 16 16" icon_width="16" icon_height="16" icon_off_x="-26"  style=" margin-top: 0px; text-offset-x:6; margin-right: 10px;color:#ffffff;font-size:14px; base-font-size:14px; font-weight: bold; width:50px;height:46px;background:url()" />
+                        </pe:if>
+                    </pe:container>
+                </pe:if>
+                
+            </div>
+        </div>
+        
+        <div style="position: relative; width: 1090px; height: 1px; margin-top: 44px; background-color: #FFF3D833"></div>
+        <!-- 占位 -->
+        <div style="position: relative; margin-top: 46px;  width: 1090px; height: 600px; ">
+            <iframe name="community_project_frame" src="<%=GetIframeUrl()%>"></iframe>
+        </div>
+        
+    </div>
+</pe:container>
+</pe:mcml>
+</body>
+</html>

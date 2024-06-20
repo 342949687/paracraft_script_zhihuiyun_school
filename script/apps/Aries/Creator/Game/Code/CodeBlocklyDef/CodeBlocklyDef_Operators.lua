@@ -402,6 +402,7 @@ end
 				{ "exp", "exp"},
 				{ L"转成数字", "tonumber"},
 				{ L"转成字符串", "tostring"},
+				{ L".2f字符串", "tostring_2f"},
 			},
 		},
 		{
@@ -418,6 +419,9 @@ end
 	func_description = 'math.%s(%s)',
 	ToPython = function(self)
 		local name = self:getFieldAsString('name')
+		if name == "tostring_2f" then
+			name = "tostring"
+		end
 		if(name == "tostring") then
 			-- name = "str"
 			name = "math."..name

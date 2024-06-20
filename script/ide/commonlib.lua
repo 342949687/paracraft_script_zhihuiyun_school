@@ -208,8 +208,8 @@ function algorithm.sort_by_predicate(input, predicate_func)
 	end
 end
 
---in-place quicksort by LXZ
--- @param compareFunc: by default it is function(a, b) return a<b end
+--in-place stable quicksort, while table.sort in not stable. 
+-- @param compareFunc: by default it is function(a, b) return a<=b end
 -- it does not change the original order if compareFunc(left, right) is true.
 -- it only swap a, b if compareFunc(a, b) is FALSE. 
 local function quicksort(t, compareFunc, start, endi)
@@ -217,8 +217,13 @@ local function quicksort(t, compareFunc, start, endi)
 	--partition w.r.t. first element
 	if(endi <= start) then return t end
 	local pivot = start
+
+	if(not compareFunc) then
+		compareFunc = function(a, b) return a<=b end
+	end
+
 	for i = start + 1, endi do
-		if( (compareFunc and not compareFunc(t[pivot], t[i]) ) or (not compareFunc and t[i] <= t[pivot]) ) then
+		if(not compareFunc(t[pivot], t[i])) then
 			local temp = t[pivot + 1]
 			t[pivot + 1] = t[pivot]
 			if(i == pivot + 1) then
@@ -857,6 +862,22 @@ function commonlib.GetLimitLabel(text, maxCharCount,bIgnoreChildDot)
     end
 end
 
+function commonlib.GetLimitLabelByTextWidth(text,maxWidth,fontName,bIgnoreChildDot)
+	if(text ==nil or text == "" or not maxWidth or maxWidth == 0)then
+		return text
+	end
+	local fontName = fontName or "System;12;norm"
+	local isUtfStr = commonlib.IsUtf8String(text);
+	local textWith = _guihelper.GetTextWidth(text)
+	if textWith <= maxWidth then
+		return text
+	end
+	if isUtfStr then
+		return _guihelper.TrimUtf8TextByWidth(text, maxWidth, fontName) .. (bIgnoreChildDot and "" or "...")
+	end
+	return _guihelper.AutoTrimTextByWidth(text, maxWidth, fontName) .. (bIgnoreChildDot and "" or "...")
+end
+
 function commonlib.GetUnicodeCharNum(text)
     if text ==nil or text == "" then
 		return 0
@@ -1121,6 +1142,8 @@ end
 function commonlib.ParseXmlToString(headon_mcml)
 	return ParaXML.LuaXML_ParseString(headon_mcml)
 end
+-- expose ParaXML interface via commonlib
+commonlib.ParaXML = ParaXML;
 
 --判断是否存在中文
 function commonlib.IsUtf8String(str)

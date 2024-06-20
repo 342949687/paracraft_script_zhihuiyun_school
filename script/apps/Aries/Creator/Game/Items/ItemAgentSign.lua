@@ -27,18 +27,17 @@ function ItemAgentSign:PickItemFromPosition(x,y,z)
 	local entity = self:GetBlock():GetBlockEntity(x,y,z);
 	if(entity) then
 		local itemStack = ItemStack:new():Init(self.id, 1);
-		-- transfer filename from entity to item stack. 
-		itemStack:SetTooltip(entity.cmd or "");
 		local agentName = entity:GetAgentName()
 		if(agentName) then
 			agentName = ""
 		end
+		-- since agent name is unique, we will set empty name for cloned item 
 		itemStack:SetDataField("agentPackageName", nil);
 		itemStack:SetDataField("agentPackageVersion", entity:GetVersion());
 		itemStack:SetDataField("agentDependencies", entity:GetAgentDependencies());
 		itemStack:SetDataField("agentExternalFiles", entity:GetAgentExternalFiles());
 		itemStack:SetDataField("updateMethod", entity:GetUpdateMethod());
-		itemStack:SetDataField("agentUrl", entity:GetAgentUrl());
+		--itemStack:SetDataField("agentUrl", entity:GetAgentUrl());
 		itemStack:SetDataField("isGlobal", entity:IsGlobal());
 		itemStack:SetDataField("isPhantom", entity:IsPhantom());
 		return itemStack;

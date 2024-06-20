@@ -58,7 +58,7 @@ local pageNum = 15 * 2;
 KeepWorkMallPage.isOpen = false;
 KeepWorkMallPage.all_mod_list = {};
 
-KeepWorkMallPage.IsFromCadBlock = false;
+KeepWorkMallPage.bFromCodeBlock = false;
 KeepWorkMallPage.menu_data_sources = {};
 KeepWorkMallPage.menu_data_sources = {
     {
@@ -183,19 +183,19 @@ function KeepWorkMallPage.OnCreate()
     KeepWorkMallPage.RefreshBeanNum()
 end
 
-function KeepWorkMallPage.Show(bFromCadBlock)
+function KeepWorkMallPage.Show(bFromCodeBlock)
     if (System.options.isCodepku) then
         return;
     end
     local http_env = HttpWrapper.GetDevVersion()
     if true then
         local MallMainPage = NPL.load("(gl)script/apps/Aries/Creator/Game/KeepWorkMall/MallMainPage.lua");
-        MallMainPage.ShowPage();
+        MallMainPage.ShowPage(bFromCodeBlock);
         return    
     end
-    KeepWorkMallPage.IsFromCadBlock = bFromCadBlock;
+    KeepWorkMallPage.bFromCodeBlock = bFromCodeBlock;
     KeepWorkMallPage.model_index = 1;
-    if KeepWorkMallPage.IsFromCadBlock then
+    if KeepWorkMallPage.bFromCodeBlock then
         KeepWorkMallPage.model_index = 8
     end
 
@@ -1012,7 +1012,7 @@ function KeepWorkMallPage.CloseView()
     
     KeepWorkMallPage.isOpen = false
     loadElse = false
-    KeepWorkMallPage.IsFromCadBlock = false
+    KeepWorkMallPage.bFromCodeBlock = false
     KeepWorkMallPage.model_index = 1
     KeepWorkMallPage.search_keyworlds = ""
     KeepWorkMallPage.isExpland_modelType = false
@@ -1288,7 +1288,7 @@ function  KeepWorkMallPage.GetSelectModelType()
 end
 
 function KeepWorkMallPage.onClick_modelType()
-    if KeepWorkMallPage.IsFromCadBlock then
+    if KeepWorkMallPage.bFromCodeBlock then
         return 
     end
     KeepWorkMallPage.isExpland_modelType = not KeepWorkMallPage.isExpland_modelType

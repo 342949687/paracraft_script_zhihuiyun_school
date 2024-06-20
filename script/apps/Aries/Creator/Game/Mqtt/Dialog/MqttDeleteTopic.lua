@@ -51,7 +51,7 @@ function MqttDeleteTopic.OnClickDeleteTopic()
     local id = MqttDeleteTopic.deleteData.id or -1
     MqttDeleteTopic.deleteData = nil
     MqttManager.getInstance():DeleteTopic(id,function(success,data)
-        echo(data,true)
+        -- echo(data,true)
         print("delete====================",success)
         if success then
             GameLogic.AddBBS(nil,L"删除成功")

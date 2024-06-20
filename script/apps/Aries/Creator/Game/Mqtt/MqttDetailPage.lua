@@ -114,7 +114,7 @@ function MqttDetailPage.LoadTopicList(bRefresh)
 
     MqttManager.getInstance():LoadTopicList(MqttDetailPage.curTopicPage,iotProjectId,function(result,data)
         if result == true then
-            echo(data,true)
+            -- echo(data,true)
             print("topic list load success==========")
             if MqttDetailPage.curTopicPageCount == 0 then
                 MqttDetailPage.curTopicPageCount = data.count
@@ -126,11 +126,11 @@ function MqttDetailPage.LoadTopicList(bRefresh)
                 end
                 -- echo(MqttDetailPage.mqttTopicList,true)
                 print("topic list load success====-------=========")
-                MqttDetailPage.RefreshPage()    
             end
+            MqttDetailPage.RefreshPage()  
             return
         end
-        GameLogic.AddBBS(nil,L"mqtt主题列表数据加载失败")
+        GameLogic.AddBBS(nil,L"暂无数据")
     end)
 end
 
@@ -213,7 +213,7 @@ function MqttDetailPage.LoadDeviceList(bRefresh)
 
     MqttManager.getInstance():LoadDeviceList(MqttDetailPage.curDevicePage,iotProjectId,function(result,data)
         if result == true then
-            echo(data,true)
+            -- echo(data,true)
             print("Device list load success==========")
             if MqttDetailPage.curDevicePageCount == 0 then
                 MqttDetailPage.curDevicePageCount = data.count
@@ -223,13 +223,13 @@ function MqttDetailPage.LoadDeviceList(bRefresh)
                 for k,v in ipairs(mqttList) do
                     table.insert(MqttDetailPage.mqttDeviceList,v)
                 end
-                echo(MqttDetailPage.mqttDeviceList,true)
+                -- echo(MqttDetailPage.mqttDeviceList,true)
                 print("Device list load success====-------=========")
-                MqttDetailPage.RefreshPage()    
             end
+            MqttDetailPage.RefreshPage() 
             return
         end
-        GameLogic.AddBBS(nil,L"mqtt设备列表数据加载失败")
+        GameLogic.AddBBS(nil,L"暂无数据")
     end)
 end
 

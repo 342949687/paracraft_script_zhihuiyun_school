@@ -1098,6 +1098,15 @@ end
 function Entity:Destroy()
 	self:beforeDestroyed(self);
 	self:DestroyInnerObject();
+	if self.bonesManipCont then
+		self.bonesManipCont:Destroy()
+	end
+
+	if self.hover_timer then
+		self.hover_timer:Change()
+		self.hover_timer = nil
+	end
+
 	Entity._super.Destroy(self);
 end
 
@@ -1350,12 +1359,25 @@ end
 
 -- called every 1500 milliseconds
 function Entity:OnHover(hoverEntity)
+	self.on_hover = true
 	local event = Event:new():init("onhover");	
 	if(hoverEntity) then
 		event.name = self.name;
 		event.hoverEntityName = hoverEntity.name or "";
 	end
 	self:event(event);
+
+	self:SetBoneNodeVisible(true)
+	if not self.hover_timer then
+		self.hover_timer = commonlib.Timer:new()
+	end
+
+	self.hover_timer:Change()
+	self.hover_timer.callbackFunc = function()
+		self.on_hover = false
+		self:SetBoneNodeVisible(false)
+	end
+	self.hover_timer:Change(300)
 
 	-- send a general event or user defined one
 	local onhoverEvent = self.onhoverEvent or "__entity_onhover"
@@ -1912,6 +1934,31 @@ end
 function Entity:OnEndDrag(dragLocation)
 	local event = Event:new():init("onenddrag");
 	self:event(event);
+
+	-- 挂载 如果拖动的物体身上有骨骼显示 那么挂载到骨骼上
+	if self.lastHoverOnEntity then
+		if self.lastHoverOnEntity.bonesManipCont and self.lastHoverOnEntity.bonesManipCont:IsVisible() then
+			local bones_manip = self.lastHoverOnEntity.bonesManipCont:GetBonesManip()
+			local pickingName = bones_manip:GetActivePickingName();
+			local pick_bone = bones_manip:GetBoneByPickName(pickingName)
+			if pick_bone then
+				-- 看能不能找到对应的骑乘点
+				local last_entity = self.lastHoverOnEntity
+				local mount_points = last_entity:GetMountPoints()
+				print("axxxxxxxddd")
+				local target_mount_point = mount_points:GetMountPointByName(pick_bone:GetDisplayName())
+				print("bbbbbbbbbbxxx", target_mount_point)
+				if target_mount_point then
+					local index = target_mount_point:GetIndex()
+					target_mount_point:SetAABBSize(0.1,0.1,0.1)
+					print("ccccccccccxx", index)
+					self:MountTo(last_entity, index)
+				end
+				
+			end
+		end
+	end
+
 
 	-- send a general event or user defined one
 	local onendDragEvent = self.onendDragEvent or "__entity_onenddrag"
@@ -2689,5 +2736,60 @@ function Entity:SetPhysicsKinematic()
 	if(obj and obj:GetField("EnableDynamicPhysics", false)) then
 		self:EnableDynamicPhysics(false)
 		self:EnableDynamicPhysics(true)
+	end
+end
+
+function Entity:SetBoneNodeVisible(flag)
+	if not flag and not self.bonesManipCont then
+		return
+	end
+
+	if not self.bonesManipCont then
+		self:CreateBoneManipCont()
+		-- 根据骨骼点创建骑乘点mountpoint
+		commonlib.TimerManager.SetTimeout(function()  
+			self:CreateMountPointsByBone()
+		end, 1000);
+		
+	end
+
+	self.bonesManipCont:SetVisible(flag)
+end
+
+function Entity:CreateBoneManipCont()
+	if self.bonesManipCont then
+		return
+	end
+
+	NPL.load("(gl)script/ide/System/Scene/Manipulators/BonesManipContainer.lua");
+	local BonesManipContainer = commonlib.gettable("System.Scene.Manipulators.BonesManipContainer");
+	local manipCont = BonesManipContainer:new();
+	manipCont:init();
+	manipCont:connectToDependNode(self);
+	manipCont:SetShowPos(false)
+	manipCont:SetVisible(false);
+
+	self.bonesManipCont = manipCont
+end
+
+function Entity:CreateMountPointsByBone()
+	if not self.bonesManipCont then
+		self:CreateBoneManipCont()
+	end
+
+	local bones_manip = self.bonesManipCont:GetBonesManip()
+	local bones = bones_manip.bones
+	for index = 1, #bones do
+		local bone = bones[index]
+		
+		if bone:IsEditable() then
+			-- echo(bone:GetTranslation(), true)
+			local pivot = bone:GetPivot(true);
+
+			local mount_points = self:CreateGetMountPoints()
+			local cur_scale = self:getScale()
+			mount_points:AddMountPoint({name=bone:GetDisplayName(), x=pivot[1], y=pivot[2], z=pivot[3], dx=0.1, dy=0.1, dz=0.1})
+		end
+		-- 
 	end
 end

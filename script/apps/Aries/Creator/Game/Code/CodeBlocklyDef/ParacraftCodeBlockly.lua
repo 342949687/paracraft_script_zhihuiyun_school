@@ -166,6 +166,7 @@ for name, api in pairs(py_env) do
 end
 ]]..luacode
 			LOG.std(nil, "debug", "npl code:", luacode)
+			entity:SetIntermediateCode(luacode)
 			return compiler:Compile(luacode);
 		end
 		-- obsoleted code below: 
@@ -215,6 +216,7 @@ end
 					if (not ok) then 
 						return G_print("Emscripten:ExecutePy2Lua Error:", luacode);
 					end
+					entity:SetIntermediateCode(luacode)
 					local code_func, errmsg = compiler:Compile(luacode);
 					if (errmsg) then
 						return G_print("compiler:Compile Error:", errmsg);
@@ -238,7 +240,7 @@ end
 			return nil, luacode
 		end
 		LOG.std(nil, "debug", "pyruntime", luacode)
-
+		entity:SetIntermediateCode(luacode)
 		codeblock:SetModified(true)
 		return compiler:Compile(luacode);
     else

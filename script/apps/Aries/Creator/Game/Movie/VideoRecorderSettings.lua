@@ -280,6 +280,9 @@ function VideoRecorderSettings.IsRecordAudio()
 end
 
 function VideoRecorderSettings.IsShowLogo()
+	if System.options.isShenzhenAi5 then
+		return false;
+	end
 	return settings.isShowLogo == true;
 end
 

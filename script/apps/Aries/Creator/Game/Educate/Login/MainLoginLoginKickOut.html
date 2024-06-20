@@ -101,6 +101,15 @@
                         end
                     end
 
+                    function cancel()
+                        close()
+                        if LoginModal.isFromKickOut then
+                            local KickOut = NPL.load('(gl)Mod/WorldShare/cellar/Common/KickOut/KickOut.lua')
+                            KickOut:ShowKickOutPage(1,true)
+                            LoginModal.isFromKickOut = nil
+                        end
+                    end
+
                     function forget_password()
                         EventTrackingService:Send(1, 'click.main_login.find_password', nil, true)
                         ForgetPassword:ShowPage()
@@ -615,7 +624,7 @@
                         local phone_number = get_page():GetValue('phone_number')
 
                         if not Validated:Phone(phone_number) then
-                            _guihelper.MessageBox(L'*手机号格式错误')
+                            _guihelper.MessageBox(L'请输入5-11位手机号')
                             return
                         end
 
@@ -933,7 +942,7 @@
                                     onclick='login()'
                                     value='<%= L"登  录"%>' />
                             <input type='button' style="color:#ffffff;font-size:16px;font-weight: bold;margin-left:30px;margin-top:60px;width:135px;height:50px;background: url(Texture/Aries/Creator/paracraft/Educate/Login/denglu_70x50_32bits.png#0 0 70 50:24 24 24 24)"
-                                    onclick='close()'
+                                    onclick='cancel()'
                                     value='<%= L"取  消"%>' />
                         </div>
                     </pe:container>

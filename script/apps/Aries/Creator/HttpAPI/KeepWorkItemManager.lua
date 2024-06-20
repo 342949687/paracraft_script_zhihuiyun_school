@@ -145,10 +145,10 @@ function KeepWorkItemManager.OnKeepWorkLogin_Callback(res)
 
         Keepwork:OnLogin();  -- 用户登录成功 数据准备就绪
 
-        NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/Quest/QuestProvider.lua");
-        local QuestProvider = commonlib.gettable("MyCompany.Aries.Game.Tasks.Quest.QuestProvider");
-        QuestProvider:Clear()
-        QuestProvider:OnInit();
+        -- NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/Quest/QuestProvider.lua");
+        -- local QuestProvider = commonlib.gettable("MyCompany.Aries.Game.Tasks.Quest.QuestProvider");
+        -- QuestProvider:Clear()
+        -- QuestProvider:OnInit();
 
 		GameLogic.ResetABPath();
         -- 皮肤检测 检测用户皮肤是否可以继续用

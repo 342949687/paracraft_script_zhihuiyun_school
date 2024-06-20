@@ -39,6 +39,7 @@ function CartoonEffect:OnRenderPostProcessing(ps_scene)
 		params:SetParam("screenParam", "vec2ScreenSize");
 		
 		-----------------------compose lum texture with original texture --------------
+		print("ddddddxxx")
 		ParaEngine.SetRenderTarget(old_rt);
 		effect:BeginPass(0);
 			params:SetTextureObj(0, _ColorRT);

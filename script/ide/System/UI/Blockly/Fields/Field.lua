@@ -168,3 +168,17 @@ function Field:LoadFromXmlNode(xmlNode)
         self:SetValue(self:GetValueByLablel(self:GetLabel(), self:GetValue()));
     end 
 end
+
+function Field:Save()
+    return tostring(self:GetValue());
+end
+
+function Field:Load(value)
+    self:SetValue(tostring(value));
+
+    if (self:IsSelectType()) then
+        self:SetLabel(tostring(self:GetLabelByValue(self:GetValue(), self:GetValue())));
+    else
+        self:SetLabel(tostring(self:GetValue()));
+    end 
+end

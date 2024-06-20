@@ -8,12 +8,14 @@ use the lib:
 local ContextMenu = NPL.load("script/ide/System/UI/Blockly/ContextMenu.lua");
 -------------------------------------------------------
 ]]
-
+local BlockManager = NPL.load("./Blocks/BlockManager.lua");
 local Element = NPL.load("../Window/Element.lua");
 local Helper = NPL.load("./Helper.lua");
 local Const = NPL.load("./Const.lua");
 
 local ContextMenu = commonlib.inherit(Element, NPL.export());
+
+local ExportAllBlockMap = {}
 
 ContextMenu:Property("Name", "ContextMenu");
 ContextMenu:Property("MenuType", "blockly");
@@ -28,6 +30,12 @@ local block_menus = {
     { text = "删除整块", cmd = "deleteAll"},
     { text = "添加注释", cmd = "add_note"},
     { text = "复制XML", cmd = "export_block_xml_text"},
+    { text = "禁用|启用块", cmd = "disable_enable_block" },
+    { text = "折叠|展开块", cmd = "folded_expand_block"},
+    -- { text = "禁用块", cmd = "disable_block"},
+    -- { text = "启用块", cmd = "enable_block"},
+    -- { text = "折叠块", cmd = "folded_block"},
+    -- { text = "展开块", cmd = "expand_block"},
 }
 
 local blockly_menus = {
@@ -39,8 +47,14 @@ local blockly_menus = {
     { text = "生成图块代码", cmd = "export_code"},
     { text = "生成宏示教代码", cmd = "export_macro_code"},
     { text = "生成工具栏XML", cmd = "export_toolbox_xml_text"},
+    { text = "用外部网页编辑...", cmd = "export_google_blockly"},
+    
     -- { text = "导入工作区XML", cmd = "import_workspace_xml_text"},
     -- { text = "导入图块XML", cmd = "import_block_xml_text"},
+}
+
+local toolbox_menus = {
+    { text = "导入定制块", cmd = "show_load_custom_block_dialog"},
 }
 
 function ContextMenu:GetMenuItemWidth()
@@ -60,9 +74,20 @@ end
 
 function ContextMenu:GetMenus()
     local menuType = self:GetMenuType();
-    if (menuType == "block") then return block_menus end
+    local menus = blockly_menus;
+    if (menuType == "block") then menus = block_menus end
+    if (menuType == "toolbox") then menus = toolbox_menus end
+    return menus;
 
-    return blockly_menus;
+    -- if (not self:GetBlockly():IsCustomBlocklyFactory()) then return menus end
+    -- local factory_menus = {};
+    -- for index, menu in ipairs(menus) do
+    --     factory_menus[index] = menu;
+    -- end
+    -- if (menuType ~= "block" and menuType ~= "toolbox") then
+    --     factory_menus[#factory_menus + 1] = { text = "用外部网页编辑...", cmd = "export_google_blockly" }
+    -- end
+    -- return factory_menus;
 end
 
 function ContextMenu:GetMenuItem(index)
@@ -123,6 +148,18 @@ function ContextMenu:OnMouseUp(event)
         blockly:Undo();
     elseif (menuitem.cmd == "redo") then
         blockly:Redo();
+    elseif (menuitem.cmd == "disable_block") then
+        blockly:HandleDisableBlock();
+    elseif (menuitem.cmd == "enable_block") then
+        blockly:HandleEnableBlock();
+    elseif (menuitem.cmd == "folded_block") then
+        blockly:HandleFoldedBlock();
+    elseif (menuitem.cmd == "expand_block") then
+        blockly:HandleExpandBlock();
+    elseif (menuitem.cmd == "disable_enable_block") then
+        blockly:HandleDisableEnableBlock();
+    elseif (menuitem.cmd == "folded_expand_block") then
+        blockly:HandleFoldedExpandBlock();
     elseif (menuitem.cmd == "export_workspace_xml_text") then
         self:ExportWorkspaceXmlText();
     elseif (menuitem.cmd == "import_workspace_xml_text") then
@@ -141,10 +178,18 @@ function ContextMenu:OnMouseUp(event)
         self:ImportBlockXmlText();
     elseif (menuitem.cmd == "import_blockly_or_block_xml_text") then
         self:ImportBlocklyOrBlockXmlText();
+    elseif (menuitem.cmd == "show_load_custom_block_dialog") then
+        self:ShowLoadCustomBlockDialog();
+    elseif (menuitem.cmd == "export_google_blockly") then
+        self:ExportGoogleBlockly();
     end 
 end
 
 function ContextMenu:ImportBlocklyOrBlockXmlText()
+    if not GameLogic.options.CanPasteBlockly then
+        GameLogic.AddBBS("Blockly", "无法粘贴Blockly代码,当前世界禁止粘贴外部Blockly代码");
+        return 
+    end
     local text = ParaMisc.GetTextFromClipboard();
     local xmlnode = Helper.XmlString2Lua(text);
     if (type(xmlnode) ~= "table" or type(xmlnode[1]) ~= "table") then return end
@@ -160,7 +205,7 @@ function ContextMenu:ImportBlocklyOrBlockXmlText()
 end
 
 function ContextMenu:ImportBlockXmlNode(xmlnode)
-    local block = self:GetBlockly():GetBlockInstanceByXmlNode(xmlnode);
+    local block = self:GetBlockly():GetBlockInstanceByXmlNode(xmlnode, ExportAllBlockMap);
     if (not xmlnode or not block) then return end
     local relx, rely = self:GetPosition();
     local sx, sy = self:GetBlockly():RelativePointToScreenPoint(relx, rely);
@@ -177,6 +222,7 @@ function ContextMenu:ExportBlockXmlText()
     local xmlText = Helper.Lua2XmlString(block:SaveToXmlNode(), true);
     ParaMisc.CopyTextToClipboard(xmlText);
     GameLogic.AddBBS("Blockly", "图块 XML 已拷贝至剪切板");
+    ExportAllBlockMap = BlockManager.GetCustomCurrentBlockAllBlockMap();
 end
 
 function ContextMenu:ImportBlockXmlText()
@@ -360,7 +406,7 @@ function ContextMenu:ExportToolboxXmlText()
         }
         table.insert(toolbox, #toolbox + 1, category);
         for _, blocktype in ipairs(categoryItem.blocktypes) do 
-            if (blockTypeMap[blocktype] or (not next(blockTypeMap))) then
+            if (blockTypeMap[blocktype]) then
                 table.insert(category, #category + 1, {name = "block", attr = {type = blocktype}});
             end
         end
@@ -370,6 +416,11 @@ function ContextMenu:ExportToolboxXmlText()
     ParaMisc.CopyTextToClipboard(xmlText);
     print(xmlText)
     GameLogic.AddBBS("Blockly", "图块工具栏XML已拷贝至剪切板");
+end
+
+function ContextMenu:ShowLoadCustomBlockDialog()
+    local LoadCustomBlock = NPL.load("script/ide/System/UI/Blockly/Pages/LoadCustomBlock.lua");
+    LoadCustomBlock.Show()
 end
 
 -- 定宽不定高
@@ -391,4 +442,18 @@ function ContextMenu:Hide()
     self:SetVisible(false);
 end
 
- 
+function ContextMenu:ExportGoogleBlockly()
+    -- 获取工作区块集
+    local blockly = self:GetBlockly();
+    local blocks = {};
+    blockly:ForEachUI(function(ui)
+        if (ui:IsBlock()) then
+            blocks[ui:GetType()] = ui;
+        end
+    end);
+
+    local GoogleNplBlockly = NPL.load("script/ide/System/UI/Blockly/GoogleNplBlockly.lua", true);
+    -- GoogleNplBlockly:NplBlocklyToGoogleBlockly(self:GetBlockly());
+    -- GoogleNplBlockly:OpenGoogleBlockly(self:GetBlockly(), blocks);
+    GoogleNplBlockly:OpenGoogleBlockly(self:GetBlockly());
+end

@@ -89,6 +89,20 @@ function ArduinoConfigPage.GetPortNameDS()
     return portNamesDS;
 end
 
+function ArduinoConfigPage.OnSelectPort(name, value)
+	if(value == "installDriver") then
+        ParaGlobal.ShellExecute("open", SerialPortConnector.driverUrl, "", "", 1);
+        if(page) then
+            page:SetValue(name, "");
+        end
+        return;
+    end
+end
+
+function ArduinoConfigPage.onBeforeClickDropDownButton()
+	ArduinoConfigPage.UpdatePortList()
+end
+
 function ArduinoConfigPage.UpdatePortList()
 	portNamesDS = {}
     local portNames = Serial:GetPortNames()
@@ -108,6 +122,9 @@ function ArduinoConfigPage.UpdatePortList()
 	for _, option in ipairs(portNamesDS) do
 		option.selected = selectedPortName == option.value;
 	end
+	if(System.os.GetPlatform() == "win32") then
+        portNamesDS[#portNamesDS+1] = {value="installDriver", text=L"安装驱动"};
+    end
 end
 
 -- return globally unique name

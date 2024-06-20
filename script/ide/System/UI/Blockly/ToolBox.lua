@@ -11,6 +11,8 @@ local BlockInputField = NPL.load("script/ide/System/UI/Blockly/BlockInputField.l
 
 local Const = NPL.load("./Const.lua");
 local Shape = NPL.load("./Shape.lua");
+local Helper = NPL.load("./Helper.lua");
+local FoldedBlock = NPL.load("./FoldedBlock.lua");
 local ToolBox = commonlib.inherit(commonlib.gettable("System.Core.ToolBase"), NPL.export());
 
 local categoryFont = "System;12;norm";
@@ -145,10 +147,19 @@ function ToolBox:RenderCategory(painter)
         if (category.name == self:GetCurrentCategoryName()) then
             painter:SetPen("#ffffff");
         else 
-            painter:SetPen(categoryColor);
+            painter:SetPen("#cccccc");
+            -- painter:SetPen(categoryColor);
         end
         painter:DrawText((categoryWidth - category.textWidth) / 2, offsetY + circleSize + 4, category.text or category.name);
     end
+
+    -- 加号
+    local offsetX = circleOffsetX;
+    local offsetY = (#categories) * categoryHeight + circleOffsetY; 
+    painter:SetPen("#808080");
+    painter:DrawRectTexture(offsetX, offsetY, circleSize, circleSize, "Texture/Aries/Creator/keepwork/ggs/blockly/yuan_26X26_32bits.png#0 0 26 26");
+    painter:SetPen("#80808080");
+    painter:DrawRectTexture(offsetX + (circleSize - 13) / 2, offsetY + (circleSize - 13) / 2, 13, 13, "Texture/Aries/Creator/keepwork/ggs/blockly/plus_13x13_32bits.png#0 0 13 13");
 end
 
 function ToolBox:IsClipToolBox()
@@ -226,7 +237,13 @@ end
 function ToolBox:OnMouseDownCategory(event)
     local blockly = self:GetBlockly();
     local x, y = blockly._super.GetRelPoint(blockly, event.x, event.y);         -- 防止减去偏移量
-    if (x > self.categoryTotalWidth or y > self.categoryTotalHeight) then return end
+    if (x > self.categoryTotalWidth or y > self.categoryTotalHeight) then 
+        if (x < self.categoryTotalWidth and y > self.categoryTotalHeight and y < (self.categoryTotalHeight + Const.ToolBoxCategoryHeight)) then
+            local LoadCustomBlock = NPL.load("script/ide/System/UI/Blockly/Pages/LoadCustomBlock.lua");
+            LoadCustomBlock.Show()
+        end
+        return 
+    end
     local categoryHeight = Const.ToolBoxCategoryHeight;
     local index = math.ceil(y / categoryHeight);
     local category = self.categoryList[index];

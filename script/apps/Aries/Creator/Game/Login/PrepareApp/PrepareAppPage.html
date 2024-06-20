@@ -14,6 +14,8 @@
                     local options = commonlib.gettable("MyCompany.Aries.Game.GameLogic.options")
                     if System.options.channelId_431 then
                         ClientVersion = L"帕拉卡智慧教育";
+                    elseif System.options.isShenzhenAi5 then
+                        ClientVersion = L"深教AI4"
                     else
                         ClientVersion = string.format(L"Paracraft帕拉卡 %s(%s)", options.GetBaseVersion(), options.GetClientVersion());
                     end
@@ -44,9 +46,9 @@
             <pe:container alignment="_mb" width="0" height="85px" style="position: relative; background:url()">
                 <pe:container align="left" style="position: relative; color: #8f815f; font-size: 12px; font-weight: bold; margin-left: 20px; background:url()">
 
-                <pe:if condition="<%= not System.options.channelId_431 %>">
+                <pe:if condition="<%= not System.options.isEducatePlatform %>">
                         <div style="margin-top:35px;text-shadow:true"><%= Eval("ClientVersion") %></div>
-                        <!-- <div style="margin-top:0px;text-shadow:true"><%= L"(c)Tatfook. powered by NPL and ParaEngine"%></div> -->
+                        <div style="margin-top:0px;text-shadow:true"><%= L"(c)Tatfook. powered by NPL and ParaEngine"%></div>
                     </pe:if>
                 </pe:container>
             </pe:container>

@@ -61,24 +61,24 @@ local default_cache_policy = System.localserver.CachePolicy:new("access plus 12 
 
 function HttpWrapper.default_prepFunc(self, inputParams, callbackFunc, option)
     cache_policy = inputParams.cache_policy or default_cache_policy;
-    if(type(cache_policy) == "string") then
+    if (cache_policy and type(cache_policy) == "string") then
 		cache_policy = System.localserver.CachePolicy:new(cache_policy);
 	end
 
     local ls = System.localserver.CreateStore(nil, 3);
-	if(not ls) then
+	if (not ls) then
 		return 
 	end
     -- make url
 	local url = self.input_cache_url;
 	local item = ls:GetItem(url)
-	if(item and item.entry and item.payload) then
-		if(not cache_policy:IsExpired(item.payload.creation_date)) then
+	if (item and item.entry and item.payload) then
+		if (not cache_policy:IsExpired(item.payload.creation_date)) then
 			-- make output msg
 			local output_msg = commonlib.LoadTableFromString(item.payload.data);
             local fullname = self.fullname or "";
 		    LOG.std("", "info",fullname, "loaded from local server: %s", url);
-			if(callbackFunc) then
+			if (callbackFunc) then
 				callbackFunc(200, {}, output_msg);
 			end	
             return true;
@@ -125,10 +125,15 @@ function HttpWrapper.EncodeInputToUniqueURL(input)
     input = input or {};
     local url = input.url or "";
     local url_queries = { "method", input.method };
-    if(input.headers)then
+    if (input.headers) then
         for k,v in pairs(input.headers) do
-            table.insert(url_queries,k);
-            table.insert(url_queries,v);
+            if (k == "Authorization") then
+                k = "username"
+                v = Mod.WorldShare.Store:Get("user/username");
+            end
+
+            table.insert(url_queries, k);
+            table.insert(url_queries, v);
         end
     end
 	local input_cache_url = NPL.EncodeURLQuery(url, url_queries);

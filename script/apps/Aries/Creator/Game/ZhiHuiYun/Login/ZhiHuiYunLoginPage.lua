@@ -154,7 +154,7 @@ function ZhiHuiYunLoginPage.OnZhiHuiYunLogin()
 
     ZhiHuiYun:Login(function(err, msg, data)
         if err ~= 200 then
-            if data.message then
+            if data and data.message then
                 page:SetUIValue('error_code', data.message)
             end
            
@@ -174,7 +174,13 @@ function ZhiHuiYunLoginPage.OnZhiHuiYunLogin()
         end
         
         ZhiHuiYunLoginPage.Close()
-        GameLogic.RunCommand(format('/loadworld -s -force %s', System.options.AutoEnterPid))
+        local KeepworkServiceSession = NPL.load('(gl)Mod/WorldShare/service/KeepworkService/KeepworkServiceSession.lua')
+        KeepworkServiceSession:LoginSocket()
+        
+        if System.options.AutoEnterPid then
+            GameLogic.RunCommand(format('/loadworld -s -force %s', System.options.AutoEnterPid))
+        end
+        
     end, login_data, use_tip)
 end
 

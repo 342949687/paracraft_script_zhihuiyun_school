@@ -98,6 +98,7 @@ local function GetAllBlocksAndCategoryList(all_cmds, all_categories, lang)
                 end,
                 tocpp = cmd.ToCpp,
                 PostProcess = cmd.PostProcess,
+                hideInToolbox = cmd.hide_in_toolbox,
                 hideInBlockly = cmd.hide_in_blockly,
             } 
             if (block.previousStatement or block.nextStatement) then block.output = false end

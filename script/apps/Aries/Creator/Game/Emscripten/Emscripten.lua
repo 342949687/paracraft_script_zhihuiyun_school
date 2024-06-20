@@ -5,6 +5,7 @@ Date: 2023.6.12
 Desc: lua 与 js 通信
 ------------------------------------------------------------
 local Emscripten = NPL.load("(gl)script/apps/Aries/Creator/Game/Emscripten/Emscripten.lua");
+Emscripten:SendMsg("xxx", {key = "value"}, nil, nil, "external");
 ------------------------------------------------------------
 ]]
 
@@ -25,12 +26,18 @@ function Emscripten:GetNextMsgId()
     return self.m_msgid;
 end
 
-function Emscripten:SendMsg(msgname, msgdata, msgid, callback)
+-- target = emscripten 发送给 webparacraft
+-- target = webview 发送给 webparacraft 内嵌的iframe
+-- target = external 发送给 webparacraft 外层的window(内嵌iframe webparacraft的页面) Emscripten:SendMsg("xxx", {key = "value"}, nil, nil, "external")
+-- 接受 target = emscripten 消息 NPL.this(function() msg = msg or {}; print(msg) end, {filename="emscripten"});
+-- 接受 target = webview 消息 NPL.this(function() msg = msg or {}; print(msg) end, {filename="webview"});
+-- 接受 target = external 消息 NPL.this(function() msg = msg or {}; print(msg) end, {filename="external"});
+function Emscripten:SendMsg(msgname, msgdata, msgid, callback, target)
     if (msgid == nil) then msgid = self:GetNextMsgId() end
     if (type(callback) == "function") then self.m_msgid_callback[msgid] = callback end
 
     ParaEngine.GetAttributeObject():SetField("SendMsgToJS", commonlib.Json.Encode({
-        target = "emscripten",
+        target = target or "emscripten",
         msgid = msgid,
         msgname = msgname,
         -- msgdata = Encoding.base64(commonlib.Json.Encode(msgdata)),

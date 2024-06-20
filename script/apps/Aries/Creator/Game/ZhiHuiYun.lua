@@ -71,7 +71,7 @@ function ZhiHuiYun:InitFilters()
         -- 登录相关
         GameLogic.GetFilters():add_filter(
             'zhihuiyun.common.login',
-            function(info)
+            function()
                 if not System.options.ZhyChannel or System.options.ZhyChannel ~= "zhy_competition_course" then
                     return true
                 end
@@ -116,6 +116,7 @@ function ZhiHuiYun:Login(callback, user_data, use_tip)
 
         if err == 200 then
             System.User.zhy_userdata = data.data
+            System.User.zhy_userdata.password = user_data.password
         else
             data = commonlib.Json.Decode(data)
             if data and data.code and data.code ~= 0 then

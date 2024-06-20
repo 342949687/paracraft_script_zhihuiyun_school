@@ -135,7 +135,7 @@ end
 -- virtual function
 function CodeWindow:FilterImage(filename)
 	-- skip url and absolute path texture
-	if(not filename:match("^https?:") and not filename:match("^_miniscenegraph") and not filename:match("^%w:")) then
+	if(not filename:match("^https?:") and not filename:match("^_miniscenegraph") and not filename:match("^_texture") and not filename:match("^%w:")) then
 		local filename_, params = filename:match("^([^;#:]+)(.*)$");
 		if(filename_) then
 			local filepath = Files.GetFilePath(filename_);

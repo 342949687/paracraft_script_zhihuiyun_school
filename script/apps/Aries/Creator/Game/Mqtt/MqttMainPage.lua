@@ -67,16 +67,18 @@ end
 function MqttMainPage.LoadProjectList()
     MqttManager.getInstance():LoadProjectList(function(result,data)
         if result == true then
-            echo(data,true)
             if data and data.count and data.count > 0 then
                 local mqttList = data.rows or {}
                 MqttMainPage.mqttServerList = mqttList
                 page:GetNode('mqtt_list'):SetAttribute('DataSource', mqttList)
-                MqttMainPage.RefreshPage()    
+            else
+                MqttMainPage.mqttServerList = {}
+                page:GetNode('mqtt_list'):SetAttribute('DataSource', {})
             end
+            MqttMainPage.RefreshPage()  
             return
         end
-        GameLogic.AddBBS(nil,L"mqtt项目列表数据加载失败")
+        GameLogic.AddBBS(nil,L"暂无数据")
     end)
 end
 

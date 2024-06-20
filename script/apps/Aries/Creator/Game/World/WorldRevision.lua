@@ -249,8 +249,8 @@ function WorldRevision:GeneratePackage(filename)
 						writer:AddDirectory(dest_folder, last_world_folder..file.filename, 0);
 					end
 				end
-			elseif(filename_lowercased=="blockworld") then
-				-- ignore this folder
+			elseif(filename_lowercased=="blockworld" or filename_lowercased:match("^%.%w+/?")) then
+				-- ignore blockworld, and folder that begins with . like .codeblock
 			elseif(filename) then
 				local ext = commonlib.Files.GetFileExtension(filename);
 				if(ext) then

@@ -154,13 +154,16 @@ function OpenImageDialog.ShowPage(text, OnClose, default_text, not_support_chang
 			OpenImageDialog.renderIndex = nil
 			OpenImageDialog.StopTimer()
 		end
+		if OpenImageDialog.showCamera then
+			GameLogic.RunCommand("/capture video stop")
+		end
 		OpenImageDialog.showCamera = nil
 		OpenImageDialog.autoUseImg = nil
 		OpenImageDialog.hasVideoImage = nil
 		Screen:Disconnect("sizeChanged", OpenImageDialog, OpenImageDialog.OnScreenSizeChange)
 		GameLogic.GetCodeGlobal():UnregisterTextEvent("captureVideoChange", OpenImageDialog.OnVideoCapturedChange);
 		GameLogic.GetCodeGlobal():UnregisterTextEvent("onClickTextSnapImage", OpenImageDialog.OnVideoCaptured);
-		GameLogic.RunCommand("/capture video stop")
+		
 		if OpenImageDialog.snapshotTimer then
 			OpenImageDialog.snapshotTimer:Change()
 		end
@@ -373,7 +376,7 @@ function OpenImageDialog.OnOK()
 						local filename = "temp/camera_size.png"
 						local function refresh()
 							ParaIO.DeleteFile(filename)
-							OpenImageDialog.showCamera = nil
+							--OpenImageDialog.showCamera = nil
 							OpenImageDialog.OnCloseWithResult(commonlib.Encoding.Utf8ToDefault(text..(extension and extension or "")))
 						end
 						local bCopySuc = ParaIO.CopyFile(filename,destFile,true)

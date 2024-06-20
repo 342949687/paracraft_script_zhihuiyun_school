@@ -153,6 +153,7 @@ function Value:ConnectionBlock(block)
                 block:GetBlockly():AddBlock(inputConnectionConnectionBlock, true);
             end
         end
+        if (self:GetBlock():IsDisableRun() and not block.isShadowBlock) then block:DisableRun(true) end
         return true;
     end
 
@@ -192,7 +193,7 @@ function Value:GetFieldEditType()
     return "input";
 end
 
-function Value:GetValueAsString()
+function Value:GetValueAsString(field_value)
     local value = self:GetValue();
     if (not self:GetInputBlock()) then 
         if (self:IsNumberType()) then
@@ -205,7 +206,7 @@ function Value:GetValueAsString()
             return string.format("'%s'", value);   -- 虚拟一个图块
         end
     end
-    return self:GetInputBlock():GetCode();
+    return field_value or self:GetInputBlock():GetCode();
 end
 
 function Value:GetFieldValue() 

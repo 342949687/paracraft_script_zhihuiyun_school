@@ -229,7 +229,7 @@ function DockLayer:ShowDockByCfg(dockCfg)
             return
         end
     end
-    if System.options.channelId_431 then
+    if System.options.isEducatePlatform then
         if self.m_current_dockkey == "E_DOCK_LESSON" then
             dockCfg = commonlib.filter(dockCfg,function (item)
                 return item.name ~= "create_spage"
@@ -324,7 +324,7 @@ function DockLayer:GetDockCfgKeyByWorldInfo()
     end
     
     if DockConfig.IsMiniWorld() then
-        if System.options.channelId_431 then
+        if System.options.isEducatePlatform then
             return "E_DOCK_NORMAL"
         end
         return "E_DOCK_MINI"

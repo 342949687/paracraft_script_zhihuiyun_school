@@ -122,12 +122,14 @@
         local index = tonumber(index) or -1
         local data = SelectNamePage.class_data[index]
         if data then
-            local nameWidth = _guihelper.GetTextWidth(data.name,"System;14;bold")
-            local accountWidth = _guihelper.GetTextWidth(data.username,"System;10;normal")
+            local name = data.name or ""
+            local username = data.username or ""
+            local nameWidth = _guihelper.GetTextWidth(name,"System;14;bold")
+            local accountWidth = _guihelper.GetTextWidth(username,"System;10;normal")
             if nameWidth <= 45 and accountWidth <= 41 then
                 return ""
             end
-            return "page://script/apps/Aries/Creator/Game/Educate/ClassCode/SelectToolTip.html?s=" ..data.name .."<br/>" ..data.username
+            return "page://script/apps/Aries/Creator/Game/Educate/ClassCode/SelectToolTip.html?s=" ..name .."<br/>" ..username
         end
     end
 ]]></script>

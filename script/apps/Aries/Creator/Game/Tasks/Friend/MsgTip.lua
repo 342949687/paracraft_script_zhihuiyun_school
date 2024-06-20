@@ -67,7 +67,7 @@ function MsgTip.AddMsgDock()
     local IsMobileUIEnabled = GameLogic.GetFilters():apply_filters('MobileUIRegister.IsMobileUIEnabled',false)
     local dockKey = GameLogic.DockManager:GetDockKey()
     if dockKey == "E_DOCK_TUTORIAR" 
-        or System.options.channelId_431 
+        or System.options.isEducatePlatform 
         or System.options.isPapaAdventure
         or IsMobileUIEnabled then
         return

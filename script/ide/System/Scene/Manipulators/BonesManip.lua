@@ -196,6 +196,7 @@ end
 function BonesManip:SetSelectedBone(bone, handleMode)
 	if( self.selectedBone ~= bone or (handleMode~=self.handleMode) ) then
 		self.handleMode = handleMode;
+		print("opooooooooooooooxx")
 		self.selectedBone = bone;
 		if(handleMode == "IK" and bone) then
 			self.boneIKHandle = bone;
@@ -972,6 +973,12 @@ function BonesManip:paintEvent(painter)
 			end
 		
 			local pivot = bone:GetPivot();
+			-- if bone:GetDisplayName() == "Bone002" then
+			-- 	pivot[1] = 1
+			-- 	pivot[2] = 0
+			-- 	pivot[3] = -1
+			-- end
+
 			-- draw connections from this to all child bones
 			local pickWithParent = false; -- picking with parent or children
 			if(pickWithParent) then

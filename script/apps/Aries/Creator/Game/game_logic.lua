@@ -187,6 +187,8 @@ function GameLogic:ctor()
 
 	NPL.load("(gl)script/apps/Aries/Creator/Game/KeepWork/KeepWork.lua");
 	NPL.load("script/ide/System/UI/Page/Macro/MacrosExtend.lua");
+	NPL.load("(gl)script/apps/Aries/Creator/Game/Areas/ChatSystem/ChatWindow.lua");
+	MyCompany.Aries.ChatSystem.ChatWindow.InitSystem();
 end
 
 
@@ -202,6 +204,9 @@ function GameLogic:InitAPIPath()
 	GameLogic.Assessment = Assessment
 	GameLogic.DockManager = DockManager:InitSingleton()
 	GameLogic.DockManager:OnInit()
+	-- for all defer loaded objects. 
+	GameLogic.All = NPL.load("(gl)script/apps/Aries/Creator/Game/Common/DeferredGlobalObjects.lua");
+	
 	_G["GameLogic"] = GameLogic; 
 
 
@@ -219,8 +224,6 @@ function GameLogic:InitAPIPath()
 	DOM.AddDOM("commonlib", function() return TableAttribute:create(commonlib) end);
 	DOM.AddDOM("WorldCommon", function() return TableAttribute:create(WorldCommon) end);
 	GameLogic.gameFRC = DOM.GetDOM("gameFRC");
-
-	
 end
 
 -- static method called at the very beginning when paracraft start
@@ -297,6 +300,8 @@ function GameLogic.InitCommon()
 	local Macros = commonlib.gettable("MyCompany.Aries.Game.GameLogic.Macros")
 
 	PhysicsWorld:StaticInit()
+
+	NPL.load("(gl)script/apps/Aries/Creator/Game/Code/CodeBlockFileSync.lua");
 end
 
 -- for checking desktop state after activate desktop
@@ -773,7 +778,7 @@ function GameLogic.LoadGame()
 	ModManager:OnWorldLoad();
 	GameLogic:WorldLoaded()
 	GameLogic.GetFilters():apply_filters("OnWorldLoaded");
-	ParaEngine.GetAttributeObject():CallField("FlushDiskIO");
+	GameLogic.FlushDiskIO()
 	
 	local worldname = GameLogic.GetWorldDirectory():match("([^/\\]+)$")
 	GameLogic.GetFilters():apply_filters("user_event_stat", "world", "enter:"..tostring(worldname), 3, nil);
@@ -991,7 +996,7 @@ function GameLogic.SaveAll(bSaveToLastSaveFolder, bForceSave)
 
 	GameLogic.GetFilters():apply_filters("OnSaveWrold");
 	-- GameLogic.SysncHomeWorkWorld()
-	ParaEngine.GetAttributeObject():CallField("FlushDiskIO");
+	GameLogic.FlushDiskIO()
 
 	GameLogic.world_revision:SetUnModified()
 end
@@ -1034,7 +1039,7 @@ function GameLogic.Exit(bSoft)
 		if(GameLogic.world_revision:IsModifiedAndNotBackedup() and GameLogic.world_revision:IsModifiedAndNotAutoSaved()) then
 			-- always do an auto save on exit when modified
 			GameLogic.world_revision:StageChangesToFolder();
-			if System.options.channelId_431 then
+			if System.options.isEducatePlatform then
 				GameLogic.SendErrorLog("GameLogic","Educate Backedup success-----")
 			end
 		end
@@ -1721,8 +1726,7 @@ function GameLogic.AppendChat(text, entity, bAppendToLast)
 			text = name..":"..(text or "");
 		end
 	end
-	NPL.load("(gl)script/apps/Aries/Creator/Game/Areas/ChatSystem/ChatWindow.lua");
-	MyCompany.Aries.ChatSystem.ChatWindow.InitSystem();
+	
 	ChatChannel.AppendChat({
 			ChannelIndex=ChatChannel.EnumChannels.NearBy, 
 			words=text,
@@ -1825,7 +1829,7 @@ function GameLogic.ToggleDesktop(name)
 		else
 			NPL.load("(gl)script/apps/Aries/Creator/Game/Areas/EscFramePage.lua");
 			local EscFramePage = commonlib.gettable("MyCompany.Aries.Creator.Game.Desktop.EscFramePage");
-		EscFramePage.ShowPage();
+			EscFramePage.ShowPage();
 		end
 	elseif(name == "builder") then
 		if(GameMode:IsUseCreatorBag()) then
@@ -1978,7 +1982,7 @@ end
 -- @param callbackFunc: only called if user is vip and bOpenUIIfNot is true
 -- return true if the user is vip
 function GameLogic.IsVip(name, bOpenUIIfNot, callbackFunc, uiType)
-	if System.options.ZhyChannel ~= "" then
+	if System.options.ZhyChannel and System.options.ZhyChannel ~= "" then
 		bOpenUIIfNot = false
 	end
 	
@@ -2310,7 +2314,7 @@ end
 
 -- @param params: {username=string, userId = id, tabName="skin|honor|nil"} or just username
 function GameLogic.ShowUserInfoPage(params)
-	if System.options.isPapaAdventure or System.options.channelId_431 then
+	if System.options.isPapaAdventure or System.options.isEducatePlatform then
 		--GameLogic.AddBBS(nil,"")
 		return
 	end
@@ -2366,4 +2370,11 @@ function GameLogic.GetMachineID(oldId)
 		end
 	end
 	return oldId
+end
+
+function GameLogic.FlushDiskIO()
+	-- emscripten 同步到磁盘
+    if (System.os.IsEmscripten()) then
+        ParaEngine.GetAttributeObject():CallField("FlushDiskIO");
+    end
 end

@@ -11,7 +11,7 @@ NPL.load("(gl)script/ide/System/localserver/localserver.lua");
 
 local HttpWrapper = NPL.load("(gl)script/apps/Aries/Creator/HttpAPI/HttpWrapper.lua");
 
-if System.options.channelId_431 then
+if System.options.isEducatePlatform then
     --http://yapi.kp-para.cn/project/32/interface/api/cat_97
     HttpWrapper.Create("keepwork.user.login", "%MAIN%/core/v0/edu/users/login", "POST", false)
 else
@@ -25,7 +25,7 @@ HttpWrapper.Create("keepwork.classcode.login", "%MAIN%/core/v0/edu/users/loginBy
 --http://yapi.kp-para.cn/project/32/interface/api/5593
 HttpWrapper.Create("keepwork.user.judgeTokenEnough", "%MAIN%/core/v0/user/judgeTokenEnough", "GET", true)
 
-if System.options.channelId_431 then
+if System.options.isEducatePlatform then
 --http://yapi.kp-para.cn/project/32/interface/api/492
     HttpWrapper.Create("keepwork.user.profile", "%MAIN%/core/v0/edu/users/profile", "GET", true)
 else

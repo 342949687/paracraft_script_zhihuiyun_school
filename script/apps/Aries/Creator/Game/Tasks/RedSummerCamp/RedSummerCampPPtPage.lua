@@ -2361,7 +2361,7 @@ function RedSummerCampPPtPage.CreateWorld(node_name, mcml_node)
 		local CreateWorldLoadingPage = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/RedSummerCamp/CreateWorldLoadingPage.lua")
 		CreateWorldLoadingPage.ShowView(loading_end_callback, desc_list);
 		if not is_file_exist and fork_project_id and tonumber(fork_project_id) > 0 then
-			GameLogic.RunCommand(string.format([[/createworld -name "%s" -update -fork %d]], project_name, tonumber(fork_project_id)))			
+			GameLogic.RunCommand(string.format([[/createworld -name "%s" -update -fork %d -mode admin]], project_name, tonumber(fork_project_id)))			
 			CreateWorldLoadingPage.SetSpecialFlag(false);
 		end
 	end, 50);

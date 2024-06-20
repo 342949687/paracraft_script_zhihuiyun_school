@@ -219,6 +219,7 @@ function SysInfoStatistics.checkGetSysInfoAndUpload(preInfo)
                             newRet[k] = v
                         end
                     end
+                    SysInfoStatistics.uploadSysInfo(newRet)
                 end
             end));
         end

@@ -50,7 +50,7 @@ function MqttDeleteProject.OnClickDeleteProject()
     local id = MqttDeleteProject.deleteData.id or -1
     MqttDeleteProject.deleteData = nil
     MqttManager.getInstance():DeleteProject(id,function(success,data)
-        echo(data,true)
+        -- echo(data,true)
         print("delete====================",success)
         if success then
             GameLogic.AddBBS(nil,L"删除成功")

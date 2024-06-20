@@ -197,12 +197,15 @@ end
         <div style="margin-left:31px;">
             <div style="margin-top:13px;">
                 <input type="button" value='<%=L"保存世界"%>' uiname="EscFramePage.shareWorld" name="shareWorld" style="width:130px;height:31px;color:#ffffff;" class="mc_light_grey_button_with_fillet" onclick="OnClickButton"/>
-                <input type="button" value='<%=L"新建世界"%>' uiname="EscFramePage.createNewWorld" name="createNewWorld"  style="margin-left:41px;width:130px;height:31px;color:#ffffff;" class="mc_light_grey_button_with_fillet" onclick="OnClickButton"/>
-            </div>
-            <div style="margin-top:8px;">
-                <input type="button" value='<%=L"加载世界"%>' tooltip="Ctrl+O" uiname="EscFramePage.loadWorld" name= "loadWorld" style="width:130px;height:31px;color:#ffffff;" class="mc_light_grey_button_with_fillet" onclick="OnClickButton"/>
                 <input type="button" value='<%=L"更换材质"%>' name="changeTexture" style="margin-left:41px;width:130px;height:31px;color:#ffffff;" class="mc_light_grey_button_with_fillet" onclick="OnClickButton"/>
             </div>
+            <pe:if condition="<%= GameLogic.IsReadOnly() %>">
+                <div style="margin-top:8px;">
+                    <input type="button" value='<%=L"加载世界"%>' tooltip="Ctrl+O" uiname="EscFramePage.loadWorld" name= "loadWorld" style="width:130px;height:31px;color:#ffffff;" class="mc_light_grey_button_with_fillet" onclick="OnClickButton"/>
+                    <input type="button" value='<%=L"新建世界"%>' uiname="EscFramePage.createNewWorld" name="createNewWorld"  style="margin-left:41px;width:130px;height:31px;color:#ffffff;" class="mc_light_grey_button_with_fillet" onclick="OnClickButton"/>
+                </div>
+            </pe:if>
+            
             <div style="margin-top:8px;">
                 <input type="button" value='<%=L"系统设置"%>' name= "systemSetting" style="width:130px;height:31px;color:#ffffff;" class="mc_light_grey_button_with_fillet" onclick="OnClickButton"/>
                 <input type="button" value='<%=L"退出世界"%>' uiname="EscFramePage.exitWorld" name= "exitWorld" style="margin-left:41px;width:130px;height:31px;color:#ffffff;" class="mc_light_grey_button_with_fillet" onclick="OnClickButton"/>

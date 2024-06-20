@@ -41,6 +41,7 @@ function EducateProject.GetUserWorldUsedSize()
                 print("err=========",err)
                 echo(data,true)
             end
+            local gbSize = 1024*1024*1024 --1GB
             local totalSize = tonumber(data.total) or 0 --总容量
             local surplus = tonumber(data.surplus) or 0 --剩余容量
             surplus = math.max(surplus,0)
@@ -49,7 +50,11 @@ function EducateProject.GetUserWorldUsedSize()
             if surplus then
                 local objText = ParaUI.GetUIObject("project_memui")
                 if objText:IsValid() then
-                    objText.text = "剩余存档空间："..(math.floor((surplus/1024/1024)*10)/10).."MB"
+                    if surplus >= 0 and surplus < gbSize then
+                        objText.text = "剩余存档空间："..(math.floor((surplus/1024/1024)*10)/10).."MB"
+                    else
+                        objText.text = "剩余存档空间："..(math.floor((surplus/gbSize)*10)/10).."GB"
+                    end
                 end
             end
         else
@@ -94,6 +99,7 @@ end
 
 function EducateProject.RefreshPage()
     if page then
+        EducateProject.CloseCreate()
         page:Refresh(0.1)
     end
 end

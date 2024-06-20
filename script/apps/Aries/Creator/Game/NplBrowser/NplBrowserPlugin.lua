@@ -66,7 +66,8 @@ local cefclient_config_filename = "cefclient_config.json"; -- same value in NplC
 
 local DISABLE_WINDOW_WEBVIEW2 = false;
 local is_windows_webview2_found = false;
-local window_webview_dll_name = ParaEngine.IsDebugging() and "ParaWebView_d.dll" or "ParaWebView.dll";
+--local window_webview_dll_name = ParaEngine.IsDebugging() and "ParaWebView_d.dll" or "ParaWebView.dll";
+local window_webview_dll_name = "ParaWebView.dll";
 local window_webview_auto_install = true;
 
 NplBrowserPlugin.is_registered = false;
@@ -77,6 +78,15 @@ NplBrowserPlugin.messageLoopInterval = 0.2 * 1000;
 NplBrowserPlugin.webview = nil; -- webview instance
 NplBrowserPlugin.on_created_callback_map = {};
 NplBrowserPlugin.last_start_cmd = nil
+NplBrowserPlugin.about_blank_url = "https://webparacraft.keepwork.com/about_blank.html";  -- window webview ²»Ö§³Ö "about:blank"
+
+local about_blank_urls = {
+    ["ONLINE"] = "https://webparacraft.keepwork.com/about_blank.html",
+    ["RELEASE"] = "https://emscripten.keepwork.com/about_blank.html",
+    ["LOCAL"] = "http://127.0.0.1:8088/npl/webparacraft/about_blank.html",
+};
+local HttpEnv = ParaEngine.GetAppCommandLineByParam("http_env", "ONLINE"); -- ONLINE -- RELEASE -- LOCAL
+NplBrowserPlugin.about_blank_url = about_blank_urls[string.upper(HttpEnv)];
 
 function NplBrowserPlugin.IsWindowWebView2Found()
 	NplBrowserPlugin.OneTimeInitWebview2()
@@ -936,7 +946,7 @@ function NplBrowserPlugin.SetWebView2NotValid(istimeout)
     NPL.load("(gl)script/apps/Aries/Creator/Game/NplBrowser/NplBrowserLoaderPage.lua");
     local NplBrowserLoaderPage = commonlib.gettable("NplBrowser.NplBrowserLoaderPage");
     NplBrowserPlugin.Show({id = id, visible = false})
-    NplBrowserPlugin.Open({id = id, url = "about:blank", resize = true});
+    NplBrowserPlugin.Open({id = id, url = NplBrowserPlugin.about_blank_url, resize = true});
     is_windows_webview2_found = false
     --only install chrome cef3 and webview2 is valid
     commonlib.TimerManager.SetTimeout(function()

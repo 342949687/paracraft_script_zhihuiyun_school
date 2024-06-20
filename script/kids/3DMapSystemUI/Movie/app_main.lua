@@ -264,7 +264,7 @@ function MyCompany.Apps.VideoRecorder.OnExec(app, commandName, params)
 		Map3DSystem.App.Commands.Call("Env.terrain")		
 		Map3DSystem.App.Env.TerrainPage.DataBind(params)
 	elseif(commandName == "File.MovieSkyTarget") then	
-		Map3DSystem.App.Commands.Call("Env.sky")		
+		Map3DSystem.App.Commands.Call("Env.sky")			
 		Map3DSystem.App.Env.SkyPage.DataBind(params)
 	elseif(commandName == "File.MovieCaptionTarget") then	
 		Map3DSystem.App.Commands.Call("File.MCMLWindowFrame", {

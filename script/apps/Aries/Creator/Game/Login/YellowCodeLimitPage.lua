@@ -33,7 +33,7 @@ function YellowCodeLimitPage.OnBecomeVip()
 end
 
 function YellowCodeLimitPage.CheckShow()
-    if System.options.channelId_431 or System.options.isPapaAdventure or System.options.channelId_tutorial then --智慧教育版，屏蔽黄码弹窗
+    if System.options.isEducatePlatform or System.options.isPapaAdventure or System.options.channelId_tutorial then --智慧教育版，屏蔽黄码弹窗
         return
     end
     keepwork.checkYellowCodeLimit({},function(err, msg, data)           
@@ -50,7 +50,7 @@ function YellowCodeLimitPage.CheckShow()
 end
 
 function YellowCodeLimitPage.ShowPage(deadline)
-    if System.options.channelId_431 or System.options.isPapaAdventure or System.options.channelId_tutorial then --智慧教育版，屏蔽黄码弹窗
+    if System.options.isEducatePlatform or System.options.isPapaAdventure or System.options.channelId_tutorial then --智慧教育版，屏蔽黄码弹窗
         return
     end
     YellowCodeLimitPage.deadlineStramp = commonlib.timehelp.GetTimeStampByDateTime(deadline)

@@ -19,7 +19,7 @@
     end
 
     function OnClickMenu()
-        print("ddddddddddddddd")
+        --print("ddddddddddddddd")
         EducateProject.ShowOptionMenu()
     end
 ]]></script>
@@ -32,11 +32,9 @@
         <div style="width: 1060px; height: 90px; margin-top: 20px; margin-left: 30px; ">
             <div style="position: relative;font-size: 20px; base-font-size: 20px;font-weight: bold;"><%=L"我的作品"%></div>
             
-            <!-- <pe:if condition="<%= System.options.isInternal %>"> -->
             <pe:container alignment="_rt" uiname="option_menu_pos"  style="width: 100px; height: 30px; margin-right: 80px; background: url();">
                 <input type="button" value="<%=L'导入存档'%>" onclick="OnClickMenu" icon="Texture/Aries/Creator/paracraft/Educate/Project/icon_import_21x21_32bits.png;0 0 21 21" icon_off_x="-28" icon_off_y="2" icon_width="21" icon_height="21" style= "width: 100px; height: 30px; background: url(Texture/Aries/Creator/keepwork/ClassManager/gray_button_32bits.png#0 0 16 16:7 7 7 7); text-offset-x:10;"/>
             </pe:container>
-            <!-- </pe:if> -->
         </div>
         <!-- 占位 -->
         <div style="margin-top: 6px; margin-left: 10px;  width: 1080px; height: 400px; ">

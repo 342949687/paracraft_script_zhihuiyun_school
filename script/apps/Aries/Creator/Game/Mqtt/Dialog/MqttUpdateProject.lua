@@ -58,7 +58,7 @@ function MqttUpdateProject.OnClickUpdateProject()
     local id = MqttUpdateProject.editProjectData.id or -1
     page:CloseWindow()
     MqttManager.getInstance():UpdateProject(id,name,function(success,data)
-        echo(data,true)
+        -- echo(data,true)
         if success then
             GameLogic.AddBBS(nil,L"修改成功")
             MqttMainPage.LoadProjectList()

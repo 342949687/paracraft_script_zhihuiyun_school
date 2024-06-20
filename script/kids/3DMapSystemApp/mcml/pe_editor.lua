@@ -873,7 +873,7 @@ function pe_editor_button.create(rootName, mcmlNode, bindingContext, _parent, le
 		_this:SetField("Padding", css.padding)
 	end
 
-	local icon = mcmlNode:GetAttribute("icon");
+	local icon = mcmlNode:GetAttributeWithCode("icon",nil,true) or mcmlNode:GetAttribute("icon");
 	local icon_obj
 	if icon then
 		local icon_width = tonumber(mcmlNode:GetAttribute("icon_width")) or 0
@@ -1672,7 +1672,8 @@ function pe_editor_text.create(rootName, mcmlNode, bindingContext, _parent, left
 		end	
 		
 		if(_this) then
-			if mcmlNode:GetBool("ReadOnly") then
+			local isReadOnly = mcmlNode:GetAttributeWithCode("ReadOnly",false,true);
+			if isReadOnly then
 				_this.enabled = false;
 			end
 			local isMoveView = mcmlNode:GetAttributeWithCode("MoveViewWhenAttachWithIME", nil, false)
@@ -1735,6 +1736,7 @@ function pe_editor_text.create(rootName, mcmlNode, bindingContext, _parent, left
 
 		if(mcmlNode:GetBool("autofocus")) then
 			_this:Focus();
+			_this:SetCaretPosition(-1);
 		end
 		local tooltip = mcmlNode:GetAttributeWithCode("tooltip")
 		if(tooltip) then

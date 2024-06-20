@@ -93,6 +93,23 @@ function commonlib.debugstack(level, count1, count2)
     return res;
 end
 
+-- print stack to log. 
+function commonlib.debug.PrintStack(level, count1, count2)
+	log(commonlib.debugstack(level, count1, count2));
+end
+
+function commonlib.debug.GetStackDepth()
+    local depth = 0
+    while true do
+        if debug.getinfo(depth + 1) then
+            depth = depth + 1
+        else
+            break
+        end
+    end
+    return depth
+end
+
 -- get formated file, line number, function info
 -- @param level Number - the stack depth at which to start the stack trace (default 1 - the function calling locationinfo) 
 function commonlib.debug.locationinfo(level)

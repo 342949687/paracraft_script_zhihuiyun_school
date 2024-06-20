@@ -66,7 +66,7 @@
                         --MqttTopicDetailPage.OnClickNextMonth()
                     end
                     function OnClickDay(name)
-                        print("name===========",name)
+                        --print("name===========",name)
                         MqttTopicDetailPage.OnClickDay(name)
                     end
 
@@ -109,7 +109,7 @@
                         MqttTopicDetailPage.RefreshPage()
                     end
                     function OnClickDay1(name)
-                        print("name===========",name)
+                        --print("name===========",name)
                         MqttTopicDetailPage.OnClickDay1(name)
                     end
 
@@ -150,23 +150,58 @@
                     end
 
                     function GetLimitMsg(msg)
-                        if msg == nil then
+                        if msg == nil or msg == "" then
                             return ""
                         end
                         local fontName = "System;12;norm"
+                        local maxWidth = 350
                         local width = _guihelper.GetTextWidth(msg, fontName)
-                        if width > 510 then
-                            local trimText = _guihelper.AutoTrimTextByWidth(msg, 510, fontName)
-                            return trimText
+                        local isUtf8String = commonlib.IsUtf8String(msg)
+                        if width > maxWidth then
+                            local trimText = isUtf8String and _guihelper.TrimUtf8TextByWidth(msg, maxWidth, fontName) or _guihelper.AutoTrimTextByWidth(msg, maxWidth, fontName)
+                            return trimText.."..."
                         end
                         return msg
                     end
 
-                    function GetMsgToolTip(msg)
-                        if GetLimitMsg(msg) ~= msg then
-                            return msg
+                    function IsLimitMsg(msg)
+                        if msg == nil or msg == "" then
+                            return false
                         end
-                        return ""
+                        local fontName = "System;12;norm"
+                        local width = _guihelper.GetTextWidth(msg, fontName)
+                        return width and width > 350
+                    end
+
+                    function IsLittleSize()
+                        return MqttTopicDetailPage.mqttShowTopicDataList and #MqttTopicDetailPage.mqttShowTopicDataList < 11
+                    end
+
+                    function onclickDetail(name)
+                        local index = name and tonumber(name)
+                        if index then
+                            local topicData = MqttTopicDetailPage.mqttShowTopicDataList[index]
+                            if topicData then
+                                MqttTopicDetailPage.OnClickDetail(topicData)
+                            end
+                        end
+                    end
+
+                    function IsLimitDeviceName(name)
+                        if name == nil or name == "" then
+                            return false
+                        end
+                        local fontName = "System;12;norm"
+                        local width = _guihelper.GetTextWidth(name, fontName)
+                        return width and width > 100
+                    end
+
+                    function GetLimitDeviceName(name)
+                        return commonlib.GetLimitLabelByTextWidth(name,100,"System;12;norm")
+                    end
+
+                    function onclickRefresh()
+                        MqttTopicDetailPage.OnClickRefresh()
                     end
                 ]]>
             </script>
@@ -264,14 +299,19 @@
                             <div style="float: left; font-size: 18px; base-font-size: 18px; color: #ffffff; font-weight: bold; "><%=L"项目名："..GetProjectName()%></div>
                             <div style="float: left; margin-left: 80px; font-size: 18px; base-font-size: 18px; color: #ffffff; font-weight: bold;"><%=L"主题："..GetTopicName()%></div>
                             <div style="color: #ffffff;"><%=L"注意：系统只保留最近500条数据，请谨慎使用"%></div>
-
-                            <div style="position: relative; width: 860px; height: 314px; margin-top: 8px;">
-                                <div style="margin-top: 0px; width:860px; height:22px; text-align:center;font-size: 16px;color:#000000;" >
+                            <input type='button' value='<%=L"刷新"%>' onclick='onclickRefresh' class='mc_light_grey_button_with_fillet' style='position: relative; color: #FFFFFF; margin-left: 735px; margin-top: -44px; width: 100px; height: 32px;' />
+                            <div style="position: relative; width: 870px; height: 314px; margin-top: 8px;">
+                                <div style="margin-top: 0px; width:870px; height:22px; text-align:center;font-size: 16px;color:#000000;" >
                                     <div style="float: left; width: 160px; background: url(Texture/Aries/Creator/keepwork/vip/baidiheikuang_32x32_32bits.png:3 3 3 3);"><%=L"设备名称"%></div>
                                     <div style="float: left; width: 160px; background: url(Texture/Aries/Creator/keepwork/vip/baidiheikuang_32x32_32bits.png:3 3 3 3);"><%=L"时间"%></div>
-                                    <div style="float: left; width: 540px; background: url(Texture/Aries/Creator/keepwork/vip/baidiheikuang_32x32_32bits.png:3 3 3 3);"><%=L"数据"%></div>
+                                    <pe:if condition="<%=IsLittleSize()%>">
+                                        <div style="float: left; width: 540px; background: url(Texture/Aries/Creator/keepwork/vip/baidiheikuang_32x32_32bits.png:3 3 3 3);"><%=L"数据"%></div>
+                                    </pe:if>
+                                    <pe:if condition="<%=not IsLittleSize()%>">
+                                        <div style="float: left; width: 536px; background: url(Texture/Aries/Creator/keepwork/vip/baidiheikuang_32x32_32bits.png:3 3 3 3);"><%=L"数据"%></div>
+                                    </pe:if>
                                 </div>
-                                <div style="width: 874px; height: 240px;">
+                                <div style="width: 870px; height: 240px;">
                                     <pe:gridview RememberScrollPos="true"
                                                 AllowPaging="false"
                                                 VerticalScrollBarStep="50"
@@ -282,9 +322,25 @@
                                                 name="mqtt_message_list">
                                         <Columns>
                                             <div style="margin-top: 0px; width:870px; height:24px; text-align:center;font-size: 12px;" >
-                                                <div style="float: left; width: 160px; height: 24px; background: url(Texture/Aries/Creator/keepwork/vip/baidiheikuang_32x32_32bits.png:3 3 3 3);"><%=Eval("deviceName")%></div>
+                                                <div style="float: left; width: 160px; height: 24px; background: url(Texture/Aries/Creator/keepwork/vip/baidiheikuang_32x32_32bits.png:3 3 3 3);">
+                                                    <pe:if condition='<%=IsLimitDeviceName(Eval("deviceName"))%>'>
+                                                        <div style="position: relative; width: 160px; height: 24px;"><%=GetLimitDeviceName(Eval("deviceName"))%></div>
+                                                        <div tooltip='<%=Eval("deviceName")%>' style="position: relative; width: 160px; height: 24px;"></div>
+                                                    </pe:if>
+                                                    <pe:if condition='<%=not IsLimitDeviceName(Eval("deviceName"))%>'>
+                                                        <%=Eval("deviceName")%>
+                                                    </pe:if>
+                                                </div>
                                                 <div style="float: left; width: 160px; height: 24px; background: url(Texture/Aries/Creator/keepwork/vip/baidiheikuang_32x32_32bits.png:3 3 3 3);"><%=Eval("publishAt")%></div>
-                                                <div style="float: left; width: 550px; height: 24px; background: url(Texture/Aries/Creator/keepwork/vip/baidiheikuang_32x32_32bits.png:3 3 3 3);"><%=GetLimitMsg(Eval("msg"))%></div>
+                                                <div style="float: left; width: 540px; height: 24px; background: url(Texture/Aries/Creator/keepwork/vip/baidiheikuang_32x32_32bits.png:3 3 3 3);">
+                                                    <pe:if condition='<%=IsLimitMsg(Eval("msg"))%>'>
+                                                        <%=GetLimitMsg(Eval("msg"))%>
+                                                        <input type="button" name="<%=Eval('index')%>" onclick="onclickDetail" value="<%=L'[详情]'%>" style="float: left; color: #0000ff; background: url();" />
+                                                    </pe:if>
+                                                    <pe:if condition='<%=not IsLimitMsg(Eval("msg"))%>'>
+                                                        <%=GetLimitMsg(Eval("msg"))%>
+                                                    </pe:if>
+                                                </div>
                                             </div>
                                         </Columns>
                                     </pe:gridview>

@@ -38,9 +38,20 @@ function CheckBox:Init(xmlNode, window, parent)
     return self;
 end
 
+function CheckBox:OnAttrValueChange(attrName, attrValue, oldAttrValue)
+    if (attrName == "checked") then 
+        self:SetChecked(self:GetAttrBoolValue("checked", false));
+    end
+end
+
+function CheckBox:SetChecked(checked)
+    self.checked = checked;
+end
+
 function CheckBox:OnClick(event)
     self.checked = not self.checked;
     CheckBox._super.OnClick(self, event);
+    self:OnChange(self.checked);
 
     local groupElement = self:GetGroupElement();
     if (groupElement) then 

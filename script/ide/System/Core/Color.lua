@@ -134,6 +134,11 @@ function Color.rgb2hsl(r, g, b)
 	return h, s, l
 end
 
+-- @param r, g, b: each in [0,255]
+function Color.RGB_TO_DWORD(r, g, b)
+	return r*256*256 + g*256 + b;
+end
+
 -- @param r, g, b, a: each in [0,255]
 function Color.RGBA_TO_DWORD(r, g, b, a)
 	local c=0;

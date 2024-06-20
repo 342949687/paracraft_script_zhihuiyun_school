@@ -33,7 +33,8 @@ local FieldVariable = NPL.load("./Fields/Variable.lua");
 local InputValue = NPL.load("./Inputs/Value.lua");
 local InputValueList = NPL.load("./Inputs/ValueList.lua");
 local InputStatement = NPL.load("./Inputs/Statement.lua");
-
+local FieldCode = NPL.load("./FieldCode.lua");
+local FoldedBlock = NPL.load("./FoldedBlock.lua");
 local Block = commonlib.inherit(BlockInputField, NPL.export());
 local BlockDebug = System.Util.Debug.GetModuleDebug("BlockDebug").Disable();   --Enable  Disable
 
@@ -42,6 +43,7 @@ local BlockPen = {width = 1, color = "#ffffff"};
 local CurrentBlockPen = {width = 2, color = "#cccccc"};
 local BlockBrush = {color = "#ffffff"};
 local CurrentBlockBrush = {color = "#ffffff"};
+local DisableRunBlockColor = "#e0e0e0";
 
 Block:Property("Blockly");
 Block:Property("Id");
@@ -54,6 +56,7 @@ Block:Property("Dragging", true, "IsDragging");                                -
 Block:Property("ProxyBlock");                                                  -- 代理块
 Block:Property("HideInToolbox", false, "IsHideInToolbox");                     -- 是否在工具栏中隐藏
 Block:Property("Indent", "");                                                  -- 缩进
+Block:Property("DisableRun", false, "IsDisableRun");                           -- 是否禁止执行
 
 function Block:ctor()
     self:SetId(nextBlockId);
@@ -157,6 +160,7 @@ function Block:ParseMessageAndArg(opt)
         return inputFieldContainer;
     end
 
+    local text_template = "";
     local message, arg = GetMessageArg();
     while (message) do
         local lastNo = 0;
@@ -173,12 +177,15 @@ function Block:ParseMessageAndArg(opt)
              -- 添加FieldLabel
             if (text ~= "") then 
                 inputFieldContainer:AddInputField(FieldLabel:new():Init(self, {text = text}), true);
+                text_template = text_template .. text .. " ";
             end
             no = no or (nolen > 0 and lastNo + 1 or nil);
             if (no and arg and arg[no]) then
                 -- 添加InputAndField
                 local inputField = arg[no];
-                if (inputField.type == "field_input" or inputField.type == "field_number" or inputField.type == "field_password") then
+                if (inputField.type == "field_label") then
+                    inputFieldContainer:AddInputField(FieldLabel:new():Init(self, inputField), true);
+                elseif (inputField.type == "field_input" or inputField.type == "field_number" or inputField.type == "field_password") then
                     inputFieldContainer:AddInputField(FieldInput:new():Init(self, inputField), true);
                 elseif (inputField.type == "field_color") then
                     inputFieldContainer:AddInputField(FieldColor:new():Init(self, inputField), true);
@@ -212,6 +219,11 @@ function Block:ParseMessageAndArg(opt)
                 end
                 
                 table.insert(self.inputFieldOptionList, inputField);
+
+                local field_name = inputField.name or "";
+                if (field_name ~= "") then
+                    text_template = text_template .. " " .. string.format("${%s}", field_name);
+                end
             end
             startPos = pos + 1 + nolen;
             lastNo = no;
@@ -220,7 +232,22 @@ function Block:ParseMessageAndArg(opt)
         message, arg = GetMessageArg();
     end
 
+    self.m_text_template = text_template;
     if (#self.inputFieldContainerList == 0) then GetInputFieldContainer(true) end
+end
+
+function Block:GetText()
+    local field_texts = {};
+    local field_size = #self.inputFieldOptionList;
+    for i = 1, field_size do
+        local input_field_option = self.inputFieldOptionList[i];
+        local field_name = input_field_option.name or "";
+        local input_field = self:GetField(field_name);
+        if (field_name ~= "" and input_field) then
+            field_texts[field_name] = input_field:GetText();
+        end  
+    end
+    return string.gsub(self.m_text_template, "%$%{([%w%_]+)%}", field_texts);      -- ${name} 取字段值
 end
 
 -- 大小改变
@@ -433,7 +460,6 @@ end
 
 function Block:OnMouseDown(event)
     if (self:IsDragging()) then return end 
-
     local blockly = self:GetBlockly();
     self.startX, self.startY = blockly:GetLogicViewPoint(event);
     self.lastMouseMoveX, self.lastMouseMoveY = self.startX, self.startY;
@@ -453,7 +479,7 @@ function Block:OnMouseMove(event)
     if (not block:IsDragging()) then
         if (not event:IsMove()) then return end
         if (block:IsToolBoxBlock()) then 
-            clone = self:Clone();
+            clone = block:Clone(nil, true);
             clone:SetToolBoxBlock(false);
             clone:OnCreate();
             clone.isNewBlock = true;
@@ -494,10 +520,8 @@ function Block:OnMouseMove(event)
 end
 
 function Block:OnMouseUp(event)
-    local blockCount = self:GetBlockCount();
     local blockly = self:GetBlockly();
     blockly:GetShadowBlock():Shadow(nil);
-
     local function delete_block()
         blockly:RemoveBlock(self);
         blockly:OnDestroyBlock(self);
@@ -577,12 +601,25 @@ function Block:GetConnection()
     return nil;
 end
 
-function Block:TryConnectionBlock(targetBlock)
+function Block:TryConnectionBlock(target_block)
+    target_block = target_block or self;
+    target_block.m_connection_distance = nil;
+    target_block.m_connection_callback = nil;
+
     local blocks = self:GetBlockly():GetBlocks();
+    local is_connect = false;
     for _, block in ipairs(blocks) do
-        if (block:ConnectionBlock(targetBlock or self)) then return true end
+        -- if (block:ConnectionBlock(target_block)) then return true end
+        local is_connect_block = block:ConnectionBlock(target_block);
+        is_connect = is_connect or is_connect_block;
     end
-    return false;
+
+    if (target_block.m_connection_distance) then
+        target_block.m_connection_callback();
+        return true;
+    end
+
+    return is_connect;
 end
 
 function Block:IsIntersect(block, isSingleBlock)
@@ -634,11 +671,25 @@ function Block:ConnectionBlock(block)
     -- 优先匹配上连接
     if (block:IsStart()) then
         if (not self.previousConnection or self.previousConnection:IsConnection()) then return end 
-        if (self.topUnitCount > block.topUnitCount and not (block.isShadowBlock and block.shadowBlock or block).nextConnection:IsConnection() and self.previousConnection:IsMatch(block.nextConnection)) then
-            self:GetBlockly():RemoveBlock(self);
-            self.previousConnection:Connection(block.nextConnection)
-            block:SetLeftTopUnitCount(self.leftUnitCount, self.topUnitCount - block.heightUnitCount);
-            block:GetTopBlock():UpdateLayout();
+        if (self:IsDraggable() and self.topUnitCount > block.topUnitCount and not (block.isShadowBlock and block.shadowBlock or block).nextConnection:IsConnection() and self.previousConnection:IsMatch(block.nextConnection)) then
+            -- 不使用距离规则
+            -- self:GetBlockly():RemoveBlock(self);
+            -- self.previousConnection:Connection(block.nextConnection)
+            -- block:SetLeftTopUnitCount(self.leftUnitCount, self.topUnitCount - block.heightUnitCount);
+            -- block:GetTopBlock():UpdateLayout();
+            -- 使用距离规则
+            local source_block = self;
+            local target_block = block;
+            local distance = math.abs(source_block.leftUnitCount - target_block.leftUnitCount);
+            if (not target_block.m_connection_distance or distance < target_block.m_connection_distance) then
+                target_block.m_connection_distance = distance;
+                target_block.m_connection_callback = function()
+                    source_block:GetBlockly():RemoveBlock(source_block);
+                    source_block.previousConnection:Connection(target_block.nextConnection)
+                    target_block:SetLeftTopUnitCount(source_block.leftUnitCount, source_block.topUnitCount - target_block.heightUnitCount);
+                    target_block:GetTopBlock():UpdateLayout();
+                end
+            end
             return true;         
         end
         return ;
@@ -650,18 +701,37 @@ function Block:ConnectionBlock(block)
         return nextBlock and nextBlock:ConnectionBlock(block);
     end
 
-    if (self.topUnitCount > block.topUnitCount and self.previousConnection and block.nextConnection and 
+    if (self:IsDraggable() and self.topUnitCount > block.topUnitCount and self.previousConnection and block.nextConnection and 
         not (block.isShadowBlock and block.shadowBlock or block).nextConnection:IsConnection() and self.previousConnection:IsMatch(block.nextConnection)) then
-        local previousConnection = self.previousConnection:Disconnection();
-        if (previousConnection) then 
-            previousConnection:Connection(block.previousConnection);
-            self:GetBlockly():RemoveBlock(block);
-        else
-            self:GetBlockly():RemoveBlock(self);
+        -- local previousConnection = self.previousConnection:Disconnection();
+        -- if (previousConnection) then 
+        --     previousConnection:Connection(block.previousConnection);
+        --     self:GetBlockly():RemoveBlock(block);
+        -- else
+        --     self:GetBlockly():RemoveBlock(self);
+        -- end
+        -- self.previousConnection:Connection(block.nextConnection)
+        -- block:SetLeftTopUnitCount(self.leftUnitCount, self.topUnitCount - block.heightUnitCount);
+        -- block:GetTopBlock():UpdateLayout();
+        
+        local source_block = self;
+        local target_block = block;
+        local distance = math.abs(source_block.leftUnitCount - target_block.leftUnitCount);
+        if (not target_block.m_connection_distance or distance < target_block.m_connection_distance) then
+            target_block.m_connection_distance = distance;
+            target_block.m_connection_callback = function()
+                local previousConnection = source_block.previousConnection:Disconnection();
+                if (previousConnection) then 
+                    previousConnection:Connection(target_block.previousConnection);
+                    source_block:GetBlockly():RemoveBlock(target_block);
+                else
+                    source_block:GetBlockly():RemoveBlock(source_block);
+                end
+                source_block.previousConnection:Connection(target_block.nextConnection)
+                target_block:SetLeftTopUnitCount(source_block.leftUnitCount, source_block.topUnitCount - target_block.heightUnitCount);
+                target_block:GetTopBlock():UpdateLayout();
+            end
         end
-        self.previousConnection:Connection(block.nextConnection)
-        block:SetLeftTopUnitCount(self.leftUnitCount, self.topUnitCount - block.heightUnitCount);
-        block:GetTopBlock():UpdateLayout();
         BlockDebug("===================nextConnection match previousConnection====================");
         return true;
     end
@@ -682,13 +752,39 @@ function Block:ConnectionBlock(block)
             if (isConnection) then return true end
         end
 
-        self:GetBlockly():RemoveBlock(block);
-        local nextConnectionConnection = self.nextConnection:Disconnection();
-        self.nextConnection:Connection(block.previousConnection);
-        local lastNextBlock = block:GetLastNextBlock();
-        if (lastNextBlock.nextConnection) then lastNextBlock.nextConnection:Connection(nextConnectionConnection) end
-        block:SetLeftTopUnitCount(self.leftUnitCount, self.topUnitCount + self.heightUnitCount);
-        block:GetTopBlock():UpdateLayout();
+        -- self:GetBlockly():RemoveBlock(block);
+        -- local nextConnectionConnection = self.nextConnection:Disconnection();
+        -- self.nextConnection:Connection(block.previousConnection);
+        -- local lastNextBlock = block:GetLastNextBlock();
+        -- if (lastNextBlock.nextConnection) then lastNextBlock.nextConnection:Connection(nextConnectionConnection) end
+        -- block:SetLeftTopUnitCount(self.leftUnitCount, self.topUnitCount + self.heightUnitCount);
+        -- block:GetTopBlock():UpdateLayout();
+
+        -- local blockPrevBlock = block:GetPrevBlock();
+        -- local blockNextBlock = block:GetNextBlock();
+        -- if (blockPrevBlock and blockPrevBlock:IsDisableRun() and blockNextBlock and blockNextBlock:IsDisableRun() and not block.isShadowBlock) then block:DisableRun(true) end
+
+        if (nextBlock and not nextBlock:IsDraggable()) then return end
+
+        local source_block = self;
+        local target_block = block;
+        local distance = math.abs(source_block.leftUnitCount - target_block.leftUnitCount);
+        if (not target_block.m_connection_distance or distance < target_block.m_connection_distance) then
+            target_block.m_connection_distance = distance;
+            target_block.m_connection_callback = function()
+                source_block:GetBlockly():RemoveBlock(target_block);
+                local nextConnectionConnection = source_block.nextConnection:Disconnection();
+                source_block.nextConnection:Connection(target_block.previousConnection);
+                local lastNextBlock = target_block:GetLastNextBlock();
+                if (lastNextBlock.nextConnection) then lastNextBlock.nextConnection:Connection(nextConnectionConnection) end
+                target_block:SetLeftTopUnitCount(source_block.leftUnitCount, source_block.topUnitCount + source_block.heightUnitCount);
+                target_block:GetTopBlock():UpdateLayout();
+        
+                local blockPrevBlock = target_block:GetPrevBlock();
+                local blockNextBlock = target_block:GetNextBlock();
+                if (blockPrevBlock and blockPrevBlock:IsDisableRun() and blockNextBlock and blockNextBlock:IsDisableRun() and not target_block.isShadowBlock) then target_block:DisableRun(true) end
+            end
+        end
         BlockDebug("===================previousConnection match nextConnection====================");
         return true;
     end
@@ -809,6 +905,40 @@ local function ToVarFuncName(str)
     return newstr;
 end
 
+local function AutoIndexCodeDescription(code_description, excludes)
+    code_description = code_description or "";
+    
+    local lines = {}
+    for line in code_description:gmatch("[^\r\n]+") do
+        table.insert(lines, line);
+    end
+    
+    excludes = excludes or {};
+    excludes["INDENT"] = true;
+    
+    local codes = lines[1] or "";
+    local lines_size = #lines;
+    for i = 2, lines_size do
+        local line = lines[i];
+        local is_skip_indent = false;
+
+        for key in pairs(excludes or {}) do
+            if (string.match(line, "^%s*%$%{" .. key .. "%}")) then
+                is_skip_indent = true;
+                break;
+            end
+        end
+
+        if (is_skip_indent) then
+            codes = codes .. "\n" .. line;
+        else
+            codes = codes .. "\n${INDENT}" .. line;
+        end
+    end
+
+    return codes;
+end
+
 local function DefaultToCode(block)
     local blockly = block:GetBlockly();
     local language = block:GetLanguageType();
@@ -816,12 +946,21 @@ local function DefaultToCode(block)
     local blockIndent = block:GetIndent()
     local option = block:GetOption();
     if (not option) then return "" end
-    local args, argStrs = {}, {};
+    local args, argStrs, auto_indent_excludes = {}, {}, {};
     if (option.arg) then
         for i, arg in ipairs(option.arg) do
             if (arg.name) then
-                args[arg.name] = block:GetFieldValue(arg.name);
-                argStrs[arg.name] = block:GetValueAsString(arg.name);
+                local field = block:GetField(arg.name);
+                local field_value = field and field:GetFieldValue() or "";
+                local field_code = field and field:GetFieldCode() or "";
+                if (type(FieldCode[field_code]) == "function") then field_value = (FieldCode[field_code])(field_value) end
+
+                args[arg.name] = field_value;
+                argStrs[arg.name] = field and field:GetValueAsString(field_value) or "";
+                
+                if (field:GetType() == "input_statement") then
+                    auto_indent_excludes[field:GetName()] = true;
+                end
             end
         end 
     end
@@ -852,11 +991,12 @@ local function DefaultToCode(block)
 
     for _, header in ipairs(option.headers or {}) do
         if (type(header) == "table" and type(header.text) == "string") then
-            blockly:AddUnqiueHeader(header.text);
+            blockly:AddUniqueHeader(template_format(header.text), tonumber(header.zorder) or 0);
         end
     end
 
-    local code = template_format(code_description);
+    local code = template_format(AutoIndexCodeDescription(code_description, auto_indent_excludes));
+
     if (not option.output) then 
         code = code .. "\n" 
     else
@@ -874,7 +1014,10 @@ function Block:GetAllCode(indent)
 
     indent = indent or "";
     while (block) do
-        code = code .. indent .. block:GetCode(indent);
+        local block_code = block:GetCode(indent);
+        if (block_code ~= "" and block_code ~= "\n") then 
+            code = code .. indent .. block:GetCode(indent);
+        end
         block = block:GetNextBlock();
     end
     return code;
@@ -882,6 +1025,7 @@ end
 
 -- 获取块代码
 function Block:GetCode(indent)
+    if (self:IsDisableRun()) then return "" end
     self:SetIndent(indent or "");
 
     local blockly = self:GetBlockly();
@@ -897,10 +1041,8 @@ function Block:GetCode(indent)
         -- print("---------------------图块转换函数不存在---------------------")
     end
     if(option.headerText and option.headerText~="") then
-        local i = 1;
         for header in option.headerText:gmatch("[^\n]+") do
-            i = (blockly:AddUnqiueHeader(header, i) or 0) + 1;
-            i = i + 1;
+            blockly:AddUniqueHeader(header, -1)
         end
     end
     local OnGenerateBlockCodeBefore = blockly:GetAttrFunctionValue("OnGenerateBlockCodeBefore");
@@ -924,6 +1066,60 @@ function Block:GetAllNextCode()
     return code;
 end
 
+function Block:Save()
+    local block = {type = self:GetType(), inputs = {}, fields = {}};
+    local blockly = self:GetBlockly();
+    if (not (self.previousConnection and self.previousConnection:IsConnection())) then block.x, block.y = self.left, self.top end
+
+    for _, inputAndField in pairs(self.inputFieldMap) do
+        local name = inputAndField:GetName();
+        if (inputAndField:IsInput()) then
+            local input = inputAndField:Save();
+            if (input) then block.inputs[name] = input end
+        else
+            local field = inputAndField:Save();
+            if (field) then block.fields[name] = field end
+        end
+    end
+
+    local next_block = self:GetNextBlock();
+    if (next_block) then 
+        block.next = {
+            type = self:GetType(),
+            block = next_block:Save(), 
+        } 
+    end
+
+    return block;
+end
+
+function Block:Load(block)
+    if (block.x and block.y) then
+        self:SetLeftTopUnitCount(math.floor(block.x / self:GetUnitSize()), math.floor(block.y / self:GetUnitSize()));
+    end
+
+    for field_name, field_value in pairs(block.fields or {}) do
+        local inputField = self:GetInputField(field_name);
+        if (inputField) then
+            inputField:Load(field_value);
+        end
+    end
+
+    for field_name, field_value in pairs(block.inputs or {}) do
+        local inputField = self:GetInputField(field_name);
+        if (inputField) then
+            inputField:Load(field_value);
+        end
+    end
+    if (block.next and block.next.block) then
+        local nextBlock = self:GetBlockly():GetBlockInstanceByType(block.next.block.type);
+        nextBlock:Load(block.next.block);
+        if (nextBlock) then
+            self.nextConnection:Connection(nextBlock.previousConnection);
+        end
+    end
+end
+
 -- 获取xmlNode
 function Block:SaveToXmlNode()
     local xmlNode = {name = "Block", attr = {}};
@@ -933,7 +1129,9 @@ function Block:SaveToXmlNode()
     attr.leftUnitCount, attr.topUnitCount = self:GetLeftTopUnitCount();
     attr.isInputShadowBlock = self:IsInputShadowBlock() and "true" or "false";
     attr.isDraggable = self:IsDraggable() and "true" or "false";
-    
+    attr.isDisableRun = self:IsDisableRun() and "true" or "false";
+    attr.isFoldedBlock = self:IsFoldedBlock() and "true" or "false";
+
     for _, inputAndField in pairs(self.inputFieldMap) do
         local subXmlNode = inputAndField:SaveToXmlNode();
         if (subXmlNode) then table.insert(xmlNode, subXmlNode) end
@@ -949,6 +1147,10 @@ function Block:SaveToXmlNode()
         end
     end
 
+    if (self:IsFoldedBlock()) then
+        local foldedBlockXmlNode = self:GetFoldedBlock():SaveToXmlNode();
+        table.insert(xmlNode, {name = "FoldedBlock", [1] = foldedBlockXmlNode});
+    end
     return xmlNode;
 end
 
@@ -961,19 +1163,162 @@ function Block:LoadFromXmlNode(xmlNode)
     self:SetDraggable(if_else(attr.isDraggable == "false", false, true));
 
     local blockly = self:GetBlockly();
+    local nextBlock = nil;
     for _, childXmlNode in ipairs(xmlNode) do
         if (childXmlNode.name == "Block") then
-            local nextBlock = self:GetBlockly():GetBlockInstanceByXmlNode(childXmlNode);
-            if (nextBlock) then
-                self.nextConnection:Connection(nextBlock.previousConnection);
-            end
+            nextBlock = self:GetBlockly():GetBlockInstanceByXmlNode(childXmlNode);
         elseif (childXmlNode.name == "Note") then
             blockly:AddNote(self):LoadFromXmlNode(childXmlNode);
+        elseif (childXmlNode.name == "FoldedBlock") then
+            -- 忽略
         else
             local inputField = self:GetInputField(childXmlNode.attr.name);
             if (inputField) then 
                 inputField:LoadFromXmlNode(childXmlNode);
             end
+        end
+    end
+
+    if (if_else(attr.isDisableRun == "true", true, false)) then 
+        self:DisableRun();
+    end
+    
+    if (nextBlock) then
+        self.nextConnection:Connection(nextBlock.previousConnection);
+    end
+end
+
+function Block:DisableRun(is_disable_next_block)
+    if (self:IsDisableRun()) then return end
+    self.enable_block_color = self:GetColor();
+    self:SetColor(DisableRunBlockColor);
+    self:SetDisableRun(true);
+
+    for _, inputAndField in pairs(self.inputFieldMap) do
+        inputAndField:DisableRun();
+    end
+
+    if (is_disable_next_block) then
+        local next_block = self:GetNextBlock();
+        if (next_block) then
+            next_block:DisableRun(true);
+        end
+    end
+end
+
+function Block:EnableRun(is_enable_next_block)
+    if (not self:IsDisableRun()) then return end
+
+    self:SetColor(self.enable_block_color);
+    self:SetDisableRun(false);
+
+    for _, inputAndField in pairs(self.inputFieldMap) do
+        inputAndField:EnableRun();
+    end
+
+    if (is_enable_next_block) then
+        local next_block = self:GetNextBlock();
+        if (next_block) then
+            next_block:EnableRun(true);
+        end
+    end
+end
+
+function Block:IsFoldedBlock()
+    return false;
+end
+
+function Block:Folded()
+    if (self:IsFoldedBlock()) then return end
+
+    local blockly = self:GetBlockly();
+    local top_block = self:GetTopBlock();
+    local next_block = self:GetNextBlock();
+    self.nextConnection:Disconnection();
+
+    local folded_block = FoldedBlock:new():Init(self:GetBlockly(), self);
+    if (top_block == self) then
+        blockly:RemoveBlock(self);
+        blockly:AddBlock(folded_block);
+        top_block = folded_block;
+        local leftUnitCount, topUnitCount = self:GetLeftTopUnitCount();
+        top_block:SetLeftTopUnitCount(leftUnitCount, topUnitCount);
+    end
+    
+    if (next_block) then
+        folded_block.nextConnection:Connection(next_block.previousConnection);
+    end
+
+    top_block:UpdateLayout();
+end
+
+function Block:Expand()
+    if (not self:IsFoldedBlock()) then return end
+    local blockly = self:GetBlockly();
+    local folded_block = self:GetFoldedBlock();
+    local top_block = self:GetTopBlock();
+    local folded_last_next_block = folded_block:GetLastNextBlock();
+
+    local previousNextConnection = self.previousConnection and self.previousConnection:Disconnection();
+    local nextPreviousConnection = self.nextConnection and self.nextConnection:Disconnection();
+    local outputInputConnection = self.outputConnection and self.outputConnection:Disconnection();
+    if (previousNextConnection and folded_block.previousConnection) then
+        previousNextConnection:Connection(folded_block.previousConnection);
+    end
+    if (nextPreviousConnection and folded_last_next_block and folded_last_next_block.nextConnection) then
+        nextPreviousConnection:Connection(folded_last_next_block.nextConnection);
+    end
+    if (outputInputConnection and folded_block.outputConnection) then
+        outputInputConnection:Connection(folded_block.outputConnection);
+    end
+
+    if (top_block == self) then 
+        blockly:RemoveBlock(self);
+        blockly:AddBlock(folded_block);
+        top_block = folded_block;
+        local leftUnitCount, topUnitCount = self:GetLeftTopUnitCount();
+        top_block:SetLeftTopUnitCount(leftUnitCount, topUnitCount);
+    end
+
+    top_block:UpdateLayout();
+end
+
+function Block:DisableDraggable(is_disable_next_block)
+    self:SetDraggable(false);
+
+    for _, inputAndField in pairs(self.inputFieldMap) do
+        if (inputAndField:IsInput()) then
+            local input_block = inputAndField:GetInputBlock();
+            if (input_block) then
+                input_block:DisableDraggable(true);
+            end
+        end
+    end
+
+    if (is_disable_next_block) then
+        local next_block = self:GetNextBlock();
+        if (next_block) then
+            next_block:DisableDraggable(true);
+        end
+    end
+end
+
+function Block:EnableDraggable(is_enable_next_block)
+    self:SetDraggable(true);
+
+    for _, inputAndField in pairs(self.inputFieldMap) do
+        if (inputAndField:IsInput()) then
+            local input_block = inputAndField:GetInputBlock();
+            if (input_block) then
+                input_block:EnableDraggable(true);
+            end
+        end
+    end
+
+    if (is_enable_next_block) then
+        local next_block = self:GetNextBlock();
+        if (next_block) then
+            next_block:EnableDraggable(true);
         end
     end
 end

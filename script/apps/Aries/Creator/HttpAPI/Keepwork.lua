@@ -162,7 +162,7 @@ function Keepwork:OnLogin()
     if (player) then 
         local skin = userinfo.extra.ParacraftPlayerEntityInfo.skin
         local assetfile = userinfo.extra.ParacraftPlayerEntityInfo.asset
-        if System.options.channelId_431 then
+        if System.options.isEducatePlatform then
             skin = "80001;84129;81112;88042;"
             assetfile = "character/CC/02human/CustomGeoset/actor_kaka.x"
         end

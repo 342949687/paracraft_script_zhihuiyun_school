@@ -76,7 +76,7 @@ function RemoteFile:Download()
 						fileExt = "png";
 					elseif(content_type:match("stl")) then
 						fileExt = "stl";
-					elseif content_type:match("audio") then
+					elseif(content_type:match("audio")) then
 						fileExt = "mp3";
 					end
 				end

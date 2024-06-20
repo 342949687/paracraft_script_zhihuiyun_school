@@ -145,6 +145,12 @@ local options = commonlib.createtable("MyCompany.Aries.Game.GameLogic.options", 
 	isAutoMovieFPS = true,
 	-- show chat wondow
 	bIsShowChatWnd = true,
+	-- can drop file
+	CanDropFile = true,
+	-- can paste block
+	CanPasteBlock = true,
+	--can paste blockly
+	CanPasteBlockly = true,
 });
 
 -- load default setting on application start. 
@@ -207,6 +213,8 @@ function options:LoadDefaultTransientOptions()
 	self.CanJumpInAir = true;
 	self.CanJumpInWater = true;
 	self.AllowRunning = true;
+	self.CanDropFile = true;
+	self.CanPasteBlock = true;
 end
 
 -- usually the left drag is enabled only in touch mode.
@@ -389,7 +397,7 @@ function options:OnLoadWorld()
 
 	if(System.options.mc) then
 		local mainAssetFilename = self:GetMainPlayerAssetName();
-		if System.options.channelId_431 then
+		if System.options.isEducatePlatform then
 			mainAssetFilename = "character/CC/02human/CustomGeoset/actor_kaka.x"
 		end
 		if(mainAssetFilename) then
@@ -397,7 +405,7 @@ function options:OnLoadWorld()
 		end
 		
 		local mainSkins = self:GetMainPlayerSkins();
-		if System.options.channelId_431 then
+		if System.options.isEducatePlatform then
 			mainSkins = "80001;84129;81112;88042;"
 		end
 		if(mainSkins and mainSkins ~= "") then
@@ -595,8 +603,6 @@ function options:SetFramePerSecond(fps)
 	end
 end
 
-
---/shader命令
 function options:SetRenderMethod(shaderIdx,bSave)
 	local res = GameLogic.RunCommand("/shader "..shaderIdx);
     if(res==false) then
@@ -688,7 +694,7 @@ function options:ResetWindowTitle()
 			if not Game.is_started and System.options.isPapaAdventure then
 				return
 			end
-			if System.options.channelId_431 and System.options.isOffline then
+			if System.options.isEducatePlatform and System.options.isOffline then
 				ParaEngine.SetWindowText(windowTitle .. L" (离线模式)");
 				return
 			end
@@ -802,6 +808,9 @@ function options:OnLeaveWorld()
 	Screen:Disconnect("sizeChanged", options, options.OnResize, "UniqueConnection")
 
 	self:SetShowChatWnd(true)
+
+	self:SetCanDropFile(true)
+	self:SetCanPasteBlock(true)
 end
 
 function options:SetLastSaveTime()
@@ -1536,8 +1545,8 @@ end
 -- @param dist: if 0, it will disable super rendering
 function options:SetSuperRenderDist(dist,bSave)
 	dist = dist and tonumber(dist)
+	local attr = ParaTerrain.GetBlockAttributeObject():GetChild("CMultiFrameBlockWorldRenderer");
 	if(dist and dist>=0 and dist <= 5000) then
-		local attr = ParaTerrain.GetBlockAttributeObject():GetChild("CMultiFrameBlockWorldRenderer");
 		attr:SetField("RenderDistance", dist);
 		if(dist == 0) then
 			attr:SetField("Enabled", false);
@@ -1545,6 +1554,8 @@ function options:SetSuperRenderDist(dist,bSave)
 			attr:SetField("Enabled", true);
 			attr:SetField("Dirty", true);
 		end
+	else
+		attr:SetField("Enabled", false);
 	end
 	if bSave then
 		WorldCommon.SetWorldTag("superrenderdist",tostring(dist));
@@ -1768,4 +1779,16 @@ function options:SetScreenSize(width, height, bFitWindow)
 		-- fit entire window 
 		SetMargin_(0, 0, 0, 0)
 	end
+end
+
+function options:SetCanDropFile(bValue)
+	self.CanDropFile = bValue;
+end
+
+function options:SetCanPasteBlock(bValue)
+	self.CanPasteBlock = bValue;
+end
+
+function options:SetCanPasteBlockly(bValue)
+	self.CanPasteBlockly = bValue;
 end

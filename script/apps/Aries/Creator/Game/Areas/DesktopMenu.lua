@@ -20,7 +20,7 @@ local menu_name_map = {};
 local edit_mode_menu = {};
 local game_mode_menu = {};
 
-local isRename = System.options.channelId_431 or System.options.isPapaAdventure
+local isRename = System.options.isEducatePlatform or System.options.isPapaAdventure
 
 function DesktopMenu.LoadMenuItems(bForceReload)
 	if(menu_items and not bForceReload) then
@@ -41,15 +41,18 @@ function DesktopMenu.LoadMenuItems(bForceReload)
 				
 				{text = L"另存为...",name = "file.saveworldas",onclick=nil},
 				{Type = "Separator"},
+				{text = L"导出...", name = "file.export", cmd="/menu file.export", onclick=nil},
 				{text = L"导出p3d文件...",name = "file.exportp3dfile",onclick=nil},
 				{text = L"加载p3d文件...",name = "file.openp3dfile",onclick=nil},
 				{Type = "Separator"},
+				{text = L"生成独立应用程序...",name = "file.makeapp", cmd="/makeapp UImode"},
+				{text = L"生成PPT演示文档...",name = "file.makeppt", cmd="/makeapp ppt"},
+				{Type = "Separator"},
 				{text = isRename and L"保存世界" or L"上传世界",name = "file.uploadworld",onclick=nil},
 				{text = L"本地历史版本...",name = "file.openbackupfolder",onclick=nil},
-				{text = L"生成独立应用程序...",name = "file.makeapp", cmd="/makeapp UImode"},
 				{text = L"备份...",name = "file.worldrevision",onclick=nil},
 				{text = L"打开本地目录".."...",name = "file.openworlddir",onclick=nil},
-				{text = L"导出全部代码...",name = "file.dumpcodeblock", cmd="/dump codeblock",onclick=nil},
+				{text = L"用VsCode打开代码...",name = "file.dumpcodeblock", cmd="/dump codeblock",onclick=nil},
 				{Type = "Separator"},
 				{text = L"系统设置...".."  ESC", name = "file.settings", cmd="/menu file.settings", },
 				{text = L"退出...",name = "file.exit",onclick=nil},
@@ -122,7 +125,7 @@ function DesktopMenu.LoadMenuItems(bForceReload)
 				-- {text = "NPL Debugger... (Ctrl+Alt+I)",name = "window.debugger", cmd="/open npl://debugger"},
 				{text = L"MOD插件管理...".."  Ctrl+M",name = "window.mod",cmd="/show mod"},
 				{text = L"连接串口...",name = "window.serialport",cmd="/show serialport"},
-				-- {text = L"MQTT管理器...",name = "window.mqtt", onclick=nil},
+				{text = L"MQTT管理器...",name = "window.mqtt", onclick=nil},
 				{Type = "Separator"},
 				{text = L"分享...",name = "share.video_or_panorama", onclick=nil},
 			},
@@ -144,7 +147,7 @@ function DesktopMenu.LoadMenuItems(bForceReload)
 				{text = L"提交意见与反馈",name = "help.bug", onclick=nil},
 				--{text = L"NPL Code Wiki...(F11)",name = "help.npl_code_wiki", autoclose=true, onclick=nil},
 				--{text = L"开发文档",name = "help.ParacraftSDK", onclick=nil},
-				{text = L"关于Paracraft...",name = "help.about", onclick=nil},
+				{text = L"关于...",name = "help.about", onclick=nil},
 				-- {text = L"致谢",name = "help.Credits", onclick=nil},
 			},
 		},
@@ -174,7 +177,7 @@ function DesktopMenu.LoadMenuItems(bForceReload)
 			end
 		end
 	end
-	if System.options.channelId_431 then
+	if System.options.isEducatePlatform then
 		for _, menuItem in ipairs(menu_items) do
 			if(menuItem.children and menuItem.name =="help") then
 				menuItem.children = commonlib.filter(menuItem.children,function (item)
@@ -187,7 +190,10 @@ function DesktopMenu.LoadMenuItems(bForceReload)
 				--table.insert(menuItem.children,7,{text = L"导出p3d文件",name = "file.exportp3dfile",onclick=nil})
 				-- table.insert(menuItem.children,8,{text = L"导入p3d文件",name = "file.importp3dfile",onclick=nil})
 				menuItem.children = commonlib.filter(menuItem.children,function (item)
-					return item.name ~= "file.saveworldas" and item.name ~= "file.openbackupfolder" and item.name ~= "file.worldrevision"
+					return item.name ~= "file.saveworldas" 
+						and item.name ~= "file.openbackupfolder" 
+						and item.name ~= "file.worldrevision"
+						and item.name ~= "file.makeppt"
 				end)
 				if System.options.isOffline then
 					menuItem.children = commonlib.filter(menuItem.children,function (item)
@@ -365,7 +371,12 @@ end
 
 -- click top menu item, normally this will show context menu
 function DesktopMenu.OnClickMenuItem(name)
-	if System.options.channelId_431 and name == "online" then
+	if (System.os.IsEmscripten() and name == "online") then
+		GameLogic.RunCommand("/tip -duration 3000 此功能， web版本暂不支持，请安装客户端。");
+		return ;
+	end
+
+	if System.options.isEducatePlatform and name == "online" then
 		if not GameLogic.GetFilters():apply_filters('is_signed_in') then
 			GameLogic.GetFilters():apply_filters('check_signed_in', '请先登录', function(result)
 				if result == true then
@@ -377,6 +388,7 @@ function DesktopMenu.OnClickMenuItem(name)
 			return
 		end
 	end
+
 	DesktopMenu.ShowMenuOpptions(name)
 end
 

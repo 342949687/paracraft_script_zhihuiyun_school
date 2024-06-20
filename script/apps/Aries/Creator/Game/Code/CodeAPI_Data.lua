@@ -300,10 +300,10 @@ function env_imp:getUrl(url_params, callbackFunc)
 	end
 end
 
--- @param params: {server="iot.keepwork.com", port="", user, password, clientid, keepalive=60}
+-- @param params: {server="mqtt.keepwork.com", port="", user, password, clientid, keepalive=60}
 function env_imp:mqtt_connect(params)
 	-- do some parameter translation
-	params.uri = params.uri or params.server or "iot.keepwork.com";
+	params.uri = params.uri or params.server or "mqtt.keepwork.com";
 	if(params.port) then
 		params.uri = params.uri..":"..params.port;
 	end

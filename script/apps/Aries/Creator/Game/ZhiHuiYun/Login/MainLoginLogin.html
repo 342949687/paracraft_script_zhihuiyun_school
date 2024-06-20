@@ -143,8 +143,12 @@
                                     return
                                 end
                                 
+                                KeepworkServiceSession:LoginSocket()
                                 LoginModal:Close(true)
-                                GameLogic.RunCommand(format('/loadworld -s -force %s', System.options.AutoEnterPid))
+                                if System.options.AutoEnterPid then
+                                    GameLogic.RunCommand(format('/loadworld -s -force %s', System.options.AutoEnterPid))
+                                end
+                                
                             end, login_data)
 
                             return

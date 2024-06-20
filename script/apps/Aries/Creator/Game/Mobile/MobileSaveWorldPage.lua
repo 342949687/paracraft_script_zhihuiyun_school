@@ -246,7 +246,7 @@ function MobileSaveWorldPage.SaveName()
     local node_name = GameLogic.IsReadOnly() and "worldname" or "edit_worldname"
     local name = page and page:GetUIValue(node_name) or "";
     if name ~= MobileSaveWorldPage.worldname then
-        local temp = MyCompany.Aries.Chat.BadWordFilter.FilterString(name);
+        local temp = MyCompany.Aries.Chat.BadWordFilter.FilterString2(name);
         if temp~=name then 
             _guihelper.MessageBox(L"该世界名称不可用，请重新设定");
             return

@@ -47,6 +47,15 @@ function Screen:OnSizeChange(width, height)
 		self.last_width, self.last_height = width, height;
 		self:GetUIScaling(true);
 		self:sizeChanged(width, height);
+
+		if (System.os.GetPlatform() == "mac" and System.os.CompareParaEngineVersion('1.9.1.0')) then
+			local att = ParaEngine.GetAttributeObject();
+			local screenSize = att:GetField("ScreenResolution", {1280, 720});
+
+			if (screenSize and (screenSize[1] <= 320 or screenSize[2] <= 240)) then
+				att:SetField("ScreenResolution", {320, 240});
+			end
+		end
 	end
 end
 

@@ -73,6 +73,7 @@ local dropdownlistbox = {
 	editbox_id = -1,
 	onremove = nil,
 	emptyText = "",
+	fontColor = "#000000",
 }
 CommonCtrl.dropdownlistbox = dropdownlistbox;
 
@@ -122,7 +123,8 @@ function dropdownlistbox:Show(bShow)
 		_this = ParaUI.CreateUIObject("imeeditbox", "e", "_mt", 0, 0, width, height);
 		_this:GetAttributeObject():SetField("EmptyText", self.emptyText);
 		_parent:AddChild(_this);
-
+		print("font color:==========",self.fontColor,self.text)
+		_guihelper.SetFontColor(_this, self.fontColor);
 		self.editbox_id = _this.id;
 		_this.text = self.text;
 
@@ -388,7 +390,6 @@ end
 function dropdownlistbox.OnClickDropDownButton(self)
 	-- calculate the position of drop down list box from the current position of the control
 	local _this = ParaUI.GetUIObject(self.id);
-
 	if(_this:IsValid() == false) then
 		return;
 	end
@@ -396,6 +397,10 @@ function dropdownlistbox.OnClickDropDownButton(self)
 	local _, _, screenWidth, screenHeight = ParaUI.GetUIObject("root"):GetAbsPosition();
 	local left, top, width, height = _this:GetAbsPosition();
 
+	if(type(self.onBeforeClickDropDownButton) == "function") then
+		self.onBeforeClickDropDownButton(self);
+	end
+	
 	-- make the listbox appear at the right position
 	if (top + height + self.dropdownheight) > screenHeight then
 		-- float up display if there is no enough space for drop down display. 

@@ -31,7 +31,7 @@ function ClientUpdateDialog.Show(latestVer,curVer,gamename,OnClickUpdate,allowSk
     });
     ClientUpdateDialog._isDownloadFinished = false
 
-    if System.options.channelId_431 then
+    if System.options.isEducatePlatform then
         local BroadcastHelper = commonlib.gettable("CommonCtrl.BroadcastHelper");
         local start_after_seconds = 5*1000
 		local elapsed_seconds = 0;

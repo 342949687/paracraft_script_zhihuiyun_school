@@ -301,3 +301,28 @@ Examples:
 		end
 	end,
 };
+
+Commands["start"] = {
+	name="start", 
+	quick_ref="/start [npl|nplcodewiki|vscode]", 
+	desc=[[start a given service
+Examples:
+/start npl     start nplcodewiki
+/start vscode
+]], 
+	handler = function(cmd_name, cmd_text, cmd_params, fromEntity)
+		local serviceName = CmdParser.ParseWord(cmd_text)
+		if(serviceName == "nplcodewiki" or serviceName == "npl") then
+			NPL.load("(gl)script/apps/Aries/Creator/Game/Network/NPLWebServer.lua");
+			local NPLWebServer = commonlib.gettable("MyCompany.Aries.Game.Network.NPLWebServer");
+			NPLWebServer.CheckServerStarted();
+		elseif(serviceName == "vscode") then
+			if(not GameLogic.IsReadOnly()) then
+				NPL.load("(gl)script/apps/Aries/Creator/Game/Code/CodeBlockFileSync.lua");
+				local CodeBlockFileSync = commonlib.gettable("MyCompany.Aries.Game.Code.CodeBlockFileSync");
+				CodeBlockFileSync:InitWorldFolder();
+				CodeBlockFileSync:OpenInVsCode()
+			end
+		end
+	end,
+};

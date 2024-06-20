@@ -1555,7 +1555,8 @@ function Actor:FrameMovePlaying(deltaTime)
 		end
 
 		-- in case of explicit animation
-		if(not self:IsAgent()) then
+		local isAgent = self:IsAgent()
+		if(not isAgent) then
 			obj:SetField("yaw", yaw or 0);
 		else
 			entity:SetFacing(yaw or 0); -- this fixed a bug to inform linked entities to update facing.
@@ -1670,7 +1671,13 @@ function Actor:FrameMovePlaying(deltaTime)
 		
 		entity:SetSpeedScale(speedscale or 1);
 		obj:SetField("Speed Scale", speedscale or 1);
-		obj:SetScale(scaling or 1);
+		
+		-- this fixed a bug to inform linked entities to update scaling.
+		if(not isAgent) then
+			obj:SetScale(scaling or 1);
+		else
+			entity:SetScaling(scaling or 1); 
+		end
 		
 		if(gravity) then
 			obj:SetField("Gravity", gravity);

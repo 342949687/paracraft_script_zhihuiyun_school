@@ -211,70 +211,81 @@ function Creation:OnClickInGame()
     PapaAPI:SendEvent("onLessonBackButtonClick",{})
 end
 
-function Creation:GetWorldFolderName()
+function Creation:GetWorldFolderName(callback)
     if (not self.curSection or
         not self.curSection.content or
         not self.curSection.content.content or
         not self.curSection.content.content.homeworkName) then
-        return "";
+        if (callback and type(callback) == "function") then
+            callback();
+        end
     end
-
-    return self.curSection.content.content.homeworkName;
+    local world_name = self.curSection.content.content.homeworkName;
+    self.homeworkName = world_name
+    local Compare = NPL.load('(gl)Mod/WorldShare/service/SyncService/Compare.lua')
+    Compare:GetNewWorldName(world_name, callback)
 end
 
 function Creation:LoadSuperFlatWorld(callbackId)
-    if self:GetWorldFolderName() ~= "" then
-        self.callbackId = callbackId
-        GameLogic.GetFilters():add_filter("OnBeforeLoadWorld",Creation.OnBeforeLoadWorld)
-        local foldername = self:GetWorldFolderName();
-        local username = Mod.WorldShare.Store:Get("user/username");
-        local worldPath = "worlds/DesignHouse/".. foldername
-        if username and username ~= "" then
-            worldPath = "worlds/DesignHouse/_user/" .. username .. "/" .. foldername
-        end
-        if (ParaIO.DoesFileExist(worldPath)) then
-            --GameLogic.RunCommand(format("/loadworld -s %s", worldPath));
+    self.callbackId = callbackId
+    self:GetWorldFolderName(function(worldName,worldPath,last_world_name)
+        if last_world_name and last_world_name ~= "" then
+            GameLogic.GetFilters():add_filter("OnBeforeLoadWorld",Creation.OnBeforeLoadWorld)
+            local foldername = last_world_name
+            local username = Mod.WorldShare.Store:Get("user/username");
+            local worldPath = "worlds/DesignHouse/".. foldername
+            if username and username ~= "" then
+                worldPath = "worlds/DesignHouse/_user/" .. username .. "/" .. foldername
+            end
+            if (ParaIO.DoesFileExist(worldPath)) then
+                --GameLogic.RunCommand(format("/loadworld -s %s", worldPath));
+            else
+                Creation.IsCreateWorld = true
+                local CreateWorld = NPL.load('(gl)Mod/WorldShare/cellar/CreateWorld/CreateWorld.lua')
+                CreateWorld:CreateWorldByName(foldername, "superflat",false)
+            end
+            local SyncWorld = NPL.load('(gl)Mod/WorldShare/cellar/Sync/SyncWorld.lua')
+            SyncWorld:CheckAndUpdatedByFoldername(foldername,function ()
+                Creation.OpenWorld(worldPath)
+                local Progress = NPL.load('(gl)Mod/WorldShare/cellar/Sync/Progress/Progress.lua')
+                Progress.syncInstance = nil
+                self.IsStartSubmiteWorld = true
+                PapaAPI:SendEvent("CreateWorld",{callbackId = self.callbackId,result = true})
+                self.callbackId = nil
+            end,"papa_adventure")
         else
-            Creation.IsCreateWorld = true
-            local CreateWorld = NPL.load('(gl)Mod/WorldShare/cellar/CreateWorld/CreateWorld.lua')
-            CreateWorld:CreateWorldByName(foldername, "superflat",false)
-        end
-        local SyncWorld = NPL.load('(gl)Mod/WorldShare/cellar/Sync/SyncWorld.lua')
-        SyncWorld:CheckAndUpdatedByFoldername(foldername,function ()
-            Creation.OpenWorld(worldPath)
-            local Progress = NPL.load('(gl)Mod/WorldShare/cellar/Sync/Progress/Progress.lua')
-            Progress.syncInstance = nil
-            self.IsStartSubmiteWorld = true
-            PapaAPI:SendEvent("CreateWorld",{callbackId = self.callbackId,result = true})
+            --创建世界失败，返回browser
+            PapaAPI:SendEvent("CreateWorld",{callbackId = self.callbackId,result = false,message = "name error"})
             self.callbackId = nil
-        end,"papa_adventure")
-    else
-         --创建世界失败，返回browser
-         PapaAPI:SendEvent("CreateWorld",{callbackId = self.callbackId,result = false,message = "name error"})
-         self.callbackId = nil
-    end
+        end
+    end)
 end
 
-function Creation:OnBeforeLoadWorld()
+function Creation.OnBeforeLoadWorld()
     WorldCommon.SetWorldTag("isHomeWorkWorld", true);
     WorldCommon.SetWorldTag("platform", System.options.appId or "paracraft_papa");
+    WorldCommon.SetWorldTag("channel", 3);
+    WorldCommon.SetWorldTag("name", Creation.homeworkName or "");
     WorldCommon.SaveWorldTag()
     GameLogic.GetFilters():remove_filter("OnBeforeLoadWorld",Creation.OnBeforeLoadWorld);
 end
 
 function Creation.CreateWorldCallback(_, event)
     local worldPath = commonlib.Encoding.DefaultToUtf8(event.world_path)
-    local foldername = Creation:GetWorldFolderName();
-    print("Creation=CreateWorldCallback============",worldPath,foldername)
-    local SyncWorld = NPL.load('(gl)Mod/WorldShare/cellar/Sync/SyncWorld.lua')
-    SyncWorld:CheckAndUpdatedByFoldername(foldername,function ()
-        Creation.OpenWorld(worldPath)
-        local Progress = NPL.load('(gl)Mod/WorldShare/cellar/Sync/Progress/Progress.lua')
-        Progress.syncInstance = nil
-        Creation.IsStartSubmiteWorld = true
-        PapaAPI:SendEvent("CreateWorld",{callbackId = Creation.callbackId,result = true})
-        Creation.callbackId = nil
-    end,"papa_adventure")
+    local paths = commonlib.split(worldPath,"/")
+    local worldName = paths[#paths]
+    if worldName and worldName ~= "" then
+        local SyncWorld = NPL.load('(gl)Mod/WorldShare/cellar/Sync/SyncWorld.lua')
+        SyncWorld:CheckAndUpdatedByFoldername(worldName,function ()
+            Creation.OpenWorld(worldPath)
+            local Progress = NPL.load('(gl)Mod/WorldShare/cellar/Sync/Progress/Progress.lua')
+            Progress.syncInstance = nil
+            Creation.IsStartSubmiteWorld = true
+            PapaAPI:SendEvent("CreateWorld",{callbackId = Creation.callbackId,result = true})
+            Creation.callbackId = nil
+        end,"papa_adventure")
+    end
+   
 end
 
 function Creation.OpenWorld(worldPath)
@@ -315,56 +326,59 @@ function Creation:LoadCreationWorld(callbackId)
     GameLogic.GetEvents():RemoveEventListener("createworld_callback",Creation.CreateWorldCallback, Creation)
     GameLogic.GetEvents():AddEventListener("createworld_callback", Creation.CreateWorldCallback, Creation, "Creation");
     GameLogic.GetFilters():add_filter("OnBeforeLoadWorld",Creation.OnBeforeLoadWorld)
-    local foldername = self:GetWorldFolderName();
-    local username = Mod.WorldShare.Store:Get("user/username");
-    local worldPath = "worlds/DesignHouse/".. foldername
-    if username and username ~= "" then
-        worldPath = "worlds/DesignHouse/_user/" .. username .. "/" .. foldername
-    end
+    self:GetWorldFolderName(function(worldName,worldPath,last_world_name)
+        local foldername = last_world_name
+        local username = Mod.WorldShare.Store:Get("user/username");
+        local worldPath = "worlds/DesignHouse/".. foldername
+        if username and username ~= "" then
+            worldPath = "worlds/DesignHouse/_user/" .. username .. "/" .. foldername
+        end
 
-    local PapaWorldLogic = NPL.load("(gl)script/apps/Aries/Creator/Game/PapaAdventures/PapaWorldLogic.lua");
-    PapaWorldLogic.CheckWorldValidById(parentId,function(bSucceed,message)
-        if not bSucceed  then
-            if message == "project" then
-                PapaAPI:SendEvent("CreateWorld",{
-                    callbackId = self.callbackId,
-                    result = false,
-                    message="配置的模板世界不存在，请联系老师"}
-                )
-                self.callbackId = nil
-                return
+        local PapaWorldLogic = NPL.load("(gl)script/apps/Aries/Creator/Game/PapaAdventures/PapaWorldLogic.lua");
+        PapaWorldLogic.CheckWorldValidById(parentId,function(bSucceed,message)
+            if not bSucceed  then
+                if message == "project" then
+                    PapaAPI:SendEvent("CreateWorld",{
+                        callbackId = self.callbackId,
+                        result = false,
+                        message="配置的模板世界不存在，请联系老师"}
+                    )
+                    self.callbackId = nil
+                    return
+                end
+                if message == "username" or message == "login" then
+                    PapaAPI:SendEvent("CreateWorld",{
+                        callbackId = self.callbackId,
+                        result = false,
+                        message="用户登录创意空间失败，请联系老师"}
+                    )
+                    self.callbackId = nil
+                    return
+                end
             end
-            if message == "username" or message == "login" then
-                PapaAPI:SendEvent("CreateWorld",{
-                    callbackId = self.callbackId,
-                    result = false,
-                    message="用户登录创意空间失败，请联系老师"}
-                )
-                self.callbackId = nil
-                return
+            if (not ParaIO.DoesFileExist(worldPath)) then
+                local cmd = format(
+                    "/createworld -name \"%s\" -parentProjectId %d -update -fork %d -mode admin",
+                    foldername,
+                    parentId,
+                    parentId
+                );
+                print("cmd==========",cmd)
+                GameLogic.RunCommand(cmd); 
+            else
+                local SyncWorld = NPL.load('(gl)Mod/WorldShare/cellar/Sync/SyncWorld.lua')
+                SyncWorld:CheckAndUpdatedByFoldername(foldername,function ()
+                    Creation.OpenWorld(worldPath)
+                    local Progress = NPL.load('(gl)Mod/WorldShare/cellar/Sync/Progress/Progress.lua')
+                    Progress.syncInstance = nil
+                    self.IsStartSubmiteWorld = true
+                    PapaAPI:SendEvent("CreateWorld",{callbackId = self.callbackId,result = true})
+                    self.callbackId = nil
+                end,"papa_adventure")
             end
-        end
-        if (not ParaIO.DoesFileExist(worldPath)) then
-            local cmd = format(
-                "/createworld -name \"%s\" -parentProjectId %d -update -fork %d",
-                foldername,
-                parentId,
-                parentId
-            );
-            print("cmd==========",cmd)
-            GameLogic.RunCommand(cmd);
-        else
-            local SyncWorld = NPL.load('(gl)Mod/WorldShare/cellar/Sync/SyncWorld.lua')
-            SyncWorld:CheckAndUpdatedByFoldername(foldername,function ()
-                Creation.OpenWorld(worldPath)
-                local Progress = NPL.load('(gl)Mod/WorldShare/cellar/Sync/Progress/Progress.lua')
-                Progress.syncInstance = nil
-                self.IsStartSubmiteWorld = true
-                PapaAPI:SendEvent("CreateWorld",{callbackId = self.callbackId,result = true})
-                self.callbackId = nil
-            end,"papa_adventure")
-        end
-    end,true)
+        end,true)
+    end);
+    
 end
 
 function Creation:ShowOpusSubmitPage(callback)
@@ -443,8 +457,36 @@ end
 
 
 function Creation:SubmitWorld(opusName, opusDesc)
-    self.nameChanged = Creation.lastName ~= opusName and opusName ~= ""
-    self.descChanged = Creation.lastDesc ~= opusDesc
+    self.nameChanged = Creation.lastName ~= opusName and opusName ~= "" and opusName ~= nil
+    self.descChanged = Creation.lastDesc ~= opusDesc and opusDesc ~= nil
+    if self.nameChanged then
+        local filterName = MyCompany.Aries.Chat.BadWordFilter.FilterString2(opusName);
+        if filterName and (filterName ~= opusName or filterName:find("*")) then
+            _guihelper.MessageBox(L'您输入的内容不符合互联网安全规范，请修改')
+            return
+        end
+    else
+        local filterName = MyCompany.Aries.Chat.BadWordFilter.FilterString2(Creation.lastName);
+        if filterName and (filterName ~= Creation.lastName or filterName:find("*")) then
+            _guihelper.MessageBox(L'您输入的内容不符合互联网安全规范，请修改')
+            return
+        end
+    end
+
+    if self.descChanged then
+        local filterName = MyCompany.Aries.Chat.BadWordFilter.FilterString2(opusDesc);
+        if filterName and (filterName ~= opusDesc or filterName:find("*") )then
+            _guihelper.MessageBox(L'您输入的内容不符合互联网安全规范，请修改')
+            return
+        end
+    else
+        local filterName = MyCompany.Aries.Chat.BadWordFilter.FilterString2(Creation.lastDesc);
+        if filterName and (filterName ~= Creation.lastDesc or filterName:find("*") )then
+            _guihelper.MessageBox(L'您输入的内容不符合互联网安全规范，请修改')
+            return
+        end
+    end
+    local notShowFinishPage
     self.worldInfo ={opusName = opusName,opusDesc = opusDesc}
     if (self.curSections and self.curSections.id) then
         notShowFinishPage = true
@@ -462,13 +504,26 @@ function Creation:SubmitWorld(opusName, opusDesc)
             Mod.WorldShare.Store:Set('world/projectDesc', opusDesc);
         end
         self:StartAssement()
-        ShareWorld:OnClick(notShowFinishPage);
     else
         Mod.WorldShare.Store:Set('world/projectName', opusName);
         Mod.WorldShare.Store:Set('world/projectDesc', opusDesc);
-        ShareWorld:OnClick();
     end
-    self.submitPage:CloseWindow();
+    
+    local isWorldExist = false
+    -- local currentWorldList = Mod.WorldShare.Store:Get('world/compareWorldList') or {}
+    -- for key, item in ipairs(currentWorldList) do
+    --     if opusName and self.nameChanged and item and (item.foldername == opusName) then
+    --         isWorldExist = true
+    --         break
+    --     end
+    -- end
+    if not isWorldExist then
+        ShareWorld:OnClick(notShowFinishPage);
+        self.submitPage:CloseWindow();
+        return
+    end
+    Mod.WorldShare.Store:Remove('world/projectName')
+    _guihelper.MessageBox(L'已有相同名称的世界，请重新输入世界名')
 end
 
 function Creation:StartAssement()

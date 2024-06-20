@@ -10,6 +10,7 @@ HTML<select AllowUserEdit="false"> and <option>, where AllowUserEdit default to 
 | IsReadonly | bool|
 | onclick | on select event, function(name,value) end|
 | onselect | same as onclick.|
+| onBeforeClickDropDownButton | one can modify data source in this function and drop down tree view will be refreshed. |
 | DataSource | the data source table array of {{value="0", text="zero"},{value="1"}}, where the each sub item is attr table of option node.  |
 <verbatim>
 	<select name="blood" AllowUserEdit="false">
@@ -821,6 +822,8 @@ function pe_select.create(rootName, mcmlNode, bindingContext, _parent, left, top
 	local dropX = mcmlNode:GetAttributeWithCode("dropX",nil,true); --下拉列表三角按钮位置X
 	local dropY = mcmlNode:GetAttributeWithCode("dropY",nil,true); --下拉列表三角按钮位置Y
 	local contentBg = mcmlNode:GetAttributeWithCode("contentBg",nil,true); --下拉列表显示框背景
+	local fontColor = mcmlNode:GetAttributeWithCode("fontcolor","#000000",true); --输入框字体颜色
+	print("pe_select========",fontColor)
 	local rows = mcmlNode:GetNumber("size") or 1;
 	local css = mcmlNode:GetStyle(Map3DSystem.mcml_controls.pe_html.css["input-select"]);
 	local margin_left, margin_top, margin_bottom, margin_right = 
@@ -843,15 +846,8 @@ function pe_select.create(rootName, mcmlNode, bindingContext, _parent, left, top
 
 	local instName = mcmlNode:GetInstanceName(rootName);
 	
-	local ds = mcmlNode:GetAttributeWithCode("DataSource",nil,true);
-	if(ds) then
-		pe_select.SetDataSource(mcmlNode, rootName, ds)
-	end
-	
-	if(mcmlNode.datasource) then
-		-- instantiate child nodes from data source 
-		pe_select.DataBind(mcmlNode, rootName, false);
-	end
+	-- instantiate child nodes from data source 
+	pe_select.DataBind(mcmlNode, rootName, false);
 
 	local onremove = mcmlNode:GetAttributeWithCode("onremove", nil, true);
 	local emptyText = mcmlNode:GetAttributeWithCode("EmptyText", "", true);
@@ -899,6 +895,14 @@ function pe_select.create(rootName, mcmlNode, bindingContext, _parent, left, top
 		elseif(preferredWidth<width) then
 			width = preferredWidth;
 		end
+		local onBeforeClickDropDownButton;
+		if(mcmlNode:GetString("onBeforeClickDropDownButton")) then
+			onBeforeClickDropDownButton = function(ctl)
+				Map3DSystem.mcml_controls.OnPageEvent(mcmlNode, mcmlNode:GetString("onBeforeClickDropDownButton"))
+				pe_select.DataBind(mcmlNode, rootName, true);
+				ctl.dropdownheight = math.min(math.max((height - 2) * table.getn(ctl.items), (height - 2) * 3), 300)
+			end
+		end
 
 		NPL.load("(gl)script/ide/dropdownlistbox.lua");
 		local ctl = CommonCtrl.dropdownlistbox:new{
@@ -924,7 +928,9 @@ function pe_select.create(rootName, mcmlNode, bindingContext, _parent, left, top
 			AllowUserEdit = mcmlNode:GetBool("AllowUserEdit"),
 			IsReadonly = mcmlNode:GetBool("IsReadonly"),
 			onremove = onremove,
+			onBeforeClickDropDownButton = onBeforeClickDropDownButton,
 			emptyText = emptyText,
+			fontColor = fontColor,
 		};
 		ctl:Show();
 		mcmlNode.control = ctl;
@@ -991,9 +997,14 @@ end
 
 -- Public method: rebind (refresh) the data.
 function pe_select.DataBind(mcmlNode, pageInstName, bRefreshUI)
+	local ds = mcmlNode:GetAttributeWithCode("DataSource",nil,true);
+	if(ds) then
+		pe_select.SetDataSource(mcmlNode, rootName, ds)
+	end
 	if(not mcmlNode.datasource) then
 		return 
 	end
+	
 	-- clear all children
 	mcmlNode:ClearAllChildren();
 	local inTable = mcmlNode.datasource;
@@ -1003,6 +1014,31 @@ function pe_select.DataBind(mcmlNode, pageInstName, bRefreshUI)
 		for i, childNode in ipairs(inTable) do
 			local sub_node = Map3DSystem.mcml.new(nil, {name="option", attr=childNode, childNode.text});
 			mcmlNode:AddChild(sub_node);
+		end
+	end
+
+	if(bRefreshUI and mcmlNode.control) then
+		local ctl = mcmlNode.control;
+		local rows = mcmlNode:GetNumber("size") or 1;
+		if rows == 1 then
+			local items = {};
+			for childnode in mcmlNode:next("option") do
+				local text = childnode:GetInnerText();
+				if(text == "") then
+					text = childnode:GetString("value") or "";
+				end
+				local value = childnode:GetString("value");
+				table.insert(items, text);
+				if(text~=value) then
+					if(not items.values) then
+						items.values = {};
+					end	
+					items.values[text] = value;
+				end
+			end
+			ctl.items = items;
+		else
+			-- TODO
 		end
 	end
 end

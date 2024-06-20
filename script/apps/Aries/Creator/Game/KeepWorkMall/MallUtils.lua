@@ -31,14 +31,14 @@ function MallUtils.FormatCount(count)
     if not count then
         return 0;
     end
-    if  count < 1000 then
+    if  count < 9999 then
         return count;
-    elseif count < 10000 then
-        return string.format("%.1fK", count/1000);
-    elseif count < 1000000 then
-        return string.format("%.1fM", count/1000000);
+    elseif count < 99999 then
+        return string.format("%.1fK", math.floor((count/1000)*10)/10);
+    elseif count < 9999999 then
+        return string.format("%.1fM", math.floor((count/1000000)*10)/10);
     else
-        return string.format("%.1fB", count/1000000000)
+        return string.format("%.1fB", math.floor((count/1000000000)*10)/10)
     end
 end
 
@@ -71,12 +71,19 @@ function MallUtils.GetIcon(item_data)
             filename = item_data.tooltip
         elseif model_url and model_url:match("character/") then
             filename = model_url
+        elseif item_data.id == -1 and item_data.userId == 0 then --本地目录下的
+            filename = model_url
+            --print("get icon==========",filename)
         else
             return nil
         end
         local filepath = PlayerAssetFile:GetValidAssetByString(filename)
+        if item_data.id > 0 and item_data.userId and item_data.userId > 0 then
+            filepath = nil
+        end
         if not filepath and filename then
             filepath = Files.GetTempPath()..filename
+            ParaAsset.LoadParaX("", filepath):UnloadAsset();
         end
     
         local ReplaceableTextures, CCSInfoStr, CustomGeosets;
@@ -90,10 +97,11 @@ function MallUtils.GetIcon(item_data)
             -- TODO:  hard code worker skin here
             ReplaceableTextures = {[2] = PlayerSkins:GetSkinByID(12)};
         end
-        return {
+        local iconParams = {
             AssetFile = filepath, IsCharacter=true, x=0, y=0, z=0,
             ReplaceableTextures=ReplaceableTextures, CCSInfoStr=CCSInfoStr, CustomGeosets = CustomGeosets
         }
+        return iconParams
     end
 end
 
@@ -107,32 +115,39 @@ function MallUtils.CheckHasPermission(item_data)
     end
 end
 
-function MallUtils.LoadLiveModelXml(item_data,cb)
+function MallUtils.LoadLiveModelXml(item_data,cb,bForceLoad)
     if item_data and item_data.needDownload then
         local model_url = item_data.modelUrl
         local name = item_data.name
         if not item_data.isLiveModeland and not item_data.modelType then
             return
         end
-        local filename = item_data.isLiveModel and "onlinestore/"..name..".blocks.xml" or  "onlinestore/"..name.."."..item_data.modelType
+        local base_path = "onlinestore/"
+        if item_data.id > 0 and item_data.userId and item_data.userId > 0 then
+            base_path = "personnalstore/"
+        end
+        local filename = item_data.isLiveModel and base_path..name..".blocks.xml" or  base_path..name.."."..item_data.modelType
         if model_url:match("^https?://") then
             MallUtils.LoadBlocksXmlToLocal(filename,model_url,function (data)
                 if data.xmlInfo then
                     data.xmlInfo.wholeScale = wholeScale
                 end
                 cb(data)
-            end,item_data.isLiveModel)
+            end,item_data.isLiveModel,bForceLoad)
         end
     end
 end
 
-function MallUtils.LoadBlocksXmlToLocal(filename,url,cb,isLiveModel)
+
+
+function MallUtils.LoadBlocksXmlToLocal(filename,url,cb,isLiveModel,bForceLoad)
     local dest = ""
-    if not filename:match("^onlinestore/") then
-        dest = Files.WorldPathToFullPath(commonlib.Encoding.Utf8ToDefault(filename))
-    else
+    if filename:match("^onlinestore/") or filename:match("^personnalstore/") then
         dest = Files.GetTempPath()..commonlib.Encoding.Utf8ToDefault(filename)
+    else
+        dest = Files.WorldPathToFullPath(commonlib.Encoding.Utf8ToDefault(filename))
     end
+    
     local func = function ()
         if isLiveModel then
             MallUtils.ParseXml(dest,cb)
@@ -140,7 +155,7 @@ function MallUtils.LoadBlocksXmlToLocal(filename,url,cb,isLiveModel)
             cb({tooltip = commonlib.Encoding.Utf8ToDefault(filename)})
         end
     end
-    if(ParaIO.DoesFileExist(dest, true)) then
+    if(ParaIO.DoesFileExist(dest, true) and not bForceLoad) then
         func()
     else
         NPL.load("(gl)script/ide/System/localserver/factory.lua");
@@ -155,6 +170,7 @@ function MallUtils.LoadBlocksXmlToLocal(filename,url,cb,isLiveModel)
                 ParaIO.CreateDirectory(dest);
                 if(ParaIO.CopyFile(entry.payload.cached_filepath, dest, true)) then
                     Files.NotifyNetworkFileChange(dest)
+                    LOG.std(nil, "info", "CommandInstall", "success to copy from %s to %s", entry.payload.cached_filepath, dest);
                     func()
                 else
                     LOG.std(nil, "warn", "CommandInstall", "failed to copy from %s to %s", entry.payload.cached_filepath, dest);
@@ -295,7 +311,7 @@ function MallUtils.UseGoodImp(item_data)
         end
         local filename = item_data.name
         -- model_url = "character/CC/05effect/fire.x"
-        if model_url:match("^https?://") then
+        if model_url:match("^https?://") or model_url:match("worlds/DesignHouse/") then
             NPL.load("(gl)script/apps/Aries/Desktop/GameMemoryProtector.lua");
             local GameMemoryProtector = commonlib.gettable("MyCompany.Aries.Desktop.GameMemoryProtector");
             local downloadList = GameLogic.GetPlayerController():LoadLocalData("mall_download_list",{})
@@ -318,6 +334,15 @@ function MallUtils.UseGoodImp(item_data)
             end
             local command = string.format("/install -event %s -hideinhand %s -hidetip %s -ext %s -reload %s -filename %s %s",eventname,
                 tostring(hideinhand), tostring(hidetip), tostring(fileType), tostring(needReload), "temp/onlinestore/"..filename, model_url)
+
+            if item_data.id == -1 and item_data.userId and item_data.userId == 0 then --本地目录下的
+                command = string.format("/install -event %s -hideinhand %s -hidetip %s -ext %s -filename %s %s",eventname,
+                tostring(hideinhand), tostring(hidetip), tostring(fileType), filename, model_url)
+            end
+            if item_data.id > 0 and item_data.userId and item_data.userId > 0 then
+                command = string.format("/install -event %s -hideinhand %s -hidetip %s -ext %s -reload %s -filename %s %s",eventname,
+                tostring(hideinhand), tostring(hidetip), tostring(fileType), tostring(needReload), "temp/personnalstore/"..filename, model_url)
+            end
             GameLogic.RunCommand(command)
         elseif model_url:match("character/") then         
             GameLogic.RunCommand(string.format("/take BlockModel {tooltip=%q}", model_url));  

@@ -77,7 +77,7 @@ function GetLimitName(name)
     return leftText.."..."
 end
 
-function showCamerUi(params,node)
+function showCameraUi(params,node)
     if System.os.IsTouchMode() then
         GameLogic.AddBBS(nil,L"暂不支持该功能~")
         return
@@ -209,7 +209,7 @@ end
                 <input type="text" SkipAutoBadWordFilter="true" EmptyText='<%= L"输入图片名或路径" %>' uiname="OpenImageDialog.text" onchange="OpenImageDialog.OnTextChange"  name="text" enable_ime="false" style="margin-left: 48px; height:31px;width:442px;background: url(Texture/Aries/Creator/keepwork/EntityImage/shulukuang_20x20_32bits.png#0 0 20 20:8 8 8 8);"/>
                 <input type="button" uiname="OpenImageDialog.openfile"  name="openfile"  style="min-width:37px;height:35px;margin-left:3px; margin-top: -1px; background: url(Texture/Aries/Creator/keepwork/EntityImage/wenjianjia_37x35_32bits.png#0 0 37 35);" onclick="OpenImageDialog.OnOpenFileDialog"/>
                 <pe:if condition="<%= not System.os.IsTouchMode()%>">
-                    <input type="button" uiname="OpenImageDialog.openCamera"  name="opencamera"  style="min-width:37px;height:35px;margin-left:3px; margin-top: -1px; background: url(Texture/Aries/Creator/keepwork/Paralife/main/camera_32bits.png#0 0 128 128);" onclick="showCamerUi"/>
+                    <input type="button" uiname="OpenImageDialog.openCamera"  name="opencamera"  style="min-width:37px;height:35px;margin-left:3px; margin-top: -1px; background: url(Texture/Aries/Creator/keepwork/Paralife/main/camera_32bits.png#0 0 128 128);" onclick="showCameraUi"/>
                 </pe:if>
             </div>
             <div style="margin-top:5px;">

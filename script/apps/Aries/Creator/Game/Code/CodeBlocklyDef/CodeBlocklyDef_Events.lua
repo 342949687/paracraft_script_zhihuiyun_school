@@ -706,6 +706,7 @@ end)
 				{ L"ps_服务器启动", "ps_server_started" },
 				{ L"ps_服务器关闭", "ps_server_shutdown" },
 				{ L"用户加入", "connect" },
+				{ L"ble:myBluetooth", "ble:myBluetooth" },
 			},
 		},
 	},

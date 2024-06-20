@@ -43,7 +43,11 @@ function PapaWorldLogic.RegisterEvent()
     NPL.load("(gl)script/apps/Aries/Creator/Game/KeepWorkMall/MallManager.lua");
 	local MallManager = commonlib.gettable("MyCompany.Aries.Game.KeepWorkMall.MallManager");
 	MallManager.getInstance():Init()
-    
+
+    NPL.load("(gl)script/apps/Aries/Chat/BadWordFilter.lua");
+    local BadWordFilter = commonlib.gettable("MyCompany.Aries.Chat.BadWordFilter");
+    BadWordFilter.Init();
+
     GameLogic.GetFilters():add_filter("EnterWorldFailed", PapaWorldLogic.EnterWorldFailed);
     GameLogic.GetFilters():add_filter("enter_world_fail",self.EnterWorldFail)
     GameLogic:Connect("WorldLoaded", self, self.OnWorldLoaded, "UniqueConnection");
@@ -365,31 +369,56 @@ function PapaWorldLogic.CreateWorld(world_data_or_name)
         end
         PapaAPI:SendEvent("CreateWorld",{callbackId = self.callbackId,result = true})
         self.callbackId = nil
+        if PapaWorldLogic.currentWorld and PapaWorldLogic.currentWorld.isDeleted == 1 then
+            world_name = world_name.."_"..os.time()
+            GameLogic.GetFilters():add_filter("OnBeforeLoadWorld", PapaWorldLogic.OnBeforeLoadWorld); 
+        end
         local CreateWorld = NPL.load('(gl)Mod/WorldShare/cellar/CreateWorld/CreateWorld.lua')
         CreateWorld:CreateWorldByName(world_name, world_type or "superflat",true)
         self.isNewCreatedWorld = true
     end)
 end
 
+function PapaWorldLogic.OnBeforeLoadWorld()
+    if not PapaWorldLogic.currentWorld then
+        return
+    end
+    local WorldCommon = commonlib.gettable("MyCompany.Aries.Creator.WorldCommon")
+    if PapaWorldLogic.currentWorld.isDeleted == 1 then
+        WorldCommon.SetWorldTag("name", PapaWorldLogic.currentWorld.name);
+        WorldCommon.SaveWorldTag()
+    end
+    GameLogic.GetFilters():remove_filter("OnBeforeLoadWorld",PapaWorldLogic.OnBeforeLoadWorld);
+    PapaWorldLogic.currentWorld = nil
+end
+
 function PapaWorldLogic.CheckCanCreate(world_name,callback)
-    local Create = NPL.load('Mod/WorldShare/cellar/Create/Create.lua')
     Create.statusFilter = nil
+    PapaWorldLogic.currentWorld = nil
     Create:GetWorldList(Create.statusFilter,function()
         local foldername = world_name
-        local currentWorldList = Mod.WorldShare.Store:Get('world/compareWorldList') or {}
-        print("foldername=======",foldername)
-        foldername = foldername:gsub('[%s/\\]', '')
         
+        local currentWorldList = Mod.WorldShare.Store:Get('world/fullWorldList') or {}
+        foldername = foldername:gsub('[%s/\\]', '')
+        local isFind,currentWorld = false,nil
         for key, item in ipairs(currentWorldList) do
-            if item.foldername == foldername then
+            if item and foldername and (item.name == foldername) then
                 -- _guihelper.MessageBox(L'世界名已存在，请列表中进入')
+                isFind = true
+                currentWorld = item
+                break
+            end
+        end
+        
+        if isFind and currentWorld then
+            if (not currentWorld.isDeleted or currentWorld.isDeleted == 0) then
                 callback(false,"exist")
                 return
             end
+            PapaWorldLogic.currentWorld = currentWorld
         end
     
         local currentEnterWorld = Mod.WorldShare.Store:Get('world/currentEnterWorld')
-    
         if currentEnterWorld and currentEnterWorld.foldername == foldername then
             -- _guihelper.MessageBox(L'世界名已存在，请列表中进入')
             callback(false,"enter")
@@ -397,13 +426,13 @@ function PapaWorldLogic.CheckCanCreate(world_name,callback)
         end
     
         -- 客户端处理敏感词
-        local temp = MyCompany.Aries.Chat.BadWordFilter.FilterString(foldername);
-    
+        local temp = MyCompany.Aries.Chat.BadWordFilter.FilterString2(foldername);
         if temp ~= foldername then 
             -- _guihelper.MessageBox(L"该世界名称不可用，请重新设定")
             callback(false,"rename")
             return
         end
+
         callback(true)
     end)
 end
@@ -486,22 +515,6 @@ function PapaWorldLogic.CheckWorldValidById(worldId,call_back_func,isLesson)
                 if not username or username == "" then
                     call_back_func(false,"username")
                     return 
-                end
-                --timeRules
-                if data.timeRules and data.timeRules[1] then
-                    echo(data.timeRules,true)
-                    local result, reason = KeepworkServicePermission:TimesFilter(data.timeRules)
-                    if not result and "CHECK_COURSE_ID" ~= reason then
-                        call_back_func(false,"time")
-                        return
-                    end
-                    -- holiday times verified
-                    KeepworkServicePermission:HolidayTimesFilter(data.timeRules, function(bAllowed, reason)
-                        if not bAllowed then
-                            call_back_func(false,"time")
-                            return
-                        end
-                    end)
                 end
 
                 -- vip enter
@@ -653,8 +666,8 @@ function PapaWorldLogic.EnterWorld(msg,isLesson)
             NPL.load("(gl)script/apps/Aries/Creator/Game/Login/LocalLoadWorld.lua");
             local LocalLoadWorld = commonlib.gettable("MyCompany.Aries.Game.MainLogin.LocalLoadWorld")
             LocalLoadWorld.CreateGetHomeWorld();
-
             PapaWorldLogic.SyncHomeWorld()
+            Create:GetWorldList()
             return
         end
         if not KeepworkServiceSession:IsSignedIn() then
@@ -667,6 +680,7 @@ function PapaWorldLogic.EnterWorld(msg,isLesson)
         end
         local currentdata = self.GenerWordData(world)
         if currentdata then
+            Create:GetWorldList()
             self.HandleEnterWorld(currentdata)
         end
     end

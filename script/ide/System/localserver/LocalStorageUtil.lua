@@ -77,7 +77,7 @@ end
 
 function LocalStorageUtil.GetSubDirectory()
 	local path = "/Paracraft/"
-	if System.options.channelId_431 then
+	if System.options.channelId_431 or System.options.isShenzhenAi5 then
 		path = "/Palaka/"
 	elseif System.options.isPapaAdventure then
 		path = "/PapaAdventure/"

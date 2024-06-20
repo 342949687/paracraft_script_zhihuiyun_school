@@ -72,6 +72,7 @@ function ItemClient.PreloadItemClass()
 	NPL.load("(gl)script/apps/Aries/Creator/Game/Items/ItemMinimap.lua");
 	NPL.load("(gl)script/apps/Aries/Creator/Game/Items/ItemBlockModel.lua");
 	NPL.load("(gl)script/apps/Aries/Creator/Game/Items/ItemColorBlock.lua");
+	NPL.load("(gl)script/apps/Aries/Creator/Game/Items/ItemColorVine.lua");
 	NPL.load("(gl)script/apps/Aries/Creator/Game/Items/ItemMaterial.lua");
 	NPL.load("(gl)script/apps/Aries/Creator/Game/Items/ItemEmpty.lua");
 	NPL.load("(gl)script/apps/Aries/Creator/Game/Items/ItemSign.lua");
@@ -91,6 +92,8 @@ function ItemClient.PreloadItemClass()
 	NPL.load("(gl)script/apps/Aries/Creator/Game/Items/ItemNplCadEditor.lua");
 	NPL.load("(gl)script/apps/Aries/Creator/Game/Items/ItemLiveModel.lua");
 	NPL.load("(gl)script/apps/Aries/Creator/Game/Items/ItemInvisibleClickSensor.lua");
+	NPL.load("(gl)script/apps/Aries/Creator/Game/Items/ItemSlope.lua");
+	NPL.load("(gl)script/apps/Aries/Creator/Game/Items/ItemStair.lua");
 
 	GameLogic.GetFilters():apply_filters("register_item");
 end
@@ -131,7 +134,7 @@ function ItemClient.LoadGlobalBlockList()
 	local xmlRoot = ParaXML.LuaXML_ParseFile(filename);
 	if(xmlRoot) then
 		LOG.std(nil, "info", "ItemClient", "loaded block list category from file %s", filename);
-		xmlRoot = GameLogic.GetFilters():apply_filters("block_list", xmlRoot);
+		-- xmlRoot = GameLogic.GetFilters():apply_filters("block_list", xmlRoot);
 
 		local version = if_else(System.options.mc, "mc", "haqi");
 		local is_sdk = System.options.isAB_SDK;
@@ -193,7 +196,7 @@ end
 -- @return blockDsItem
 function ItemClient.AddBlock(block_id, index, category_name, blockName, isWorldOnly)
 	local item = ItemClient.CreateGetByBlockID(block_id);
-	if item.hideforSchool and (System.options.isChannel_430 or System.options.isSchool) then
+	if item.hideforSchool and (System.options.isEducatePlatform or System.options.isChannel_430 or System.options.isSchool) then
 		return {}
 	end
 	local blockDSItem = { __index = item, block_id = block_id, uid = blockName, isWorldOnly=isWorldOnly};

@@ -1351,6 +1351,12 @@ function RedSummerCampCourseScheduling.DS_classes()
 end
 
 function RedSummerCampCourseScheduling.LoadClassList(callback)
+    if not System.options.isDevMode then
+        if callback then
+            callback({})
+        end
+        return 
+    end
     local ds = RedSummerCampCourseScheduling.DS_classes()
     if #ds>0 then
         if callback then

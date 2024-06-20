@@ -139,7 +139,7 @@ end
 
 
 function BuilderFramePage.OnFilterBlock()
-	if System.options.channelId_431 or System.options.isPapaAdventure then
+	if System.options.isEducatePlatform or System.options.isPapaAdventure then
 		BuilderFramePage.Current_Item_DS = commonlib.filter(BuilderFramePage.Current_Item_DS,function (block)
 			return block.block_id ~= 10516 
 				and block.block_id ~= 10517 

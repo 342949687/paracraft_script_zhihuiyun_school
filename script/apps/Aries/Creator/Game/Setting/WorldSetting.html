@@ -7,6 +7,7 @@
                     WorldSetting.OnInit()
                     local WorldCommon = commonlib.gettable('MyCompany.Aries.Creator.WorldCommon')
                     local page = document:GetPageCtrl()
+                    local currentEnterWorld = Mod.WorldShare.Store:Get('world/currentEnterWorld') or {}
                     local isHaveCopyRight = GameLogic.options:HasCopyright()
                     page:SetValue("saveas", isHaveCopyRight and "forbidden" or "allow")
                     function close()
@@ -18,6 +19,22 @@
                     end
 
                     function set_public(val)
+                        if GameLogic.IsReadOnly() then
+                            GameLogic.AddBBS(nil, L'当前为只读模式，无法设置世界权限', 3000, '255 0 0')
+                            return
+                        end
+                        local channel = tonumber((WorldCommon.GetWorldTag("channel") or 0))
+                        local isVisibility = currentEnterWorld.visibility or 0
+                        local server_channel = currentEnterWorld.channel or 0
+                        if ((channel == 1 or server_channel == 1) and isVisibility == 1 and val and val == "public")then
+                            GameLogic.AddBBS(nil, L'课程世界不可设置公开权限', 3000, '255 0 0')
+                            --page:SetValue('private', true)
+                            page:SetValue('public', false)
+                            page:SetValue('institute_vip_checkbox', false)
+                            page:SetValue('vip_checkbox', false)
+                            page:Refresh(0.01)
+                            return 
+                        end
                         GameLogic.IsVip(
                             'VipPrivateWorld',
                             true,
@@ -30,7 +47,7 @@
                                         page:Refresh(0.01)
                                         return
                                     end
-                                    if val and val == "private" and System.options.channelId_431 then
+                                    if val and val == "private" and System.options.isEducatePlatform then
                                         GameLogic.AddBBS(nil, L'该版本不能设置成私有世界', 3000, '255 0 0')
                                         page:SetValue('private', false)
                                         page:Refresh(0.01)
@@ -154,6 +171,15 @@
 
                     function set_saveas()
                         if not GameLogic.IsReadOnly() then
+                            local isVisibility = currentEnterWorld.visibility or 0
+                            local value = page:GetValue("saveas")
+                            local channel = tonumber((WorldCommon.GetWorldTag("channel") or 0))
+                            local server_channel = currentEnterWorld.channel or 0
+                            if ((channel == 1 or server_channel == 1) and isVisibility == 1 and value == "allow")then
+                                GameLogic.AddBBS(nil, L'课程世界不可设置允许另存', 3000, '255 0 0')
+                                page:SetValue("saveas", "forbidden")
+                                return 
+                            end
                             local value = page:GetValue("saveas")
                             GameLogic.options:SetHasCopyright(value == "forbidden")
                         end
@@ -201,11 +227,11 @@
                                     </div>
                                 </div>
                                 <div style="margin-top: 10px;">
-                                    <pe:if condition="<%= System.options.channelId_431 %>">
+                                    <pe:if condition="<%= System.options.isEducatePlatform %>">
                                         <div tooltip="<%=L'此版本不支持该功能'%>" style="float:left; width: 16px; height: 16px; background:url(Texture/Aries/Common/ThemeKid/radio_32bits.png)"></div> 
                                         <div tooltip="<%=L'此版本不支持该功能'%>" style="float: left; margin-left: 6px; margin-top:  -2px; color: #cccccc;"><%= L'私有世界' %></div>
                                     </pe:if>
-                                    <pe:if condition="<%= not System.options.channelId_431 %>">
+                                    <pe:if condition="<%= not System.options.isEducatePlatform %>">
                                         <input type='radio' name='private' value='private' onclick='set_public'/> 
                                         <div for="private" style="float: left; margin-left: 6px; margin-top:  -2px;"><%= L'私有世界' %></div>
                                     </pe:if>

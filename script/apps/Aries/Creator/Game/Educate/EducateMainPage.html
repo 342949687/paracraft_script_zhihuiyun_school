@@ -149,10 +149,17 @@
                     </pe:repeatitem>
                 </pe:repeat>
             </div>
-            <div style="width: 100px; height: 60px;">
-                <input type="button" name="btn_web" onclick="OpenWebUrl" style=" margin-left:30px; width: 40px; height: 40px; background: url(Texture/Aries/Creator/paracraft/Educate/Login/wangzhan_40x40_32bits.png#0 0 40 40);"/> 
-                <div for="btn_web" style="text-align: center; color: #ffffff; font-size: 10px;"><%=L"打开网站"%></div>
-            </div>
+            <pe:if condition="<%=System.options.isShenzhenAi5%>">
+                <div style="width: 100px; height: 60px;">
+                </div>
+            </pe:if>
+            <pe:if condition="<%=not System.options.isShenzhenAi5%>">
+                <div style="width: 100px; height: 60px;">
+                    <input type="button" name="btn_web" onclick="OpenWebUrl" style=" margin-left:30px; width: 40px; height: 40px; background: url(Texture/Aries/Creator/paracraft/Educate/Login/wangzhan_40x40_32bits.png#0 0 40 40);"/> 
+                    <div for="btn_web" style="text-align: center; color: #ffffff; font-size: 10px;"><%=L"打开网站"%></div>
+                </div>
+            </pe:if>
+            
 
             <div style="width: 100px; height: 60px; margin-top: 40px;">
                 <input type="button" onclick="ClosePage" style="width: 40px; height: 40px; margin-left: 30px; background: url(Texture/Aries/Creator/paracraft/Educate/guanbi_40x40_32bits.png#0 0 40 40);" />

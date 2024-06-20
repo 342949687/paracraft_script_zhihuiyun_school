@@ -57,20 +57,17 @@
 
 
 
-                function GetButtonHtml(status,compete_status)
-                    if compete_status and compete_status == 1 then
-                        return [[<div style="position: relative; margin-top: 16px; margin-left: -2px; width: 332px; height: 44px; background: url(Texture/Aries/Creator/paracraft/Educate/Compete/anniu3_420x60_32bits.png#0 0 420 60);" ></div>]]
-                    end
-                    if status == 0 then
+                function GetButtonHtml(status)
+                    if status == 1 then
                         return [[<div style="position: relative; margin-top: 16px; margin-left: -2px; width: 332px; height: 44px; background: url(Texture/Aries/Creator/paracraft/Educate/Compete/anniu4_420x60_32bits.png#0 0 420 60);" ></div>]]
-                    elseif status == 3 then
+                    elseif status == 2 then
                         return [[<input type="button" name="<%=Eval('index')%>" onclick="OnClickCompete" style="position: relative; margin-top: 16px; margin-left: -2px; width: 332px; height: 44px; background: url(Texture/Aries/Creator/paracraft/Educate/Compete/anniu_420x60_32bits.png#0 0 420 60);" />]]
+                    elseif status == 3 then
+                        return [[<div style="position: relative; margin-top: 16px; margin-left: -2px; width: 332px; height: 44px; background: url(Texture/Aries/Creator/paracraft/Educate/Compete/anniu2_420x60_32bits.png#0 0 420 60);" ></div>]]
                     elseif status == 4 then
                         return [[<div style="position: relative; margin-top: 16px; margin-left: -2px; width: 332px; height: 44px; background: url(Texture/Aries/Creator/paracraft/Educate/Compete/anniu3_420x60_32bits.png#0 0 420 60);" ></div>]]
-                    elseif status == 5 then
-                        return [[<div style="position: relative; margin-top: 16px; margin-left: -2px; width: 332px; height: 44px; background: url(Texture/Aries/Creator/paracraft/Educate/Compete/anniu2_420x60_32bits.png#0 0 420 60);" ></div>]]
                     end
-                    return [[<input type="button" name="<%=Eval('index')%>" onclick="OnClickCompete" style="position: relative; margin-top: 16px; margin-left: -2px; width: 332px; height: 44px; background: url(Texture/Aries/Creator/paracraft/Educate/Compete/anniu1_420x60_32bits.png#0 0 420 60);" />]]
+                    return [[<div style="position: relative; margin-top: 16px; margin-left: -2px; width: 332px; height: 44px; background: url(Texture/Aries/Creator/paracraft/Educate/Compete/anniu4_420x60_32bits.png#0 0 420 60);" ></div>]]
                 end
 
                 function OnClickCompete(name)
@@ -133,8 +130,8 @@
                                                     <div style="margin-left: 0px; margin-top: 6px;"><%=GetTimeFormat(Eval("endTime"))%></div>
                                                     
                                                 </div>
-                                                <%=GetButtonHtml(Eval("status"),Eval("compete_status"))%>
-                                                <pe:if condition='<%=Eval("status") == 0%>'>
+                                                <%=GetButtonHtml(Eval("status"))%>
+                                                <pe:if condition='<%=Eval("status") == 1%>'>
                                                     <input type="button" value='<%=GetTimeDisText(Eval("startTime"))%>' zorder="2" style="margin-top: 16px; color: #ffffff; font-size: 6px; base-font-size: 6px; text-offset-y:-3; margin-left: -6px; width: 108px; height: 30px; background: url(Texture/Aries/Creator/paracraft/Educate/Compete/date_96x22_32bits.png#0 0 96 22);" />
                                                 </pe:if>
                                             </div>

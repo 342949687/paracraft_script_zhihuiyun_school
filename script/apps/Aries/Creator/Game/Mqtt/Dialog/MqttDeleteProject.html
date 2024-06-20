@@ -30,7 +30,7 @@
                 <pe:container alignment="_ct" width="420" height="200" style="margin-left:-210px;margin-top:-125px;background: ;">
                     <aries:window mode='thin' title='<%= L"提醒：删除项目" %>' width='420' height='200' onclose='close()'>
                         <div style="position: relative;margin-left: 30px; margin-top: 30px;">
-                            <div style="float: left; width: 354px; font-size: 15px; base-font-size: 15px; color: #ffffff; font-weight: bold;"><%=L"删除项目：【"..GetProjectName()..'】？操作后不可恢复'%></div>
+                            <div style="float: left; width: 354px; font-size: 15px; base-font-size: 15px; color: #ffffff; font-weight: bold;"><%=format(L"删除项目：[%s]？操作后不可恢复",GetProjectName())%></div>
                         </div>
                         
                         <div style="position: relative; margin-left: 60px; margin-top: 100px;">

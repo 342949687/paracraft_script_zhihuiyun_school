@@ -165,9 +165,9 @@ end
     </div>
 
     <div style="margin-top: 10px;">
-        <pe:if condition="<%=not System.options.isHideVip or System.options.channelId_431 %>">
+        <pe:if condition="<%=not System.options.isHideVip or System.options.isEducatePlatform %>">
             <div style="float:left;margin-left:30px;">
-                <pe:if condition="<%= not System.options.channelId_431%>">
+                <pe:if condition="<%= not System.options.isEducatePlatform%>">
                     <div style="margin-top: 2px; float: left; margin-left:0px;width: 20px;height: 20px; background: url(Texture/Aries/Creator/keepwork/Quest/VIP_20X20_32bits.png#0 0 20 20);"></div>
                 </pe:if>
                 <%=L"播音员:"%>

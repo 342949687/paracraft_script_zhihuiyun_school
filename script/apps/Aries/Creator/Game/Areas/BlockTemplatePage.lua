@@ -401,6 +401,18 @@ function BlockTemplatePage.GetAllTemplatesDS(bForceRefresh, searchText)
 			table.insert(result,value)
 		end
 
+		-- 个人目录下载
+		local personnalstore = commonlib.Files.Find({}, GameLogic.current_worlddir.."personnalstore/", 2, 500, function(item)
+			item.fromPersonnalMall = false
+			if(item.filename:match("%.bmax$") or item.filename:match("%.x$")or item.filename:match("%.blocks%.xml$")) then
+				return true;
+			end
+		end)
+
+		for key, value in pairs(personnalstore) do
+			table.insert(result,value)
+		end
+
 		table.sort(result,function (a, b)
 			local isABlocks = a.filename:match("([^/\\]+)%.blocks%.xml$")
 			local isBBlocks = b.filename:match("([^/\\]+)%.blocks%.xml$")
@@ -418,6 +430,8 @@ function BlockTemplatePage.GetAllTemplatesDS(bForceRefresh, searchText)
 				file.text = commonlib.Encoding.url_decode(commonlib.Encoding.DefaultToUtf8(file.text));
 				if file.fromMall then
 					file.filename = GameLogic.current_worlddir.."onlinestore/"..file.filename;
+				elseif file.fromPersonnalMall then
+					file.filename = GameLogic.current_worlddir.."personnalstore/"..file.filename;
 				else
 					file.filename = GameLogic.current_worlddir.."blocktemplates/"..file.filename;
 				end

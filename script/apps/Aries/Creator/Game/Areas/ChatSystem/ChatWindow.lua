@@ -49,6 +49,8 @@ local BadWordFilter = commonlib.gettable("MyCompany.Aries.Chat.BadWordFilter");
 local max_broadcast_message = 3;
 -- we will clear the broadcast message from the ui after this amount of time. 
 local max_broadcast_msg_show_time = 60000;
+-- we will refresh UI at most 500ms
+ChatWindow.maxRefreshInterval = 500;
 -- the default show positions.
 ChatWindow.DefaultUIPos = {
 	RestoreBtn = {alignment = "_lb", left = 2, top = -254+75, width = 21, height = 24, background = "Texture/Aries/ChatSystem/jiahao_32bits.png;0 0 21 24"},
@@ -71,7 +73,6 @@ function ChatWindow.ResetPosition(ggs_valid)
 		if not System.os.IsTouchMode() then
 			ChatWindow.ShowAllPage(true)
 		end
-		
     end
 
     if (ggs_valid) then
@@ -1055,19 +1056,31 @@ function ChatWindow.OnSwitchChannelDisplay(name)
 end
 
 -- refresh the tree view. 
+-- @param bImmediate: if nil, we will refresh at most 1 time per second
 -- TODO: only refresh whenever the tree view is visible, otherwise we will postpone until it is visible again. 
-function ChatWindow.RefreshTreeView()
-	if (ChatWindow.page) then
-		local ctl = ChatWindow.GetTreeView();
-		if(ctl) then
-			local parent = ParaUI.GetUIObject("chatwindow_tvcon");
-			if(parent:IsValid())then
-				ctl.parent = parent;
-				ctl:Update(true);
+function ChatWindow.RefreshTreeView(bImmediate)
+	if(bImmediate) then
+		if (ChatWindow.page) then
+			local ctl = ChatWindow.GetTreeView();
+			if(ctl) then
+				local parent = ParaUI.GetUIObject("chatwindow_tvcon");
+				if(parent:IsValid())then
+					ctl.parent = parent;
+					ctl:Update(true);
+				end
 			end
-		end
 
-		ChatWindow.RefreshScrollBar();
+			ChatWindow.RefreshScrollBar();
+		end
+	else
+		if(not ChatWindow.timer) then
+			ChatWindow.timer = commonlib.Timer:new({callbackFunc = function(timer)
+				ChatWindow.RefreshTreeView(true)
+				timer:SetEnabled(false);
+			end})
+			ChatWindow.timer:Change(0, ChatWindow.maxRefreshInterval);
+		end
+		ChatWindow.timer:SetEnabled(true);
 	end
 end
 

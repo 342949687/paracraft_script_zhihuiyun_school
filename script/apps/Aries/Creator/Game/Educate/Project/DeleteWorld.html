@@ -5,6 +5,7 @@
 <script refresh="true" type="text/npl" src=".lua" ><![CDATA[
     local DeleteWorld = NPL.load('(gl)Mod/WorldShare/cellar/DeleteWorld/DeleteWorld.lua')
     -- service
+    local EducateProject = NPL.load("(gl)script/apps/Aries/Creator/Game/Educate/Project/EducateProject.lua")
     local KeepworkServiceSession = NPL.load('(gl)Mod/WorldShare/service/KeepworkService/KeepworkServiceSession.lua')
     local KeepworkServiceProject = NPL.load('(gl)Mod/WorldShare/service/KeepworkService/KeepworkServiceProject.lua')
 
@@ -62,11 +63,13 @@
                         DeleteWorld:DeleteLocal(function()
                             GameLogic.AddBBS(nil,"删除项目成功")
                             Create:GetWorldList(Create.statusFilter)
+                            EducateProject.GetUserWorldUsedSize()
                             close_page()
                         end,true)
                     else
                         GameLogic.AddBBS(nil,"删除项目成功")
                         Create:GetWorldList(Create.statusFilter)
+                        EducateProject.GetUserWorldUsedSize()
                         close_page()
                     end
 

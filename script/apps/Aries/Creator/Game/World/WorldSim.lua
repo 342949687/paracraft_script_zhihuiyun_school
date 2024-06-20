@@ -207,6 +207,14 @@ function WorldSim:OnTickDayLight(fForceUpdate)
 				end
 			end
 		end
+		
+		-- 根据时间启动光照
+		if (System.os.IsEmscripten()) then
+			local attr = ParaTerrain.GetBlockAttributeObject();
+			if(attr:GetFieldIndex("IsAsyncLightCalculation") >= 0) then
+				attr:SetField("IsAsyncLightCalculation", time_std < -0.4 or time_std > 0.4);
+			end
+		end
 	end
 end
 

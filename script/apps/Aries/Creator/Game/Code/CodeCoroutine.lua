@@ -253,8 +253,9 @@ function CodeCoroutine:Run(msg, onFinishedCallback)
 			end
 			return result, r2, r3, r4;
 		end)
-			
+		local lastCo = GameLogic.GetCodeGlobal():GetCurrentCoroutine()
 		local ok, result, r2, r3, r4 = self:Resume();
+		GameLogic.GetCodeGlobal():SetCurrentCoroutine(lastCo);
 		if(ok and self.isFinished) then
 			return result, r2, r3, r4;
 		end
@@ -295,8 +296,9 @@ function CodeCoroutine:RunSingle(msg, onFinishedCallback)
 				end
 			end)
 		end
-
+		local lastCo = GameLogic.GetCodeGlobal():GetCurrentCoroutine()
 		local ok, result, r2, r3, r4 = self:Resume();
+		GameLogic.GetCodeGlobal():SetCurrentCoroutine(lastCo);
 		if(ok and self.isFinished) then
 			return result, r2, r3, r4;
 		end

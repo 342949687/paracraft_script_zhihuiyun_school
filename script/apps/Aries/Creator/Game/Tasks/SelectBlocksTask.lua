@@ -279,9 +279,20 @@ end
 
 
 -- set pivot point vector3d in block coordinate system
+-- @param vec: if nil, we will use self.aabb's bottom center if player is in air, otherwise it will use the player's block position
 function SelectBlocks:SetPivotPoint(vec)
 	if(not vec) then
-		vec = {EntityManager.GetPlayer():GetBlockPos()};
+		local x, y, z = EntityManager.GetPlayer():GetBlockPos();
+		local xx, yy, zz = EntityManager.GetPlayer():GetPosition();
+		xx, yy, zz = BlockEngine:block(xx, yy-0.2, zz)
+		local block = BlockEngine:GetBlock(xx, yy, zz)
+		if(block and block.obstruction) then
+			vec = {x, y, z};
+		else
+			-- player is in air, use the bottom center of the selection box
+			local bx, by, bz = self.aabb:GetBottomCenter()
+			vec = {math.floor(bx), math.floor(by), math.floor(bz)};
+		end
 	end
 	if(not self.PivotPoint:equals(vec)) then
 		self.PivotPoint:set(vec);
@@ -444,6 +455,37 @@ function SelectBlocks:RefreshImediately()
 	end
 end
 
+-- automatically select blocks near a given position. 
+-- it first find the closest block within the radius, and then select all connected blocks to it. 
+-- @param radius: default to 7;
+-- @return the number of blocks selected.
+function SelectBlocks.AutoSelectNearbyBlocks(cx, cy, cz, radius)
+	radius = radius or 7;
+	NPL.load("(gl)script/ide/System/Util/Iterators.lua");
+	local Iterators = commonlib.gettable("System.Util.Iterators");
+	
+	for dx, dz in Iterators.Spiral3d(radius) do 
+		local x, y, z = cx + dx, cy, cz + dz;
+		local blockId = BlockEngine:GetBlockId(x, y, z);
+		if(blockId and blockId ~= 0) then
+			local block_data = ParaTerrain.GetBlockUserDataByIdx(x,y,z);
+			local self = cur_instance;
+			local count = 0;
+			if(cur_instance) then
+				self:SelectSingleBlock(x,y,z, blockId, block_data);
+				count = SelectBlocks.SelectAll(true, 2000)
+			else
+				local task = SelectBlocks:new({blockX = x, blockY = y, blockZ = z, blocks = {}})
+				task:Run()
+				task:SelectSingleBlock(x,y,z, blockId, block_data);
+				count = SelectBlocks.SelectAll(true, 2000)
+			end
+			return count or 0;
+		end
+	end
+	return 0;
+end
+
 -- static function:
 -- select all blocks connected with current selection but not below current selection. 
 -- @param max_new_count: max number of blocks to be added. default to 20000
@@ -453,13 +495,19 @@ function SelectBlocks.SelectAll(bImmediateUpdate, max_new_count)
 	if(not self) then
 		return
 	end 
-	local baseBlockCount = #(self.blocks);
 	local blockIndices = {}; -- mapping from block index to true for processed bones
 	local block = self.blocks[1];
-	if(not block) then
-		return;
+	local cx, cy, cz;
+	if(block) then
+		cx, cy, cz = block[1], block[2], block[3];
+	elseif(self.blockX) then
+		cx, cy, cz = self.blockX, self.blockY, self.blockZ;
+		self.blocks[1] = {cx, cy, cz};
+	else
+		return
 	end
-	local cx, cy, cz = block[1], block[2], block[3];
+	local baseBlockCount = #(self.blocks);
+	
 	local min_y = 9999;
 	for i, block in ipairs(self.blocks) do
 		local x, y, z = block[1], block[2], block[3];
@@ -517,6 +565,7 @@ function SelectBlocks.SelectAll(bImmediateUpdate, max_new_count)
 
 	self:OnSelectionRefreshed();
 	SelectBlocks.UpdateBlockNumber(#(self.blocks));
+	return #(self.blocks);
 end
 
 -- return a table containing all blocks that has been selected. 
@@ -716,6 +765,7 @@ function SelectBlocks:handleRightClickScene(event)
 				end
 			end
 			SelectBlocks.ExtendAABB(result.blockX,result.blockY,result.blockZ)
+			self:SetPivotPoint();
 			self:SetManipulatorPosition({result.blockX,result.blockY,result.blockZ});
 		end
 		return 
@@ -755,6 +805,7 @@ function SelectBlocks:handleLeftClickScene(event)
 				SelectBlocks.FilterOnlyBlock(result.blockX,result.blockY,result.blockZ)
 			else
 				SelectBlocks.ExtendAABB(result.blockX,result.blockY,result.blockZ)
+				self:SetPivotPoint();
 				self:SetManipulatorPosition({result.blockX,result.blockY,result.blockZ});
 			end
 		end
@@ -1413,6 +1464,10 @@ end
 
 -- static public function: clipboard
 function SelectBlocks.PasteFromClipboard(bx, by, bz)
+	if not GameLogic.options.CanPasteBlock then
+		GameLogic.AddBBS(nil,L"粘贴失败，该世界禁止从外部粘贴方块！")
+		return
+	end
 	local bHasSpecifiedPasteLocation;
 	local x, y, z;
 	if(bx) then
@@ -1703,5 +1758,70 @@ function SelectBlocks.ReplaceBlocks(from_block_id, to_block_id)
 				end
 			end
 		end
+	end
+end
+
+
+-- make blocks in the selected aabb area solid (without hollow blocks)
+-- @param fillBlockId: if nil, it will be 62 grass block. 
+-- @return number of blocks filled.
+function SelectBlocks.MakeSolid(fillBlockId, fillBlockData)
+	local self = cur_instance;
+	if(self and self:HasSelection()) then
+		local min = self.aabb:GetMin();
+		local max = self.aabb:GetMax();
+		local minX, minY, minZ = min[1], min[2], min[3];
+		local maxX, maxY, maxZ = max[1], max[2], max[3];
+
+		-- mark block states: 0 for light, 1 for solid, 2 for hollow, -1 for unknown
+		local blocks = {};
+		local lightBlocks = {};
+		for x = minX, maxX do
+			for y = minY, maxY do
+				for z = minZ, maxZ do
+					local sparseIndex = BlockEngine:GetSparseIndex(x, y, z);
+					local id = BlockEngine:GetBlockId(x, y, z);
+					if(x == minX or x == maxX or y == minY or y == maxY or z == minZ or z == maxZ) then
+						if(id > 0) then
+							blocks[sparseIndex] = 1;
+						else	
+							lightBlocks[#lightBlocks+1] = sparseIndex;
+							blocks[sparseIndex] = 0;
+						end
+					else
+						blocks[sparseIndex] = (id > 0) and 1 or -1;
+					end
+				end
+			end
+		end
+		-- for each light block, also light the nearby blocks, use a breath first search
+		while(#lightBlocks > 0) do
+			local sparseIndex = lightBlocks[#lightBlocks];
+			lightBlocks[#lightBlocks] = nil;
+			local x, y, z = BlockEngine:FromSparseIndex(sparseIndex);
+			for i = 0, 5 do
+				local dx, dy, dz = Direction.GetOffsetBySide(i)
+				local newSparseIndex = BlockEngine:GetSparseIndex(x+dx, y+dy, z+dz);
+				if(blocks[newSparseIndex] == -1) then
+					blocks[newSparseIndex] = 0;
+					lightBlocks[#lightBlocks+1] = newSparseIndex;
+				end
+			end
+		end
+		-- everything else marked -1 is hollow blocks, and we shall fill it with a default block
+		fillBlockId = fillBlockId or 62;
+		local count = 0
+		for x = minX, maxX do
+			for y = minY, maxY do
+				for z = minZ, maxZ do
+					local sparseIndex = BlockEngine:GetSparseIndex(x, y, z);
+					if(blocks[sparseIndex] == -1) then
+						BlockEngine:SetBlock(x, y, z, fillBlockId, fillBlockData);
+						count = count + 1;
+					end
+				end
+			end
+		end
+		return count;
 	end
 end

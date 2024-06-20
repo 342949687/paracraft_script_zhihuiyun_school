@@ -431,25 +431,35 @@ function Desktop.OnExit(bForceExit, bRestart)
 					end
 				end
 			};
-			local func = function()
-				if not Game.is_started and System.options.channelId_431 then
-					return
-				end
-				local dialog = GameLogic.GetFilters():apply_filters("ShowExitDialog", dialog, bRestart);			
-				if(dialog and dialog.callback and dialog.text) then
-					_guihelper.MessageBox(dialog.text, 
-						dialog.callback,dialog.messageBoxButton or _guihelper.MessageBoxButtons.YesNoCancel);
-				end
-			end
 
-			local CourseEvaluation = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/Lesson/CourseEvaluation/CourseEvaluation.lua") 
-			if CourseEvaluation then
-				CourseEvaluation.ShowView(function()
-					func()
-				end)
+			if not Game.is_started and System.options.isEducatePlatform then
 				return
 			end
-			func()
+			local dialog = GameLogic.GetFilters():apply_filters("ShowExitDialog", dialog, bRestart);			
+			if(dialog and dialog.callback and dialog.text) then
+				_guihelper.MessageBox(dialog.text, 
+					dialog.callback,dialog.messageBoxButton or _guihelper.MessageBoxButtons.YesNoCancel);
+			end
+			--暂时去掉课程评价
+			-- local func = function()
+			-- 	if not Game.is_started and System.options.isEducatePlatform then
+			-- 		return
+			-- 	end
+			-- 	local dialog = GameLogic.GetFilters():apply_filters("ShowExitDialog", dialog, bRestart);			
+			-- 	if(dialog and dialog.callback and dialog.text) then
+			-- 		_guihelper.MessageBox(dialog.text, 
+			-- 			dialog.callback,dialog.messageBoxButton or _guihelper.MessageBoxButtons.YesNoCancel);
+			-- 	end
+			-- end
+
+			-- local CourseEvaluation = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/Lesson/CourseEvaluation/CourseEvaluation.lua") 
+			-- if CourseEvaluation then
+			-- 	CourseEvaluation.ShowView(function()
+			-- 		func()
+			-- 	end)
+			-- 	return
+			-- end
+			-- func()
 		end
 	else
 		if(bForceExit or Desktop.is_exiting) then
@@ -512,7 +522,7 @@ function Desktop.OnExit(bForceExit, bRestart)
 				MobileSaveWorldPage.ShowPage("exit_world", dialog.callback)
 				dialog = nil
 			else
-				if not Game.is_started and System.options.channelId_431 then
+				if not Game.is_started and System.options.isEducatePlatform then
 					dialog = nil
 				else
 					dialog = GameLogic.GetFilters():apply_filters("ShowExitDialog", dialog);

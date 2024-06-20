@@ -50,7 +50,7 @@ function MqttClearTopic.OnClickTopicClear()
     local id = MqttClearTopic.clearData.id or -1
     MqttClearTopic.clearData = nil
     MqttManager.getInstance():ClearTopic(id,function(success,data)
-        echo(data,true)
+        -- echo(data,true)
         print("clear topic ====================",success)
         if success then
             GameLogic.AddBBS(nil,L"清空成功")

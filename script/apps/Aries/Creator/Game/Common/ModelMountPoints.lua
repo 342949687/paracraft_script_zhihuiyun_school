@@ -70,6 +70,7 @@ function ModelMountPoints:AddMountPoint(point)
 	if(autoPos) then
 		point.y = 0.4 * self:GetCount()
 	end
+	
 	self:SetTransformDirty()
 end
 

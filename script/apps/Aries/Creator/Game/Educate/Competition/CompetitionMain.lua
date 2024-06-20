@@ -116,12 +116,16 @@ function CompetitionMain.HandleCompeteData(data)
                     temp.applyStartAt = competeData.applyStartAt
                     temp.applyEndAt = competeData.applyEndAt
                     temp.compete_status = answerSheetRecord.status or 0
-                    temp.status = status
+                    temp.status = papers[j].status or status
                     local _,startTime,endTime = CompetitionUtils.GetTimeFormat(temp.startTime,temp.endTime)
                     temp.name = papers[j].competePaper.name
                     temp.competeContentId = papers[j].competePaper.competeContentId
                     temp.isMain = false
                     temp.isWaitStart = curTime < startTime
+                    -- --如果外层大赛再开考时间内，试卷未到答题时间，则修改状态为不能进去
+                    -- if status == 3 and curTime < startTime then 
+                    --     temp.status = 0
+                    -- end
                     temp.enrolmentId = enrolmentId
                     temp.sponsor = competeData.sponsor
                     temp.countDown = papers[j].countDown

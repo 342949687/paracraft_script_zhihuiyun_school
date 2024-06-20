@@ -138,6 +138,33 @@
                             MqttDetailPage.OnClickDeviceDelete(index)
                         end
                     end
+
+                    function IsLimitTopicDesc(msg)
+                        if msg == nil or msg == "" then
+                            return false
+                        end
+                        local fontName = "System;12;norm"
+                        local width = _guihelper.GetTextWidth(msg, fontName)
+                        --print("IsLimitTopicDesc========",width)
+                        return width and width > 180
+                    end
+
+                    function GetLimitTopicDesc(msg)
+                        return commonlib.GetLimitLabelByTextWidth(msg,180,"System;12;norm")
+                    end
+
+                    function IsLimitDeviceName(name)
+                        if name == nil or name == "" then
+                            return false
+                        end
+                        local fontName = "System;12;norm"
+                        local width = _guihelper.GetTextWidth(name, fontName)
+                        return width and width > 100
+                    end
+
+                    function GetLimitDeviceName(name)
+                        return commonlib.GetLimitLabelByTextWidth(name,100,"System;12;norm")
+                    end
                 ]]>
             </script>
             <style type="text/mcss">
@@ -193,8 +220,18 @@
                                                             </div>
                                                         </div>
                                                         <div style="float: left; width: 290px;  background: url(Texture/Aries/Creator/keepwork/vip/baidiheikuang_32x32_32bits.png:3 3 3 3);">
-                                                            <div style="float: left; width: 260;"><%=Eval("desc")%>
-                                                                <input type="button" name="<%=Eval('index')%>" onclick="onclickTopicEdit" value="<%=L'[编辑]'%>" style="float: left; color: #0000ff; background: url();" />
+                                                            <div style="float: left; width: 260;">
+                                                                <pe:if condition='<%=IsLimitTopicDesc(Eval("desc"))%>'>
+                                                                    <div style="float: left;width: 200px;">
+                                                                        <div style="position: relative; width: 200px; height: 22px;"><%=GetLimitTopicDesc(Eval("desc"))%></div>
+                                                                        <div tooltip='<%=Eval("desc")%>' style="position: relative; width: 200px; height: 22px;"></div>
+                                                                    </div>
+                                                                    <input type="button" name="<%=Eval('index')%>" onclick="onclickTopicEdit" value="<%=L'[编辑]'%>" style="float: left; color: #0000ff; background: url();" />
+                                                                </pe:if>
+                                                                <pe:if condition='<%=not IsLimitTopicDesc(Eval("desc"))%>'>
+                                                                    <%=Eval("desc")%>                                                                
+                                                                    <input type="button" name="<%=Eval('index')%>" onclick="onclickTopicEdit" value="<%=L'[编辑]'%>" style="float: left; color: #0000ff; background: url();" />
+                                                                </pe:if>
                                                             </div>
                                                         </div>
                                                         <div style="float: left; width: 260px;  background: url(Texture/Aries/Creator/keepwork/vip/baidiheikuang_32x32_32bits.png:3 3 3 3);">
@@ -233,7 +270,13 @@
                                                 <Columns>
                                                     <div style=" margin-left: 20px;margin-top: 0px; width:930px; min-height:24px; text-align:center;font-size: 12px;" >
                                                         <div style="float: left; height: 23px; width: 120px;  background: url(Texture/Aries/Creator/keepwork/vip/baidiheikuang_32x32_32bits.png:3 3 3 3);">
-                                                            <%=Eval("desc")%>
+                                                            <pe:if condition='<%=IsLimitDeviceName(Eval("desc"))%>'>
+                                                                <div style="position: relative; width: 120px; height: 24px;"><%=GetLimitDeviceName(Eval("desc"))%></div>
+                                                                <div tooltip='<%=Eval("desc")%>' style="position: relative; width: 120px; height: 24px;"></div>
+                                                            </pe:if>
+                                                            <pe:if condition='<%=not IsLimitDeviceName(Eval("desc"))%>'>
+                                                                <%=Eval("desc")%>
+                                                            </pe:if>
                                                         </div>
                                                         <div style="float: left; height: 23px; width: 240px;  background: url(Texture/Aries/Creator/keepwork/vip/baidiheikuang_32x32_32bits.png:3 3 3 3);">
                                                             <div style="float: left; width: 230; text-align:left; margin-left: 20px;"><%=Eval("clientid")%>

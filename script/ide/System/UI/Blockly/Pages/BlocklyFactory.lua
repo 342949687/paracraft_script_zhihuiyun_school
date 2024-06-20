@@ -246,18 +246,21 @@ ClickEditBlockBtn = function(blockType) EditBlock(blockType) end
 LoadBlockXmlText = function(block)
     if (not block or not block.xml_text) then return end
     BlocklyEditor:LoadFromXmlNodeText(block.xml_text)
+    BlocklyEditor:CloseFieldEditorAndContextMenu();
 end
 
 GenerateBlockOption = function()
     local rawcode, prettycode = BlocklyEditor:GetCode()
     local prettycode = string.gsub(prettycode, "\t", "    ")
-    local G = {message = "", arg = {}, field_count = 0, type = "", category = "图块", color = "#2E9BEF", output = false, previousStatement = true, nextStatement = true, connections = {}, headers = {}}
+    local G = {message = "", arg = {}, field_count = 0, type = "", category = "图块", color = "#2E9BEF", group = "", output = false, previousStatement = true, nextStatement = true, connections = {}, headers = {}}
     local func, errmsg = loadstring(prettycode)
 
     if (not func) then
         print("============================loadstring error==========================", errmsg)
-        print(prettycode)
+        -- print(prettycode)
         return nil
+    else
+        -- print(prettycode)
     end
     setfenv(func, G)
     local isError = false
@@ -290,7 +293,7 @@ PreviewBlockOption = function(blockOption)
         return ;
     end
     BlocklyPreview:DefineBlock(commonlib.deepcopy(blockOption))
-    local block = BlocklyPreview:GetBlockInstanceByType(blockOption.type)
+    local block = BlocklyPreview:GetBlockInstanceByType(blockOption.type, true)
     BlocklyPreview:ClearBlocks()
     block:SetLeftTopUnitCount(10, 10)
     block:UpdateLayout()
@@ -344,6 +347,7 @@ GenerateBlockDefineCode = function(option)
     type = "%s",
     category = "%s",
     color = "%s",
+    group = "%s",
     output = %s,
     previousStatement = %s, 
     nextStatement = %s,
@@ -352,7 +356,7 @@ GenerateBlockDefineCode = function(option)
     %s,
     %s,
 }"
-]=], option.type, option.category, option.color, option.output, option.previousStatement, option.nextStatement, option.message, code_description, commonlib.dump(option.arg, "arg", false, 2), commonlib.dump(option.headers, "headers", false, 2))
+]=], option.type, option.category, option.color, option.group, option.output, option.previousStatement, option.nextStatement, option.message, code_description, commonlib.dump(option.arg, "arg", false, 2), commonlib.dump(option.headers, "headers", false, 2))
 
     return block_define_code
 end

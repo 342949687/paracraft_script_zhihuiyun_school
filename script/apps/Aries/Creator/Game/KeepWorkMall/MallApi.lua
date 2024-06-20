@@ -168,3 +168,19 @@ function MallApi:UpdateModel(model_id,model_name,callbackFunc)
         end
     end)
 end
+
+function MallApi:UpdateModelUrl(model_id,model_url,callbackFunc)
+    if type(model_id) ~= "number" or type(model_url) ~= "string" then
+        return;
+
+    end
+    keepwork.mall.updateModel({
+        router_params = {id = model_id},
+        modelUrl = model_url,
+    },function(err,msg,data)
+        if callbackFunc then
+            callbackFunc(err,data);
+        end
+    end)
+end
+

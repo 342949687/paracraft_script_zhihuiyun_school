@@ -48,13 +48,14 @@
     
 <pe:container alignment="_fi" zorder='-2' onclick = "onclickBackground" width="100%" height="100%" style="background-color:#ff00ff00; ">
     <pe:container alignment='_rt' zorder='-1' style='width:120px;height:60px;position: relative; margin-top: 80px;margin-right: 100px;background-color:#fff60000;'>
-        <div  style='width: 120px;margin-left: 0px;'>
-            <input type='button' onclick='on_click_educate_net' style='margin-left: 40px;width: 40px; height: 40px; background: url(Texture/Aries/Creator/paracraft/Educate/Login/wangzhan_40x40_32bits.png#0 0 40 40)'/>
-            <div style = " width: 120px;text-align: center;font-size: 8px;color: #0E1627;">
-                <%=L"智慧教育平台"%>
+        <pe:if condition="<%=not System.options.isShenzhenAi5%>">
+            <div  style='width: 120px;margin-left: 0px;'>
+                <input type='button' onclick='on_click_educate_net' style='margin-left: 40px;width: 40px; height: 40px; background: url(Texture/Aries/Creator/paracraft/Educate/Login/wangzhan_40x40_32bits.png#0 0 40 40)'/>
+                <div style = " width: 120px;text-align: center;font-size: 8px;color: #0E1627;">
+                    <%=L"智慧教育平台"%>
+                </div>
             </div>
-        </div>
-        
+        </pe:if>
     </pe:container>
     <pe:container alignment="_ct" uiname="ClassCodeLogin.background" width="360" height="500" zorder='-1' style="margin-left: -180px;margin-top: -200px; background: url();">
         <div zorder='-1' style="position: relative;width:360px;height: 400px;background: url(Texture/Aries/Creator/paracraft/Educate/Login/dengludi_50x50_32bits.png#0 0 60 60:28 28 28 28);"></div>

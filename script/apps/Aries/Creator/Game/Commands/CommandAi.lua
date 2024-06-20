@@ -105,7 +105,7 @@ model默认为百度问心一言。 免费用户每天10次，会员用户每天
 
 Commands["capture"] = {
     name="capture", 
-    quick_ref="/capture [none|image|video|sound|text|objectdetection|pose|handpose] [-width 400] [-height 300] [-x 0 -y -0] [-duration 5] [-file temp/capture.png] [-event eventName]", 
+    quick_ref="/capture [none|hide|image|video|videoimage|webpage|sound|text|objectdetection|pose|handpose] [-width 400] [-height 300] [-url url] [-x 0 -y -0] [-duration 5] [-file temp/capture.png] [-event eventName]", 
     desc=[[capture image with computer's camera. we will use webview to capture the image.
 ESC key to close the camera window, click the camera window to take image. 
 @return file|filename: if start with "temp/" we will save to temp folder, otherwise we will save to world folder.
@@ -121,6 +121,8 @@ ESC key to close the camera window, click the camera window to take image.
 -- model [PoseNet|MoveNet|BlazePose] -runtime [mediapipe|tfjs] -maxPoses [number] -interval [number]
 /capture pose start -model BlazePose -maxPoses 1 -event OnPose
 /capture handpose start -event OnHandPose
+-- play mp4 video, and capture via vidioimage sub-command later
+/capture webpage -url https://url.mp4
 -- when user clicked, an event is fired with msg:{filename}
 /capture video -event OnVideoCaptured
 -- capture current video image during pose, video, handpose, objectdetection, etc. 
@@ -128,9 +130,11 @@ ESC key to close the camera window, click the camera window to take image.
 /capture videoimage -format png -filename test.png
 -- event msg is {width, height, data={r,g,b,a,...}}
 /capture videoimage -format raw -event OnImageCaptured
+/capture videoimage -format rgbstring -event OnImageCaptured
 -- close camera capture window
 /capture video stop
 /capture none
+/capture hide
 ]], 
     handler = function(cmd_name, cmd_text, cmd_params, fromEntity)
         local subCmd, action;
@@ -144,7 +148,7 @@ ESC key to close the camera window, click the camera window to take image.
         local options = {};
 		while (option_name and cmd_text) do
 			option_name, cmd_text = CmdParser.ParseOption(cmd_text);
-			if(option_name == "x" or option_name == "y" or option_name == "width" or option_name == "height" or option_name == "duration") then
+			if(option_name == "x" or option_name == "y" or option_name == "width" or option_name == "height" or option_name == "duration" or option_name == "scale" or option_name == "scale_x" or option_name == "scale_y") then
 				value, cmd_text = CmdParser.ParseInt(cmd_text);
                 options[option_name] = value;
 			elseif(option_name == "file" or option_name == "filename") then
@@ -166,10 +170,13 @@ ESC key to close the camera window, click the camera window to take image.
             elseif(option_name == "language" or option_name == "event" or option_name == "model" or option_name == "maxPoses" or option_name == "interval" or option_name == "runtime" or option_name == "format") then
                 value, cmd_text = CmdParser.ParseWord(cmd_text);
                 options[option_name] = value;
-            elseif(option_name == "debug") then
-                options.debug = true;
-            elseif(option_name == "video_url") then
+            elseif (option_name == "camera_id" or option_name == "device_id") then
                 value, cmd_text = CmdParser.ParseString(cmd_text);
+                options[option_name] = value;
+            elseif(option_name == "debug" or option_name == "offline") then
+                options[option_name] = true;
+            elseif(option_name == "video_url" or option_name == "url" or option_name == "camera_url") then
+                value, cmd_text = CmdParser.ParseUrl(cmd_text);
                 options[option_name] = value;
             end
         end
@@ -212,15 +219,20 @@ ESC key to close the camera window, click the camera window to take image.
                             callbackFunc.callback = nil;
                         end
                     end
-                end, x = options.x, y = options.y, width = options.width, height = options.height, filepath = options.file or options.filename, debug = options.debug})
+                end, x = options.x, y = options.y, width = options.width, height = options.height, 
+                filepath = options.file or options.filename, debug = options.debug, url = options.url, 
+                scale = options.scale, scale_x = options.scale_x, scale_y = options.scale_y,
+                camera_id = options.camera_id, device_id = options.device_id, offline = options.offline, camera_url = options.camera_url});
             end
             if(subCmd == "image") then
                 return callbackFunc;
             end
         elseif (subCmd == "videoimage") then
             if(options.event) then
+                local camera_id = options.camera_id;
                 local event = System.Core.Event:new():init(options.event)
                 options.callback = function(data) 
+                    if (camera_id and type(data) == "table" and camera_id ~= data.camera_id) then return end
                     event.msg = data;
                     GameLogic:event(event)
                 end
@@ -231,7 +243,12 @@ ESC key to close the camera window, click the camera window to take image.
             local NPLJS = NPL.load("(gl)script/apps/Aries/Creator/Game/NplBrowser/NPLJS.lua");
             NPLJS:CloseCamera();
             GameLogic.AddBBS("capture", nil);
-
+        elseif(subCmd == "hide") then
+            local NPLJS = NPL.load("(gl)script/apps/Aries/Creator/Game/NplBrowser/NPLJS.lua");
+            NPLJS:Hide();
+        elseif(subCmd == "show") then
+            local NPLJS = NPL.load("(gl)script/apps/Aries/Creator/Game/NplBrowser/NPLJS.lua");
+            NPLJS:Show();
         elseif(subCmd == "text") then
             -- audio to text with external web service
              NPL.load("(gl)script/apps/Aries/Creator/Game/Movie/SoundRecorder.lua");
@@ -321,6 +338,19 @@ ESC key to close the camera window, click the camera window to take image.
                 if (subCmd == "objectdetection") then NPLJS:GetCameraObjectDetection(options) end 
                 if (subCmd == "pose") then NPLJS:GetCameraPoseDetection(options) end
                 if (subCmd == "handpose") then NPLJS:GetCameraHandPoseDetection(options) end
+            else
+                NPLJS:Close();
+            end
+        elseif (subCmd == "webpage") then
+            local NPLJS = NPL.load("(gl)script/apps/Aries/Creator/Game/NplBrowser/NPLJS.lua");
+            if (action == "start") then
+                NPLJS:GetWebPageImage({callback = function() 
+                    if(options.event) then
+                        local event = System.Core.Event:new():init(options.event)
+  				        event.msg = {};
+  				        GameLogic:event(event)
+                    end
+                end, x = options.x, y = options.y, width = options.width, height = options.height, url = options.url, scale = options.scale, scale_x = options.scale_x, scale_y = options.scale_y, debug = options.debug})
             else
                 NPLJS:Close();
             end

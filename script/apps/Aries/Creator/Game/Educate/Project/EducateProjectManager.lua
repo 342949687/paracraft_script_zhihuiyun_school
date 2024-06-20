@@ -71,7 +71,7 @@ function EducateProjectManager.StartSycUserWorld()
         return
     end
     print("EducateProjectManager.CurrentCreateWorldName===============",EducateProjectManager.CurrentCreateWorldName)
-    if System.options.channelId_431 then
+    if System.options.isEducatePlatform then
         if not System.options.isOffline then
             if EducateProjectManager.CurrentCreateWorldName and EducateProjectManager.CurrentCreateWorldName ~= "" then
                 GameLogic.AddBBS(nil,"世界创建成功，开始自动保存世界")

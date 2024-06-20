@@ -49,6 +49,7 @@ Window:Property("3DWindow", false, "Is3DWindow");   -- 是否是3D窗口
 Window:Property("Destroy", false, "IsDestroy");     -- 是否销毁窗口
 Window:Property("EnableMouseWheelSimulate", true, "IsEnableMouseWheelSimulate");         -- 是否开启鼠标滚动模拟
 Window:Property("EnableSimulator", true, "IsEnableSimulator");                           -- 是否开启事件模拟器
+Window:Property("Refresh", true, "IsRefresh");      -- 是否刷新
 
 local function GetSceneViewport()
     NPL.load("(gl)script/ide/System/Scene/Viewports/ViewportManager.lua");
@@ -449,6 +450,8 @@ function Window:HandleRender()
     self:Render(painter);
     painter:Scale(1 / self.scaleX, 1 / self.scaleY);
     painter:Flush();
+
+    self:SetRefresh(false);
 end
 
 -- 获取方法名通过事件名

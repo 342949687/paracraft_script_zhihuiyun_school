@@ -26,6 +26,7 @@ local ToolBox = NPL.load("./ToolBox.lua");
 local ContextMenu = NPL.load("./ContextMenu.lua");
 local Block = NPL.load("./Block.lua");
 local ShadowBlock = NPL.load("./ShadowBlock.lua");
+local FoldedBlock = NPL.load("./FoldedBlock.lua");
 local BlocklyEditor = NPL.load("./BlocklyEditor.lua");
 local Note = NPL.load("./Note.lua");
 local BlocklySimulator = NPL.load("./BlocklySimulator.lua");
@@ -57,6 +58,7 @@ Blockly:Property("ToCodeCache");              -- 生成代码的时缓存对象
 Blockly:Property("RunBlockId", 0);            -- 运行块ID
 Blockly:Property("ShowMiniMap", false, "IsShowMiniMap");  -- 是否显示小地图
 Blockly:Property("Version", "1.0.0");         -- 当前版本
+Blockly:Property("CustomBlocklyFactory", false, "IsCustomBlocklyFactory");         -- 是否是定制工具
 
 function Blockly.PlayCreateBlockSound()
     ConnectionBlockSound:play2d();
@@ -93,6 +95,7 @@ function Blockly:Reset()
     self.Const = Const;
     self.ToolBoxWidth = Const.ToolBoxWidth;
     self.ToolBoxBlockMap = {};
+    self.init_workspace_xml = "";
     self:ResetExtendBlockAndCategory();
     self:SetScale(1);
 end
@@ -135,6 +138,7 @@ function Blockly:Init(xmlNode, window, parent)
 
     self:SetShadowBlock(ShadowBlock:new():Init(self));
 
+    self:SetCustomBlocklyFactory(self:GetAttrStringValue("CustomBlocklyFactory") == "true");
     self:SetLanguage(self:GetAttrStringValue("language"));
     self:SetLanguageType(self:GetAttrStringValue("LanguageType"));
     self:LoadBlockMap();
@@ -153,6 +157,7 @@ function Blockly:OnToolBoxXmlTextChange(toolboxXmlText)
     local xmlNode = ParaXML.LuaXML_ParseString(toolboxXmlText);
     local toolboxNode = xmlNode and commonlib.XPath.selectNode(xmlNode, "//toolbox");
     local all_category_map = BlockManager.GetCustomCurrentBlockAllCategoryMap();
+    local all_block_map = BlockManager.GetCustomCurrentBlockAllBlockMap();
     if (toolboxNode) then
         local categorylist, categorymap = {}, {};
         for _, categoryNode in ipairs(toolboxNode) do
@@ -172,7 +177,8 @@ function Blockly:OnToolBoxXmlTextChange(toolboxXmlText)
                         local blocktype = blockTypeNode.attr.type;
                         local disabled = blockTypeNode.attr.disabled == "true";
                         local hideInToolbox = blockTypeNode.attr.hideInToolbox == "true";
-                        table.insert(category, {blocktype = blocktype, hideInToolbox = hideInToolbox, disabled = disabled});
+                        local color = blockTypeNode.color;
+                        table.insert(category, {blocktype = blocktype, hideInToolbox = hideInToolbox, disabled = disabled, color = color});
                     end
                 end
                 if (not categorymap[category.name]) then
@@ -197,7 +203,7 @@ function Blockly:OnToolBoxXmlTextChange(toolboxXmlText)
         end
         for _, block in ipairs(category) do
             local blocktype = block.blocktype;
-            local option = self.BlockMap[blocktype];
+            local option = self.BlockMap[blocktype] or all_block_map[blocktype];
             if (option) then  
                 option.category = category.name; 
                 option.color = category.color;
@@ -224,6 +230,8 @@ function Blockly:OnToolBoxXmlTextChange(toolboxXmlText)
                     category = { color = default_category.color, name = default_category.name, text = default_category.text, blocktypes = {} };
                 end
                 table.insert(category.blocktypes, #category.blocktypes + 1, block_type);
+                block.color = block.color or category.color;
+                block.group = block.group or category.name or "";
                 self.ToolBoxBlockMap[block_type] = block;
             end
             for _, category in pairs(all_category_map) do
@@ -238,6 +246,7 @@ function Blockly:OnToolBoxXmlTextChange(toolboxXmlText)
                 local extend_block = commonlib.deepcopy(block);
                 local extend_category = all_category_map[extend_block.category] or {};
                 extend_block.color = extend_block.color or extend_category.color;
+                extend_block.group = extend_block.group or extend_category.name or "";
                 self.ExtendBlockMap[block_type] = extend_block;
                 self.ToolBoxBlockMap[block_type] = extend_block;
                 table.insert(self.ExtendCategory.blocktypes, #(self.ExtendCategory.blocktypes) + 1, block_type);
@@ -250,7 +259,14 @@ function Blockly:OnToolBoxXmlTextChange(toolboxXmlText)
 end
 
 function Blockly:SortExtendBlocks()
-    table.sort(self.ExtendCategory.blocktypes);
+    local __self__ = self;
+    table.sort(self.ExtendCategory.blocktypes, function(block_type_1, block_type_2)
+        local block_1 = __self__.ExtendBlockMap[block_type_1] or __self__.ToolBoxBlockMap[block_type_1];
+        local block_2 = __self__.ExtendBlockMap[block_type_2] or __self__.ToolBoxBlockMap[block_type_2];
+        local group_1 = (block_1 and block_1.group or "") or "";
+        local group_2 = (block_2 and block_2.group or "") or "";
+        return group_1 < group_2 or (group_1 == group_2 and block_type_1 < block_type_2);
+    end);
 end
 
 function Blockly:IsOnlyGenerateStartBlockCode()
@@ -264,7 +280,11 @@ end
 
 function Blockly:OnAttrValueChange(attrName, attrValue, oldAttrValue)
     if (attrName == "ToolBoxXmlText") then
-        self:OnToolBoxXmlTextChange(self:GetAttrStringValue("ToolBoxXmlText"));
+            -- self:OnToolBoxXmlTextChange(self:GetAttrStringValue("ToolBoxXmlText"));
+        self.m_on_toolbox_xml_text_change_timer = self.m_on_toolbox_xml_text_change_timer or commonlib.TimerManager.SetTimeout(function()  
+            self:OnToolBoxXmlTextChange(self:GetAttrStringValue("ToolBoxXmlText"));
+            self.m_on_toolbox_xml_text_change_timer = nil;
+        end,  10);
     elseif (attrName == "language" or attrName == "LanguageText") then
         self:SetLanguage(self:GetAttrStringValue("language"));
         self:SetLanguageText(self:GetAttrStringValue("LanguageText", "{}"));
@@ -272,9 +292,13 @@ function Blockly:OnAttrValueChange(attrName, attrValue, oldAttrValue)
         BlockManager.LoadCustomCurrentBlockEntity();
         self:LoadBlockMap();
         self.CategoryList, self.CategoryMap = BlockManager.GetCategoryListAndMap(CustomCurrentBlockLanguage);
-        self:OnToolBoxXmlTextChange(self:GetAttrStringValue("ToolBoxXmlText"));
+        -- self:OnToolBoxXmlTextChange(self:GetAttrStringValue("ToolBoxXmlText"));
         self:SetShowCategory(not BlockManager.IsHideCategory(CustomCurrentBlockLanguage));
         self:SetToolBoxWidth(BlockManager.GetToolBoxWidth(CustomCurrentBlockLanguage));
+        self.m_on_toolbox_xml_text_change_timer = self.m_on_toolbox_xml_text_change_timer or commonlib.TimerManager.SetTimeout(function()  
+            self:OnToolBoxXmlTextChange(self:GetAttrStringValue("ToolBoxXmlText"));
+            self.m_on_toolbox_xml_text_change_timer = nil;
+        end,  10);
     elseif (attrName == "LanguageType") then
         self:SetLanguageType(self:GetAttrStringValue("LanguageType"));
     end
@@ -308,7 +332,7 @@ function Blockly:LoadBlockMap()
         -- 调用初始化回调
         if (type(option.OnInit) == "function") then option.OnInit(option) end 
     end 
-    print("===========LoadBlockMap===============", self:GetLanguage(), block_count);
+    -- print("===========LoadBlockMap===============", self:GetLanguage(), block_count);
 end
 
 -- 添加一个注释
@@ -394,70 +418,38 @@ end
 
 -- 操作
 function Blockly:Do(cmd)
-    local block = cmd.block;
-    cmd.startLeftUnitCount = block.startLeftUnitCount;
-    cmd.startTopUnitCount = block.startTopUnitCount;
-    cmd.endLeftUnitCount = block.leftUnitCount;
-    cmd.endTopUnitCount = block.topUnitCount;
-    table.insert(self.undos, cmd);
+    cmd = cmd or {};
+    cmd.workspace_xml_text = self:SaveToXmlNodeText();
+
+    local last_cmd = self.undos[#self.undos];
+    if (last_cmd and last_cmd.workspace_xml_text == cmd.workspace_xml_text) then return end
+
+    table.insert(self.undos, #self.undos + 1, cmd);
+    self.redos = {}
     self:OnChange();
+    -- 如果超过50个，删除第一个
+    if (#self.undos > 50) then
+        table.remove(self.undos, 1);
+    end
 end
 
 -- 撤销命令
 function Blockly:Undo()
-    local cmd = self.undos[#self.undos];
-    if (not cmd) then return end
+    if (#self.undos == 0) then return end
+    table.insert(self.redos, #self.redos + 1, self.undos[#self.undos]);
     table.remove(self.undos, #self.undos);
-    local action, block, blockCount = cmd.action, cmd.block, cmd.blockCount;
-    local tmpBlock = block;
-    local blocks = {};
-    local index = 1;
-    for index = 1, blockCount do
-        if (tmpBlock) then
-            blocks[index] = tmpBlock;
-            blocks[index]:Disconnection();
-            tmpBlock = tmpBlock:GetNextBlock();
-            if (index > 1 and blocks[index-1].nextConnection) then
-                blocks[index-1].nextConnection:Connection(blocks[index].previousConnection);
-            end
-            index = index + 1;
-        end
-    end
-    if (action == "DeleteBlock" or action == "MoveBlock") then
-        self:AddBlock(block);
-        block:SetLeftTopUnitCount(cmd.startLeftUnitCount, cmd.startTopUnitCount);
-        block:UpdateLeftTopUnitCount();
-        block:TryConnectionBlock();
-    elseif (action == "NewBlock") then
-        self:RemoveBlock(block);
-    end
-    table.insert(self.redos, cmd);
+    local cmd = self.undos[#self.undos];
+    self:LoadFromXmlNodeText(cmd and cmd.workspace_xml_text or self.init_workspace_xml);
     self:OnChange();
 end
 
 -- 恢复
 function Blockly:Redo()
+    if (#self.redos == 0) then return end
     local cmd = self.redos[#self.redos];
-    if (not cmd) then return end
     table.remove(self.redos, #self.redos);
-    local action, block = cmd.action, cmd.block;
-    local connection = block and block:GetConnection();
-
-    if (connection) then
-        connection:Disconnection();
-        connection:GetBlock():GetTopBlock():UpdateLayout();
-    end
-
-    if (action == "NewBlock" or action == "MoveBlock") then
-        self:AddBlock(block);
-        block:SetLeftTopUnitCount(cmd.endLeftUnitCount, cmd.endTopUnitCount);
-        block:UpdateLeftTopUnitCount();
-        block:TryConnectionBlock();
-    elseif (action == "DeleteBlock") then
-        self:RemoveBlock(block);
-    end
-
-    table.insert(self.undos, cmd);
+    table.insert(self.undos, #self.undos + 1, cmd);
+    self:LoadFromXmlNodeText(cmd.workspace_xml_text);
     self:OnChange();
 end
 
@@ -471,15 +463,21 @@ function Blockly:DefineBlock(block)
     self.ToolBoxBlockMap[block.type] = block;
 end
 
+function Blockly:GetBlockOptionByType(blocktype)
+    return self.ToolBoxBlockMap[blocktype] or self.BlockMap[blocktype];
+end
+
 -- 获取块
-function Blockly:GetBlockInstanceByType(blockType, isToolBoxBlock)
+function Blockly:GetBlockInstanceByType(blockType, isToolBoxBlock, source_all_block_map)
     if (blockType == "") then return nil end
-    local options = self.ToolBoxBlockMap[blockType] or self.ExtendBlockMap[blockType]
+    local LangBlockMap = BlockManager.GetBlockMap(self:GetLanguage());
+    local options = self.ToolBoxBlockMap[blockType] or self.ExtendBlockMap[blockType] or LangBlockMap[blockType];
     if (not self:IsCustomLanguage()) then
         options = options or self.BlockMap[blockType];
     end
     if (options == nil) then 
-        options = BlockManager.GetBlockOption(blockType, self:GetLanguage());
+        if (type(source_all_block_map) == "table") then options = source_all_block_map[blockType] end
+        options = options or BlockManager.GetBlockOption(blockType, self:GetLanguage());
         if (options == nil) then return nil end
         options.category = self.ExtendCategory.name;
         self.ExtendBlockMap[blockType] = options;
@@ -496,14 +494,45 @@ function Blockly:GetBlockInstanceByType(blockType, isToolBoxBlock)
             print("===========New Extend Block:", blockType);
         end
     end 
-    return Block:new():Init(self, options, isToolBoxBlock);
+    local block = Block:new():Init(self, options, isToolBoxBlock);
+
+    if (isToolBoxBlock) then
+        local block_option = block:GetOption();
+        local folded_xmlnode = Helper.XmlString2Lua(block_option.folded_xml_text or "");
+        if (type(folded_xmlnode) == "table" and folded_xmlnode[1]) then
+            local next_block = self:GetBlockInstanceByXmlNode(folded_xmlnode[1]);
+            if (next_block and block_option.is_folded_draggable == false) then
+                next_block:DisableDraggable(true);
+            end
+            if (next_block and next_block.previousConnection and block.nextConnection) then
+                block.nextConnection:Connection(next_block.previousConnection);
+                if (block_option.is_folded ~= false) then
+                    block = FoldedBlock:new():Init(self, block);
+                    block:SetType(block_option.type);
+                end
+            end
+        end
+    end
+
+    return block;
 end
 
 -- 获取块
-function Blockly:GetBlockInstanceByXmlNode(xmlNode)
+function Blockly:GetBlockInstanceByXmlNode(xmlNode, source_all_block_map)
     if (type(xmlNode) ~= "table" or xmlNode.name ~= "Block" or type(xmlNode.attr) ~= "table" or not xmlNode.attr.type) then return end
+    local isFoldedBlock = xmlNode.attr.isFoldedBlock == "true";
+    if (isFoldedBlock) then 
+        for _, childXmlNode in ipairs(xmlNode) do
+            if (childXmlNode.name == "FoldedBlock" and childXmlNode[1]) then
+                local folded_block = self:GetBlockInstanceByXmlNode(childXmlNode[1]);
+                local block = FoldedBlock:new():Init(self, folded_block);
+                block:LoadFromXmlNode(xmlNode);
+                return block;
+            end
+        end
+    end
 
-    local block = self:GetBlockInstanceByType(xmlNode.attr.type);
+    local block = self:GetBlockInstanceByType(xmlNode.attr.type, false, source_all_block_map);
     if (not block) then 
         print("block: " .. xmlNode.attr.type .. " undefined");
         return nil 
@@ -816,6 +845,19 @@ function Blockly:GetMouseDownUI(event)
     return ui;
 end
 
+function Blockly:CloseFieldEditorAndContextMenu()
+    local focusUI = self:GetFocusUI();
+    if (focusUI ~= nil and type(focusUI.OnFocusOut) == "function") then 
+        focusUI:OnFocusOut();
+    end
+    self:SetFocusUI(nil);
+
+    local contextmenu = self:GetContextMenu();
+    if (contextmenu ~= nil) then
+        contextmenu:Hide();
+    end
+end
+
 -- 鼠标按下事件
 function Blockly:OnMouseDown(event)
     event:Accept();
@@ -994,9 +1036,13 @@ function Blockly:OnMouseUp(event)
         end
     end
     
-    if (event:IsRightButton() and not self:IsInnerToolBox(event) and not self:IsReadOnly()) then
+    if (event:IsRightButton() and not self:IsReadOnly()) then
         local menuType = "block";
-        if (ui == self or (type(ui) == "table" and type(ui.GetClassName) == "function" and ui:GetClassName() == "Blockly")) then 
+        if (self:IsInnerToolBox(event)) then
+            -- menuType = "toolbox";
+            -- self:SetCurrentBlock(nil);
+            return;
+        elseif (ui == self or (type(ui) == "table" and type(ui.GetClassName) == "function" and ui:GetClassName() == "Blockly")) then 
             menuType = "blockly";
             self:SetCurrentBlock(nil);
         elseif (type(ui) == "table" and type(ui.GetBlock) == "function") then
@@ -1007,7 +1053,6 @@ function Blockly:OnMouseUp(event)
         end
         local contextmenu = self:GetContextMenu();
         contextmenu:SetMenuType(menuType);
-        
         local absX, absY = Blockly._super.GetRelPoint(self, event.x, event.y);  -- 相对坐标为窗口的缩放后坐标
         -- local absX, absY = self:GetLogicViewPoint(event);
         local x, y, w, h = self:GetGeometry();
@@ -1154,7 +1199,7 @@ function Blockly:handleDelete()
     self:RemoveBlock(block);
     self:OnDestroyBlock(block);
     self:SetCurrentBlock(nil);
-    self:OnChange();
+    self:Do();
 end
 
 function Blockly:CopyBlock(targetBlock, cloneBlock, isCloneAllBlock)
@@ -1188,7 +1233,20 @@ end
 
 -- 复制当前块
 function Blockly:handlePaste()
-    self:CopyBlock(self:GetCurrentBlock(), nil, nil);
+    local block = self:GetCurrentBlock();
+    if (not block) then
+        -- local text = ParaMisc.GetTextFromClipboard();
+        -- local workspace = commonlib.Json.Decode(text);
+        -- if (type(workspace) == "table") then
+        --     self:Load({
+        --         blocks = workspace.blocks.blocks,
+        --     });
+        -- end
+        -- self:Do();
+    else
+        self:CopyBlock(self:GetCurrentBlock(), nil, nil);
+        self:Do();
+    end
 end
 
 -- 复制整块
@@ -1201,7 +1259,9 @@ function Blockly:handleDeleteAll()
     local block = self:GetCurrentBlock();
     if (not block) then return end
     if (block.previousConnection) then
+        local connectionBlock = block.previousConnection:GetConnectionBlock();
         block.previousConnection:Disconnection();
+        if (connectionBlock) then connectionBlock:UpdateLayout() end
     end
     local nextBlock = block;
     while (nextBlock) do
@@ -1210,7 +1270,66 @@ function Blockly:handleDeleteAll()
     end
     self:RemoveBlock(block);
     self:SetCurrentBlock(nil);
-    self:OnChange();
+    self:Do();
+end
+
+-- 禁用块
+function Blockly:HandleDisableBlock()
+    local block = self:GetCurrentBlock();
+    if (not block) then return end
+    block:DisableRun();
+    self:Do();
+end
+
+-- 启用块
+function Blockly:HandleEnableBlock()
+    local block = self:GetCurrentBlock();
+    if (not block) then return end
+
+    local prevBlock = block:GetPrevBlock() or block:GetOutputBlock();
+    while (prevBlock and prevBlock:IsDisableRun()) do
+        block = prevBlock;
+        prevBlock = block:GetPrevBlock() or block:GetOutputBlock();
+    end
+
+    block:EnableRun();
+    self:Do();
+end
+
+-- 折叠块
+function Blockly:HandleFoldedBlock()
+    local block = self:GetCurrentBlock();
+    if (not block) then return end
+    block:Folded();
+    self:Do();
+end
+
+-- 展开块
+function Blockly:HandleExpandBlock()
+    local block = self:GetCurrentBlock();
+    if (not block) then return end
+    block:Expand();
+    self:Do();
+end
+
+function Blockly:HandleDisableEnableBlock()
+    local block = self:GetCurrentBlock();
+    if (not block) then return end
+    if (block:IsDisableRun()) then
+        self:HandleEnableBlock();
+    else
+        self:HandleDisableBlock();
+    end
+end
+
+function Blockly:HandleFoldedExpandBlock()
+    local block = self:GetCurrentBlock();
+    if (not block) then return end
+    if (block:IsFoldedBlock()) then
+        self:HandleExpandBlock();
+    else
+        self:HandleFoldedBlock();
+    end
 end
 
 function Blockly:GetPrettyCode(code)
@@ -1229,14 +1348,25 @@ function Blockly:GetPrettyCode(code)
     return prettyCode;
 end
 
--- @param if nil, it will be appended. if 1 it is prepended.
+-- @param order: if nil, it default to 0, and will be appended. the larger the order, the later it will be inserted to code header.
 -- @return index of the added text
-function Blockly:AddUnqiueHeader(headerText, position)
+function Blockly:AddUniqueHeader(headerText, zorder)
     if(headerText and self.uniqueHeaders) then
         if(not self.uniqueHeaders:contains(headerText)) then
-            self.uniqueHeaders:add(headerText, true, position);
+            self.uniqueHeaders:add(headerText, zorder or 0);
         end
         return self.uniqueHeaders:getIndex(headerText)
+    end
+end
+-- fixed typo
+Blockly.AddUnqiueHeader = Blockly.AddUniqueHeader
+
+-- check if a unique header exist
+function Blockly:HasUniqueHeader(headerText)
+    if(headerText and self.uniqueHeaders) then
+        if(self.uniqueHeaders:contains(headerText)) then
+            return true;
+        end
     end
 end
 
@@ -1316,6 +1446,7 @@ function Blockly:GetCode()
     end
 
     if(self.uniqueHeaders:size() > 0) then
+        self.uniqueHeaders:valueSort(function(a, b) return a <= b end);
 		for i = 1, self.uniqueHeaders:size() do
             table.insert(lines, i, self.uniqueHeaders:getKeyAt(i) .. "\n")
 		end
@@ -1331,6 +1462,7 @@ function Blockly:GetCode()
             block = block:GetNextBlock();
         end
     end
+
     -- for _, block in ipairs(self.blocks) do
     --     local option = block:GetOption();
     --     if(option and option.PostProcess) then
@@ -1341,7 +1473,44 @@ function Blockly:GetCode()
 
     self:SetToCodeCache(nil); -- 清除缓存
     
+    code = self:PostProcessCode(code);
+
     return code, self:GetPrettyCode(code);
+end
+
+function Blockly:PostProcessCode(code)
+    NPL.load("(gl)script/apps/Aries/Creator/Game/Code/CodeHelpWindow.lua");
+    local CodeHelpWindow = commonlib.gettable("MyCompany.Aries.Game.Code.CodeHelpWindow");
+    NPL.load("(gl)script/apps/Aries/Creator/Game/Code/LanguageConfigurations.lua");
+    local LanguageConfigurations = commonlib.gettable("MyCompany.Aries.Game.Code.LanguageConfigurations");
+    local filename = CodeHelpWindow.GetLanguageConfigFile();
+    local langConfig = LanguageConfigurations:LoadConfigByFilename(filename);
+    if (type(langConfig) == "table" and type(langConfig.PostProcessBlocklyCode) == "function") then
+        code = langConfig.PostProcessBlocklyCode(self, code);
+    end
+    return code;
+end
+
+function Blockly:Save()
+    local blockly = { blocks = {} };
+
+    for _, block in ipairs(self.blocks) do
+        table.insert(blockly.blocks, block:Save());
+    end
+
+    return blockly;
+end
+
+function Blockly:Load(blockly)
+    for _, block in ipairs(blockly.blocks) do
+        local block_type = block.type;
+        local block_inst = self:GetBlockInstanceByType(block_type);
+        if (block_inst) then
+            block_inst:Load(block);
+            block_inst:UpdateLayout();
+            self:AddBlock(block_inst);
+        end
+    end
 end
 
 -- 转换成xml
@@ -1479,4 +1648,14 @@ function Blockly:SetShowCategory(bShow)
     if (self:GetToolBox():IsShowCategory() == bShow) then return end
     self:GetToolBox():SetShowCategory(bShow);
     self:GetToolBox():SetCategoryList(self.CategoryList);
+end
+
+function Blockly:SetInitWorkspaceXml(xml_text)
+    if (self.m_on_toolbox_xml_text_change_timer) then
+        self.m_on_toolbox_xml_text_change_timer:Change();
+        self.m_on_toolbox_xml_text_change_timer = nil;
+        self:OnToolBoxXmlTextChange(self:GetAttrStringValue("ToolBoxXmlText"));
+    end
+    self.init_workspace_xml = xml_text;
+    self:LoadFromXmlNodeText(xml_text);
 end

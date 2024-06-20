@@ -231,6 +231,7 @@ function EditMovieContext:updateManipulators()
 				local BonesManipContainer = commonlib.gettable("System.Scene.Manipulators.BonesManipContainer");
 				local manipCont = BonesManipContainer:new();
 				manipCont:init();
+				
 				self:AddManipulator(manipCont);
 				-- this should be connected before connectToDependNode to ensure signal be sent during initialization.
 				manipCont:Connect("varNameChanged", SelectionManager, SelectionManager.varNameChanged);
@@ -297,6 +298,8 @@ function EditMovieContext:OnBoneChanged(name)
 			GameLogic.AddBBS("EditMovieContext", L"2,3,4键切换编辑工具;双击2键位置", 10000);
 			tip_count = tip_count + 1;
 		else
+			print("ooooooooxx")
+			print(commonlib.debugstack())
 			GameLogic.AddBBS("EditMovieContext", L"左键选择骨骼, ESC取消选择, -/+遍历选择", 10000);
 		end
 	else

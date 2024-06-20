@@ -283,6 +283,21 @@ function NPL.DoesFileExist(filename)
 	return (ParaIO.DoesFileExist(filename, true) or ParaIO.DoesFileExist("bin/"..string.gsub(filename, "lua$", "o"), true) )
 end
 
+-- get disk file path of a script. it will also check precompiled bin folder. 
+-- return nil if no disk file is found
+function NPL.GetScriptDiskFilepath(filename)
+	if(ParaIO.DoesFileExist(filename, true)) then
+		return filename;
+	else
+		local binScriptFile = string.gsub(filename, "lua$", "o");
+		if(binScriptFile ~= filename) then
+			binScriptFile = "bin/"..binScriptFile;
+			if(ParaIO.DoesFileExist(binScriptFile, true)) then
+				return binScriptFile;
+			end
+		end
+	end
+end
 
 -- load public NPL file to id map from XML file. 
 -- @param filename: if nil, it defaults to config/NPLPublicFiles.xml
@@ -340,3 +355,17 @@ NPL.DoString = function(sCode)
 	end
 end
 ]]
+
+-- in iOS, max stack size is limited, so need to prevent too many nested NPL.load calls. 
+-- set to true to debug load file order on stack. 
+if(false) then
+	local NPL_load =  NPL.load;
+	NPL.load = function(filename, ...)
+		NPL_load("(gl)script/ide/debug.lua");
+		local count = commonlib.debug.GetStackDepth()
+		if(count > 35) then
+			LOG.std(nil, "info", "NPL", "(%d):%s", count, filename);
+		end
+		return NPL_load(filename, ...)
+	end
+end

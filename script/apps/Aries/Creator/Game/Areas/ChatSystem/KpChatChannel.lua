@@ -67,21 +67,42 @@ function KpChatChannel.PreloadSocketIOUrl(callback)
 			end
 		end
 		LOG.std(nil, "info", "Before KpChatChannel.PreloadSocketIOUrl");
-		keepwork.app.availableHost({},function(err, msg, data)
+        
+
+        if System.options.ZhyChannel == "zhy_competition_course" then
+            NPL.load("(gl)script/apps/Aries/Creator/Game/ZhiHuiYun/HttpApi/ZhiHuiYunHttpApi.lua");
+            local ZhiHuiYunHttpApi = commonlib.gettable("MyCompany.Aries.Game.ZhiHuiYun.ZhiHuiYunHttpApi")
+            ZhiHuiYunHttpApi.GetSocketUrl(function(err, msg, data)
+                if(err == 200 and data)then
+                    LOG.std(nil, "info", "KpChatChannel.PreloadSocketIOUrl succeed");
+                    KpChatChannel.preload_socketio_url = data;
+                    do_callback();
+                    return
+                else
+                    LOG.std(nil, "warn", "KpChatChannel.PreloadSocketIOUrl err code", err);
+                    LOG.std(nil, "warn", "KpChatChannel.PreloadSocketIOUrl msg", msg);
+                    LOG.std(nil, "warn", "KpChatChannel.PreloadSocketIOUrl data", data);
+                end
+                do_callback();
+            end)
+        else
+            keepwork.app.availableHost({},function(err, msg, data)
 			
-			if(err == 200 and data)then
-				LOG.std(nil, "info", "KpChatChannel.PreloadSocketIOUrl succeed");
-				KpChatChannel.preload_socketio_url = data;
-				do_callback();
-				return
-			else
-				LOG.std(nil, "warn", "KpChatChannel.PreloadSocketIOUrl err code", err);
-				LOG.std(nil, "warn", "KpChatChannel.PreloadSocketIOUrl msg", msg);
-				LOG.std(nil, "warn", "KpChatChannel.PreloadSocketIOUrl data", data);
-			end
-			do_callback();
-			
-		end)
+                if(err == 200 and data)then
+                    LOG.std(nil, "info", "KpChatChannel.PreloadSocketIOUrl succeed");
+                    KpChatChannel.preload_socketio_url = data;
+                    do_callback();
+                    return
+                else
+                    LOG.std(nil, "warn", "KpChatChannel.PreloadSocketIOUrl err code", err);
+                    LOG.std(nil, "warn", "KpChatChannel.PreloadSocketIOUrl msg", msg);
+                    LOG.std(nil, "warn", "KpChatChannel.PreloadSocketIOUrl data", data);
+                end
+                do_callback();
+                
+            end)
+        end
+
 
 		if(not KpChatChannel.timer_preload_url)then
 			KpChatChannel.timer_preload_url = commonlib.Timer:new({callbackFunc = function(timer)
@@ -460,7 +481,10 @@ function KpChatChannel.OnMsg(self, msg)
                     GameLogic.GetFilters():apply_filters('login_with_token')
                     GameLogic.GetFilters():apply_filters('cellar.vip_notice.close')
                     GameLogic.GetFilters():apply_filters('became_vip')
-                    _guihelper.MessageBox("恭喜您"..product.description)
+                    GameLogic.GetFilters():apply_filters('community.vip.notice',payload)
+                    if not System.options.isCommunity then
+                        _guihelper.MessageBox("恭喜您"..product.description)
+                    end
                end)
                 return
             end

@@ -20,6 +20,6 @@ end
 function Image:GetBackground()
     local src = self:GetAttrStringValue("src");
     if (not src) then return Image._super.GetBackground(self) end 
-
+    if (src and string.find(src, "_texture", 1, true) == 1) then return src end
     return CommonLib.GetFullPath(src);
 end

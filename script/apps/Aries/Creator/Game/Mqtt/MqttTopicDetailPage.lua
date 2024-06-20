@@ -105,6 +105,18 @@ function MqttTopicDetailPage.UpdateDetailUI()
         calendarStart.visible = MqttTopicDetailPage.mIsShowCalendar
         calendarEnd.visible = MqttTopicDetailPage.mIsShowCalendar1
     end
+    if MqttTopicDetailPage.search_timeStart ~= "" then
+        page:SetValue("text_mqtt_time_start",MqttTopicDetailPage.search_timeStart) 
+    end
+    if MqttTopicDetailPage.search_timeEnd ~= "" then
+        page:SetValue("text_mqtt_time_end",MqttTopicDetailPage.search_timeEnd) 
+    end
+    if MqttTopicDetailPage.search_device_name ~= "" then
+        page:SetValue("text_mqtt_device",MqttTopicDetailPage.search_device_name) 
+    end
+    if MqttTopicDetailPage.search_device_data ~= "" then
+        page:SetValue("text_mqtt_device_data",MqttTopicDetailPage.search_device_data) 
+    end
 end
 
 function MqttTopicDetailPage.LoadTopicDataList(bRefresh)
@@ -131,15 +143,22 @@ function MqttTopicDetailPage.LoadTopicDataList(bRefresh)
                 temp.publishTime = commonlib.timehelp.GetTimeStampByDateTime(v.publishAt)
                 temp.publishAt = os.date("%Y-%m-%d %H:%M:%S",temp.publishTime)
                 temp.deviceName = v.device and v.device.desc
-                temp.msg = commonlib.serialize_compact(commonlib.Json.Decode(v.payload))
+                -- local jsonStr = commonlib.Json.Decode(v.payload)
+                -- if jsonStr then
+                --     temp.msg = commonlib.serialize_compact(jsonStr)
+                -- else
+                --     temp.msg = v.payload
+                -- end
+                temp.msg = v.payload
+                
                 table.insert(MqttTopicDetailPage.mqttTopicDataList,temp)
             end
-            echo(MqttTopicDetailPage.mqttTopicDataList,true)
+            -- echo(MqttTopicDetailPage.mqttTopicDataList,true)
             MqttTopicDetailPage.mqttShowTopicDataList = MqttTopicDetailPage.mqttTopicDataList
             MqttTopicDetailPage.RefreshPage()
             return
         end
-        GameLogic.AddBBS(nil,L"mqtt主题数据列表加载失败")
+        GameLogic.AddBBS(nil,L"暂无数据")
     end)
 end
 
@@ -158,6 +177,7 @@ function MqttTopicDetailPage.OnClickDay(name)
     MqttTopicDetailPage.OnClickShowCalendar("calendar3")
     if page then
         page:SetValue("text_mqtt_time_start", name)
+        MqttTopicDetailPage.search_timeStart = name
     end
 end
 
@@ -166,7 +186,18 @@ function MqttTopicDetailPage.OnClickDay1(name)
     MqttTopicDetailPage.mIsShowCalendar1 = false
     MqttTopicDetailPage.mIsShowCalendar = false
     MqttTopicDetailPage.RefreshPage()
+    
+    
     if page then
+        local timeStart = page:GetValue("text_mqtt_time_start") or ""
+        local year,month,day = commonlib.timehelp.GetYearMonthDayFromStr(timeStart)
+        local year1,month1,day1 = commonlib.timehelp.GetYearMonthDayFromStr(name)
+        local start_time = os.time({year=year,month=month,day=day})
+        local end_time = os.time({year=year1,month=month1,day=day1})
+        if  start_time >= end_time then
+            name = year.."-"..month.."-"..day
+        end
+        MqttTopicDetailPage.search_timeEnd = name
         page:SetValue("text_mqtt_time_end", name)
     end
 end
@@ -197,7 +228,13 @@ function MqttTopicDetailPage.OnClickSearch()
     local bTimeValid,timeStart,timeEnd = MqttTopicDetailPage.CheckValidTime(MqttTopicDetailPage.search_timeStart,MqttTopicDetailPage.search_timeEnd)
     if bTimeValid then
         MqttTopicDetailPage.mqttShowTopicDataList = commonlib.filter(MqttTopicDetailPage.mqttTopicDataList, function (item)
-            return item.publishTime >= timeStart and item.publishTime <= timeEnd;
+            local isFilterTime = false
+            if timeStart < timeEnd then
+                isFilterTime = item.publishTime >= timeStart and item.publishTime <= timeEnd
+            else
+                isFilterTime = item.publishTime >= timeStart
+            end
+            return  isFilterTime
         end)
     else
         MqttTopicDetailPage.mqttShowTopicDataList = MqttTopicDetailPage.mqttTopicDataList
@@ -218,8 +255,7 @@ function MqttTopicDetailPage.OnClickSearch()
     MqttTopicDetailPage.RefreshPage()
 end
 
-function MqttTopicDetailPage.OnClickClearSearch()
-    -- text_mqtt_device_data text_mqtt_device text_mqtt_time_start text_mqtt_time_end
+function MqttTopicDetailPage.ClearData()
     if page then
         page:SetValue("text_mqtt_device_data", "")
         page:SetValue("text_mqtt_device", "")
@@ -230,8 +266,30 @@ function MqttTopicDetailPage.OnClickClearSearch()
     MqttTopicDetailPage.search_timeEnd = ""
     MqttTopicDetailPage.search_device_name = ""
     MqttTopicDetailPage.search_device_data = ""
+    MqttTopicDetailPage.cur_year = os.date("%Y");
+    MqttTopicDetailPage.cur_month = os.date("%m");
+    MqttTopicDetailPage.cur_year1 = os.date("%Y");
+    MqttTopicDetailPage.cur_month1 = os.date("%m");
+end
+
+
+function MqttTopicDetailPage.OnClickClearSearch()
+    -- text_mqtt_device_data text_mqtt_device text_mqtt_time_start text_mqtt_time_end
+    MqttTopicDetailPage.ClearData()
     MqttTopicDetailPage.mqttShowTopicDataList = MqttTopicDetailPage.mqttTopicDataList
     MqttTopicDetailPage.RefreshPage()
     
+end
+
+function MqttTopicDetailPage.OnClickDetail(topicData)
+    if topicData then
+        local MqttTopicDataDetail = NPL.load('(gl)script/apps/Aries/Creator/Game/Mqtt/Dialog/MqttTopicDataDetail.lua')
+        MqttTopicDataDetail.ShowPage(topicData)
+    end
+end
+
+function MqttTopicDetailPage.OnClickRefresh()
+    MqttTopicDetailPage.ClearData()
+    MqttTopicDetailPage.LoadTopicDataList(true)
 end
 

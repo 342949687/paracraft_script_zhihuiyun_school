@@ -84,6 +84,7 @@ function CompetitionCreatePaper.OnSubmitProject()
     if not CompetitionCreatePaper.is_submiting then
         if not CompetitionCreatePaper.SubmitWorld then
             CompetitionCreatePaper.SubmitWorld = commonlib.debounce(function()
+                CompetitionManager:SetIsSubmitScore(true)
                 CompetitionManager:SubmitWorld()
             end, 300)
         end

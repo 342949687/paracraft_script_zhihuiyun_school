@@ -24,6 +24,7 @@ MallMainPage.tabValues = {
     {index = 3, name = L"历史"},
     {index = 4, name = L"个人"},
 }
+MallMainPage.bFromCodeBlock = false
 local page
 
 function MallMainPage.OnInit()
@@ -33,28 +34,40 @@ function MallMainPage.OnInit()
     end
 end
 
-function MallMainPage.ShowPage(bFromCadBlock)
+function MallMainPage.ShowPage(bFromCodeBlock)
     if (GameLogic.GetFilters():apply_filters('is_signed_in')) then
-        MallMainPage.Show();
+        MallMainPage.Show(bFromCodeBlock);
         return;
     end
 
     GameLogic.GetFilters():apply_filters('check_signed_in', L"请先登录", function(result)
         if (result == true) then
             commonlib.TimerManager.SetTimeout(function()
-                MallMainPage.Show();
+                MallMainPage.Show(bFromCodeBlock);
             end, 500)
         end
     end)
 end
 
-function MallMainPage.Show()
+function MallMainPage.Show(bFromCodeBlock)
+    MallMainPage.bFromCodeBlock = (bFromCodeBlock == true)
     MallMainPage.select_tab_index = 1
+    MallMainPage.CloseOthers()
     MallManager.getInstance():LoadMallSearchHistory()
     MallManager.getInstance():LoadMallHistory()
     MallManager.getInstance():LoadMallColletIdList(function(data)
         MallMainPage.OpenView()
     end)
+end
+
+function MallMainPage.CloseOthers()
+    NPL.load("(gl)script/apps/Aries/Creator/Game/Areas/DesktopMenuPage.lua");
+    local DesktopMenuPage = commonlib.gettable("MyCompany.Aries.Creator.Game.Desktop.DesktopMenuPage");
+    DesktopMenuPage.ActivateMenu(false);
+    DesktopMenuPage.ShowPage(false);
+    NPL.load("(gl)script/apps/Aries/Creator/Game/Areas/EscFramePage.lua");
+    local EscFramePage = commonlib.gettable("MyCompany.Aries.Creator.Game.Desktop.EscFramePage");
+    EscFramePage.ShowPage(false)
 end
 
 function MallMainPage.OpenView()
@@ -89,6 +102,7 @@ function MallMainPage.CloseView()
     end
     MallPage.IsInited = false
     MallOtherPage.type = ""
+    MallMainPage.bFromCodeBlock = false
     MallManager.getInstance():SaveMallSearchHistory()
     MallManager.getInstance():SaveMallHistory()
 
@@ -105,6 +119,8 @@ function MallMainPage.OnChangeMenu(index)
         MallMainPage.OnRefreshPage()
         if index == 1 then
             MallPage.OnChangeMenu(1)
+        else
+            MallMainPage.bFromCodeBlock = false
         end
     end
 end

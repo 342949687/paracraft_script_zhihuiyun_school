@@ -120,6 +120,12 @@ function ShapeAABB:GetBottomPosition()
 	return self.mCenter[1],  self.mCenter[2] - self.mExtents[2], self.mCenter[3];
 end
 
+-- Get the position at the bottom center of the aabb
+-- @return x,y,z;
+function ShapeAABB:GetBottomCenter()
+	return self.mCenter[1],  self.mCenter[2] - self.mExtents[2], self.mCenter[3];
+end
+
 function ShapeAABB:SetPointAABB(pt)
 	self.mCenter:set(pt); 
 	self.mExtents:set(0,0,0);

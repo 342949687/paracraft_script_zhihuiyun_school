@@ -1,5 +1,3 @@
-
-
 local BlockManager = BlockManager or NPL.load("script/ide/System/UI/Blockly/Blocks/BlockManager.lua")
 local __ToolBoxXmlText__ = NPL.load("script/ide/System/UI/Blockly/Blocks/ToolBoxXmlText.lua")
 local Helper = NPL.load("script/ide/System/UI/Blockly/Helper.lua")

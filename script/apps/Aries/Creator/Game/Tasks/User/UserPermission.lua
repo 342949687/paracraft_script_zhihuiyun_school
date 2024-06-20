@@ -46,7 +46,7 @@ local VipSchoolLimit  ={}
 
 -- 检测是否特殊身份 (vip, school_admin, school_teacher, school_student, org_school)
 function UserPermission.IsSpecialIdentity()
-    if System.options.channelId_431 then
+    if System.options.isEducatePlatform then
         return false
     end
     local check_role_list = {
@@ -76,7 +76,7 @@ end
 function UserPermission.CheckHasPermission(check_type)
     if (true) then return true end -- bugID 1003014 1003013 1003012 1003011
 
-    if (System.options.channelId_431) then
+    if (System.options.isEducatePlatform) then
         return true
     end
 
@@ -98,7 +98,7 @@ end
 -- 检查用户是否有特殊身份 vip学校学生 江西某学校等
 
 function UserPermission.CheckIsSpecialSchool()
-    if System.options.channelId_431 then
+    if System.options.isEducatePlatform then
         return false
     end
     for key, value in pairs(SpecialSchoolRoleList) do
@@ -173,7 +173,7 @@ end
 
 -- 检测是否在时间规则定义的时间内
 function UserPermission.CheckIsInTimeRule(time_rule)
-    if System.options.channelId_431 then
+    if System.options.isEducatePlatform then
         return true
     end
     local start_time_t, end_time_t = UserPermission.GetTimeRuleStartEndTimeT(time_rule)
@@ -223,7 +223,7 @@ end
 
 -- 检测是否上课的时间
 function UserPermission.IsInVipSchoolCourseTime()
-    if System.options.channelId_431 then
+    if System.options.isEducatePlatform then
         return true
     end
     local cur_time_stamp = QuestAction.GetServerTime()
@@ -255,7 +255,7 @@ function UserPermission.CheckCanEditBlock(check_type, callbackFunc)
     --     return
     -- end
 
-    if (System.options.channelId_431) then
+    if (System.options.isEducatePlatform) then
         InvokeCallBack_();
         return;
     end

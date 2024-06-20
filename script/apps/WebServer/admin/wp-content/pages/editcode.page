@@ -46,6 +46,37 @@ if(is_ajax()) then
         end
         wp_send_json(output);
     end)
+    add_action('wp_ajax_find_definition', function()
+        local output = {success = false};
+	    local line = request:get("line");
+        local cursor = tonumber(request:get("cursor") or 1);
+        if(line) then
+            NPL.load("(gl)script/apps/Aries/Creator/Game/Code/CodeIntelliSense.lua");
+            NPL.load("(gl)script/ide/System/Core/UniString.lua");
+            local UniString = commonlib.gettable("System.Core.UniString");
+            local CodeIntelliSense = commonlib.gettable("MyCompany.Aries.Game.Code.CodeIntelliSense");
+            line = UniString:new(line);
+            local from, to = line:wordPosition(cursor);
+            if(to) then
+                local func = CodeIntelliSense:GetFunctionByCursor(line, to)
+                if(func) then
+                    NPL.load("(gl)script/apps/Aries/Creator/Game/Code/CodeInspector.lua");
+                    local CodeInspector = commonlib.gettable("MyCompany.Aries.Game.Code.CodeInspector");
+                    local info = CodeInspector:GetFunctionDefinition(func)
+                    if(info and info.source) then
+                        output.success = true;
+                        output.source = info.source;
+                        output.filepath = info.source;
+                        if(not commonlib.Files.IsAbsolutePath(info.source)) then
+                            output.filepath = ParaIO.GetCurDirectory(0)..info.source;
+                        end
+                        output.linedefined = info.linedefined;
+                    end
+                end
+            end
+        end
+        wp_send_json(output);
+    end)
 	return;
 end
 wp_enqueue_script("ace", "/wp-includes/js/ace/ace.js");

@@ -832,3 +832,17 @@ function CustomCharItems:GetDefaultSkinString(assetfile)
 
 	return default
 end
+
+function CustomCharItems:GetDefaultAssetBySkin(skinString)
+	if not skinString then
+		return nil
+	end
+	local asset = ""
+	for assets,skin in pairs(CustomCharItems.modelToSkinString) do
+		if skin == skinString then
+			asset = assets
+			break
+		end
+	end
+	return asset
+end

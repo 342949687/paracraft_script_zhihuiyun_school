@@ -23,7 +23,7 @@ end
         </div>
         <div style="margin-bottom:10px;">
             <%=L"串口: "%>
-            <select uiname="ArduinoConfigPage.port" DataSource='<%=ArduinoConfigPage.GetPortNameDS()%>' name="port" style="margin-left: 5px; height: 25px; margin-top: -1px; width: 190px;" AllowUserEdit="true">
+            <select uiname="ArduinoConfigPage.port" onBeforeClickDropDownButton="ArduinoConfigPage.onBeforeClickDropDownButton" onselect="ArduinoConfigPage.OnSelectPort" DataSource='<%=ArduinoConfigPage.GetPortNameDS()%>' name="port" style="margin-left: 5px; height: 25px; margin-top: -1px; width: 190px;" AllowUserEdit="true">
             </select>
             <input type="button" style="min-width: 80px;margin-left:5px" class="button" uiname="ArduinoConfigPage.OpenSerialMonitor" name="OpenSerialMonitor" value='<%=L"打开监控..."%>' onclick="ArduinoConfigPage.OpenSerialMonitor" />
         </div>

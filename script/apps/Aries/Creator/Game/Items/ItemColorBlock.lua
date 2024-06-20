@@ -358,11 +358,31 @@ function ItemColorBlock:OnClickInHand(itemStack, entityPlayer)
 	elseif(GameLogic.GameMode:IsEditor() and entityPlayer == EntityManager.GetPlayer()) then
 		local selected_blocks = Game.SelectionManager:GetSelectedBlocks();
 		if(selected_blocks) then
-			NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/ReplaceBlockTask.lua");
+			
 			local data = self:GetBlockData(itemStack);
-			local task = MyCompany.Aries.Game.Tasks.ReplaceBlock:new({blocks = commonlib.clone(selected_blocks), 
-				to_id = self.id, to_data=data});
-			task:Run();
+			local blocks = commonlib.clone(selected_blocks)
+			
+			local hasSameBlock;
+			if(self:IsColorData8Bits()) then
+				-- if blocks in selected blocks are of the same id, we will replace its color only preserving direction
+				local colordata = band(0xff00, self:GetBlockData(itemStack) or 0);
+				for _, block in ipairs(blocks) do
+					if(block[4] == self.id) then
+						block[5] = colordata + band(block[5] or 0, 0xff)
+						hasSameBlock = true;
+					end
+				end
+			end
+			if(hasSameBlock) then
+				NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/CreateBlockTask.lua");
+				local task = MyCompany.Aries.Game.Tasks.CreateBlock:new({blocks = blocks});
+				task:Run();
+			else
+				NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/ReplaceBlockTask.lua");
+				local task = MyCompany.Aries.Game.Tasks.ReplaceBlock:new({blocks = blocks, to_id = self.id, to_data=data});
+				task:Run();
+			end
+			
 		end
 	end
 end

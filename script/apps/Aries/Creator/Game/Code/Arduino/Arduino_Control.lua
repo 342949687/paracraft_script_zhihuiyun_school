@@ -212,6 +212,7 @@ NPL.export({
 				text = "\"start\"",
 			},
 		},
+		hide_in_codewindow = true,
 		hide_in_toolbox = true,
 		output = {type = "field_number",},
 		category = "Control", 

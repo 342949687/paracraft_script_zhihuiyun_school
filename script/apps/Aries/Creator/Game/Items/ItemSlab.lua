@@ -11,13 +11,13 @@ local ItemSlab = commonlib.gettable("MyCompany.Aries.Game.Items.ItemSlab");
 ]]
 NPL.load("(gl)script/ide/math/vector.lua");
 NPL.load("(gl)script/ide/math/bit.lua");
-local Player = commonlib.gettable("MyCompany.Aries.Player");
 local EntityManager = commonlib.gettable("MyCompany.Aries.Game.EntityManager");
 local BlockEngine = commonlib.gettable("MyCompany.Aries.Game.BlockEngine")
 local TaskManager = commonlib.gettable("MyCompany.Aries.Game.TaskManager")
 local block_types = commonlib.gettable("MyCompany.Aries.Game.block_types")
 local GameLogic = commonlib.gettable("MyCompany.Aries.Game.GameLogic")
 local band = mathlib.bit.band;
+local bor = mathlib.bit.bor;
 
 local ItemSlab = commonlib.inherit(commonlib.gettable("MyCompany.Aries.Game.Items.ItemColorBlock"), commonlib.gettable("MyCompany.Aries.Game.Items.ItemSlab"));
 
@@ -49,10 +49,18 @@ local function GetBoxBlockBySlabID(slab_id)
 	return block_id_map[slab_id];
 end
 
-
 -- @param template: icon
 -- @param radius: the half radius of the object. 
 function ItemSlab:ctor()
+end
+
+function ItemSlab:OnSelect(itemStack)
+	ItemSlab._super.OnSelect(self, itemStack);
+	GameLogic.SetStatus(L"Alt+ÓÒ¼ü¸Ä±äÐÎ×´");
+end
+function ItemSlab:OnDeSelect()
+	ItemSlab._super.OnDeSelect(self);
+	GameLogic.SetStatus(nil);
 end
 
 -- Right clicking in 3d world with the block in hand will trigger this function. 

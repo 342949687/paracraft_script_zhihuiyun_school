@@ -149,7 +149,7 @@ function EditMovieTextPage.OnClickSelcetNarrator(name, value)
 	end
 
 	if value >= 0 then
-		if not System.options.channelId_431 then
+		if not System.options.isEducatePlatform then
 			local has_permission = UserPermission.CheckUserPermission("movie_playText")
 			if not has_permission and not GameLogic.Macros:IsPlaying() then
 				page:SetValue("voicenarrator", default_narrator);

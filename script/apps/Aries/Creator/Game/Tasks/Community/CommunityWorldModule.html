@@ -1,0 +1,31 @@
+<!-- script/apps/Aries/Creator/Game/Tasks/Community/CommunityWorldModule.html -->
+<body>
+    <pe:mcml>
+        <script type='text/npl'>
+            <![CDATA[
+                local CommunityWorldModule = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/Community/CommunityWorldModule.lua")
+                CommunityWorldModule.OnInit()
+                local page = document:GetPageCtrl()
+
+                function close_page()
+                    page:CloseWindow()
+                end
+
+            ]]>
+        </script>
+        <pe:container ClickThrough="false" alignment="_fi" width="100%" height="100%" style="background-color: #00000088;">
+            <pe:container alignment="_ct" width="850" height="550" style="margin-left:-425px;margin-top:-275px;background-color: #2e2e2e; background: url(Texture/Aries/Creator/keepwork/community_32bits.png#778 146 32 32:14 14 14 14)">
+                <div style="width: 850;height: 550px;">
+                    <div style="width: 850;height: 40px;margin-top: 0px;">
+                        <div style="float: left;margin-left: 12px;margin-top: 12px;color: #ffffff;font-size: 18px;base-font-size: 18px;font-weight: bold;"><%=L"新建项目"%></div>
+                        <div onclick="cancel()" style="float: left;margin-left: 760px;margin-top: 16px;width: 16px;height: 16px; background: Texture/Aries/Creator/paracraft/Educate/guanbi_14x14_32bits.png#0 0 14 14;"></div>
+                    </div>
+                    <div style="position: relative; width: 850px; height: 1px; margin-top: 10px; background-color: #FFF3D833"></div>
+                    
+                    
+                </div>
+            </pe:container>
+        </pe:container>
+    </pe:mcml>
+</body>
+</html>

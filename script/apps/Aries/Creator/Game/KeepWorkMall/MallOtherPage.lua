@@ -21,6 +21,7 @@ local MallOtherPage = NPL.export()
 
 local pageNum = 40;
 MallOtherPage.data_hits = {}
+MallOtherPage.local_data_hits = {}
 MallOtherPage.data_count = 0
 
 
@@ -33,6 +34,7 @@ local defaultSort = {
 MallOtherPage.sort_data = defaultSort
 MallOtherPage.sort_select_index = -1
 MallOtherPage.sort_select_type = -1 --0,asc-》顺序；1，desc-》降序
+MallOtherPage.select_menu_index = 1
 MallOtherPage.do_modify = false
 MallOtherPage.ShowEditData = nil
 local page
@@ -45,11 +47,15 @@ function MallOtherPage.OnInit(page_type)
     -- end
     if MallOtherPage.type ~= page_type then
         MallOtherPage.type = page_type
+        if MallOtherPage.type == "personnal" then
+            MallOtherPage.select_menu_index = 1
+        end
         MallOtherPage.dataLoaded = false
         MallOtherPage.curPage = 1
         MallOtherPage.sort_select_index = -1
         MallOtherPage.sort_select_type = -1
         MallOtherPage.data_hits = {}
+        MallOtherPage.local_data_hits = {}
         MallOtherPage.data_count = 0
         MallOtherPage.FilterSort()
         MallOtherPage.LoadMallList()
@@ -74,6 +80,7 @@ function MallOtherPage.Show(type)
     MallOtherPage.curPage = 1
     MallOtherPage.data_count = 0
     MallOtherPage.data_hits = {}
+    MallOtherPage.local_data_hits = {}
     local params = {
         url = "script/apps/Aries/Creator/Game/KeepWorkMall/MallOtherPage.html",
         name = "MallOtherPage.Show", 
@@ -122,9 +129,10 @@ function MallOtherPage.OnChangeSort(name)
         MallOtherPage.dataLoaded = false
         MallOtherPage.curPage = 1
         MallOtherPage.data_hits = {}
+        MallOtherPage.local_data_hits = {}
         MallOtherPage.data_count = 0
         MallOtherPage.LoadMallList()
-        MallOtherPage.RefreshPage()
+        MallOtherPage.FlushView()
     end
 end
 
@@ -267,11 +275,13 @@ function MallOtherPage.LoadPersonalList(sortName,sortType)
                 for i,v in ipairs(data.rows) do
                     table.insert(MallOtherPage.data_hits,v)
                 end
+                MallOtherPage.HandleLocalData()
                 MallOtherPage.HandleDataSources()
-
+                MallOtherPage.FlushView(true)  
                 -- echo(MallOtherPage.data_hits,true)
             else
-                -- GameLogic.AddBBS(nil,"数据加载完毕")  
+                -- GameLogic.AddBBS(nil,"数据加载完毕")
+                MallOtherPage.HandleLocalData() 
                 MallOtherPage.FlushView(true)   
             end
         end)
@@ -344,7 +354,8 @@ function MallOtherPage.HandleDataSources()
             MallOtherPage.LoadMallList()
         end
     end
-
+    -- echo(MallOtherPage.data_hits,true)
+    -- print("xxxxxxxxxxxxxxxxxxxxxxxx")
     local index = 1;
     local loadCount = 0;
     local loadFunc = nil;
@@ -377,6 +388,395 @@ function MallOtherPage.HandleDataSources()
     end
 
     loadFunc(MallOtherPage.data_hits[index]);
+end
+
+local GetTempData = function(data)
+	if not data then
+		return {}
+	end
+	local temp = {}
+	local num = #data
+	for i = 1 ,num do
+		local attr = data[i].attr
+		if attr and data[i].name == "file" then
+			temp[#temp + 1] = {
+				accessdate=attr.accessdate,
+				createdate=attr.createdate,
+				fileattr=attr.fileattr,
+				filename=attr.filename,
+				filesize=attr.filesize,
+				text=attr.text,
+				writedate=attr.writedate,
+                filepath=attr.filepath,
+                filetype=attr.filetype,
+			}
+		end
+	end
+	return temp
+end
+
+function MallOtherPage.GetFileType(filename)
+    if not filename then
+        return ""
+    end
+    if filename:match("([^/\\]+)%.blocks%.xml$") then
+        return "blocks"
+    elseif filename:match("([^/\\]+)%.bmax$") then
+        return "bmax"
+    elseif filename:match("([^/\\]+)%.x$") then
+        return "x"
+    elseif filename:match("([^/\\]+)%.stl$") then
+        return "stl"
+    end
+    return ""
+end
+
+local cached_ds = {};
+-- get all template ds
+--- @param bForceRefresh boolean
+function MallOtherPage.GetAllTemplatesDS(bForceRefresh)
+    local global_template_dir = "worlds/DesignHouse/blocktemplates/"
+
+	if(not cached_ds[GameLogic.current_worlddir] or bForceRefresh) then
+		NPL.load("(gl)script/ide/Files.lua");
+	
+		local root = {name="root", attr={},};
+	
+		local folder_global = {name="folder", attr={text=L"全局模板"},};
+		root[#root+1] = folder_global;
+		local folder_local = {name="folder", attr={text=L"本地模板", expanded=true},};
+		root[#root+1] = folder_local;
+		
+
+		-- global dir and all of its sub directories.
+		local result = commonlib.Files.Find({}, global_template_dir, 2, 500, "*.blocks.xml")
+		for _, file in ipairs(result) do 
+			file.text = file.filename:match("([^/\\]+)%.blocks%.xml$")
+			if(file.text) then
+				file.text = commonlib.Encoding.url_decode(commonlib.Encoding.DefaultToUtf8(file.text));
+				file.filepath = global_template_dir..file.filename;
+                file.filetype = "blocks"
+				folder_global[#folder_global+1] = {name="file", attr=file};
+			end
+		end
+
+		-- local dir
+		local result = commonlib.Files.Find({}, GameLogic.current_worlddir.."blocktemplates/", 2, 500, function(item)
+			if(item.filename:match("%.bmax$") or item.filename:match("%.x$") or item.filename:match("%.blocks%.xml$")) then
+				return true;
+			end
+		end)
+
+        -- stl 文件
+        local result1 = commonlib.Files.Find({}, GameLogic.current_worlddir, 0, 500, function(item)
+			if item.filename:match("%.stl$")  then
+                item.isStl = true
+				return true;
+			end
+		end)
+        
+        if result1 and next(result1) ~= nil then
+            for _, file in ipairs(result1) do 
+                table.insert(result,file)
+            end
+        end
+		table.sort(result,function (a, b)
+			local isABlocks = a.filename:match("([^/\\]+)%.blocks%.xml$")
+			local isBBlocks = b.filename:match("([^/\\]+)%.blocks%.xml$")
+			return not isABlocks and isBBlocks
+		end)
+		
+		for _, file in ipairs(result) do 
+			file.text = file.filename:match("([^/\\]+)%.blocks%.xml$")
+
+			if(not file.text) then
+				file.text = file.filename:match("([^/\\]+)%.bmax$") or file.filename:match("([^/\\]+)%.x$") or file.filename:match("([^/\\]+)%.stl$")
+			end
+            file.filetype = MallOtherPage.GetFileType(file.filename)
+			if(file.text) then
+				file.text = commonlib.Encoding.url_decode(commonlib.Encoding.DefaultToUtf8(file.text));
+				if file.isStl then
+					file.filepath = GameLogic.current_worlddir..file.filename;
+				else
+					file.filepath = GameLogic.current_worlddir.."blocktemplates/"..file.filename;
+				end
+                folder_local[#folder_local+1] = { name="file", attr=file };
+			end
+		end
+		cached_ds[GameLogic.current_worlddir] = root;
+	end
+
+	return cached_ds[GameLogic.current_worlddir];
+end
+
+function MallOtherPage.HandleLocalData()
+    if GameLogic.IsReadOnly() or MallOtherPage.type ~= "personnal" then
+        return
+    end
+    MallOtherPage.local_data_hits = {}
+    local data = MallOtherPage.GetAllTemplatesDS(true) or {}
+    local local_data_hits = {}
+    local global_data_hits = {}
+    
+    --echo(data,true)
+    local num = #data
+    for i = 1,num do
+        local attr = data[i].attr
+        if attr and (attr.text == "全局模板" or string.find(attr.text,"Global")) then
+            local templates = data[i]
+            global_data_hits = GetTempData(templates)
+        end
+        if attr and (attr.text == "本地模板" or string.find(attr.text,"Local")) then
+            local templates = data[i]
+            local_data_hits= GetTempData(templates)
+        end
+    end
+
+    local mall_data_hits = global_data_hits
+    for i,v in ipairs(local_data_hits) do
+        table.insert(mall_data_hits,v)
+    end
+
+    --MallOtherPage.local_data_hits = mall_data_hits
+    for i,v in ipairs(mall_data_hits) do
+        local temp = {}
+        local sp,sp1 = MallUtils.GetPinyin(v.text,true)
+        temp.createdAt = MallOtherPage.GetDate(v.createdate)
+        temp.updatedAt = MallOtherPage.GetDate(v.accessdate)
+        temp.enabled = true
+        temp.hasIcon = v.filetype == "blocks" or v.filetype == "stl"
+        if v.filetype == "stl" or v.filetype == "blocks" then
+            temp.icon = icons[v.filetype]
+            temp.bigIcon = true
+        end
+        temp.hasPermission = true
+        temp.isModelProduct = true
+        temp.isLink = false
+        temp.isLiveModel = false
+        temp.isPublic = 1
+        temp.modelType = v.filetype
+        temp.modelUrl = v.filepath
+        temp.name = v.text
+        temp.namePinyin = sp
+        temp.needDownload = false
+        temp.size = v.filesize
+        temp.useCount = 0
+        temp.userId = 0
+        temp.vip_enabled = false
+        temp.id = -1
+        table.insert(MallOtherPage.local_data_hits,temp)
+    end
+    local keyword = (MallOtherPage.SearchText and MallOtherPage.SearchText ~= "") and MallOtherPage.SearchText or nil
+    if keyword and keyword ~= "" then
+        MallOtherPage.local_data_hits = commonlib.filter(MallOtherPage.local_data_hits, function(item)
+            return (item["name"] and item["name"]:lower():find(keyword:lower()))
+                or (item["id"] and item["id"] == tonumber(keyword))
+        end)
+    end
+end
+
+function MallOtherPage.GetDate(date)
+    local year,month,day,hour,min = string.match(date, "(%d+)-(%d+)-(%d+)-(%d+)-(%d+)")
+    if not year or not month or not day or not hour or not min then
+        return ""
+    end
+    month = string.format("%02d", tonumber(month))
+    day = string.format("%02d", tonumber(day))
+    hour = string.format("%02d", tonumber(hour))
+    min = string.format("%02d", tonumber(min))
+    local strDate = ""
+    strDate = strDate..year..'-'..month..'-'..day..'T'..hour..':'..min..':00.000Z'
+    return strDate
+end
+
+function MallOtherPage.GetMineMenuData()
+    return {
+        {name="all",text=L"全部"},
+        {name="online",text=L"在线"},
+        {name="local",text=L"本地"},
+    }
+end
+
+function MallOtherPage.OnChangeMenu(index)
+    local index = tonumber(index)
+    if index == MallOtherPage.select_menu_index then
+        return
+    end
+    MallOtherPage.select_menu_index = index
+    MallOtherPage.FlushView()
+end
+
+function MallOtherPage.GetMineData(bForceRefresh)
+    if not MallOtherPage.mine_data or bForceRefresh then
+        if MallOtherPage.type ~= "personnal" then
+            return
+        end
+        local mine_data = {}
+        if MallOtherPage.select_menu_index == 1 then
+            mine_data = commonlib.copy(MallOtherPage.data_hits)
+            for i,v in ipairs(MallOtherPage.local_data_hits) do
+                table.insert(mine_data,v)
+            end
+        elseif MallOtherPage.select_menu_index == 2 then
+            mine_data = MallOtherPage.data_hits
+        elseif MallOtherPage.select_menu_index == 3 then
+            mine_data = MallOtherPage.local_data_hits
+        end
+        local sortName, sortType = MallOtherPage.GetSortData()
+        if not sortName or sortName == "" then
+            sortName = "updatedAt"
+            sortType = "desc"
+        end
+        if sortName == "mProduct.namePinyin" then
+            table.sort(mine_data, function(a,b)
+                if sortType == "desc" then
+                    return a.namePinyin < b.namePinyin
+                else
+                    return a.namePinyin > b.namePinyin
+                end
+            end)
+        end
+        if sortName == "updatedAt" then
+            table.sort(mine_data, function(a,b)
+                local timestamp1 = commonlib.timehelp.GetTimeStampByDateTime(a["updatedAt"])
+                local timestamp2 = commonlib.timehelp.GetTimeStampByDateTime(b["updatedAt"])
+                if sortType == "desc" then
+                    return timestamp1 > timestamp2
+                else
+                    return timestamp1 < timestamp2
+                end
+            end)
+        end
+        MallOtherPage.mine_data = mine_data
+    end
+    -- print("ddddddddd=================")
+    -- echo(MallOtherPage.mine_data,true)
+    --return mine_data
+end
+
+function MallOtherPage.GetModelDisplayName()
+    if MallOtherPage.type == "personnal" then
+        local username = GameLogic.GetFilters():apply_filters('store_get', 'user/username') or ""
+        if username ~= "" then
+            local model_display_name = commonlib.GetLimitLabel(username, 6,true)
+            local index = 1
+            for i,v in ipairs(MallOtherPage.data_hits) do
+                index = math.max(index,v.id)
+            end
+            index = index + 1
+
+            model_display_name = model_display_name.. "(".. index .. ")"
+            return model_display_name
+        end
+    end
+end
+
+function MallOtherPage.DeleteLocalModel(data,bDeleteFile)
+    NPL.load("(gl)script/apps/Aries/Creator/Game/Common/Files.lua");
+    local Files = commonlib.gettable("MyCompany.Aries.Game.Common.Files");
+    NPL.load("(gl)script/apps/Aries/Creator/Game/Entity/PlayerAssetFile.lua");
+    local PlayerAssetFile = commonlib.gettable("MyCompany.Aries.Game.EntityManager.PlayerAssetFile")
+    
+    for i,v in ipairs(MallOtherPage.data_hits) do
+        if data and v.id == data.id then
+            local filepath = v.tooltip
+            local world_filepath = PlayerAssetFile:GetValidAssetByString(filepath)
+            filepath = Files.GetTempPath()..filepath
+            if ParaIO.DoesFileExist(filepath,false) then
+                ParaAsset.LoadParaX("", filepath):UnloadAsset();
+                ParaAsset.LoadParaX("", world_filepath):UnloadAsset();
+                if bDeleteFile then
+                    print("删除文件======",filepath)
+                    ParaIO.DeleteFile(filepath)
+                end
+            end
+            break
+        end
+    end
+end
+
+function MallOtherPage.OnClickUploadImp(params)
+    if not params or type(params) ~= "table" then
+        return
+    end
+    local filename = params.modelUrl
+    local displayName = params.name
+    MallManager.getInstance():CheckUniqueName(displayName,function(err,data)
+        if err == 200 then
+            local isFind = false
+            local findData = nil
+            if data and data.count and data.count > 0 then
+                local models = data.rows
+                for i,v in ipairs(models) do
+                    if v.name == displayName then
+                        isFind = true
+                        findData = v
+                        break
+                    end
+                end
+            end
+            if isFind then
+                _guihelper.MessageBox(L"该模型在服务器中有同名模型，是否覆盖？",function(res)
+                    if res and res == _guihelper.DialogResult.OK then
+                        MallManager.getInstance():UpdateModelByFile(findData,filename,function(err,data)
+                            if err == 200 then
+                                local item_data = nil
+                                for i,v in ipairs(MallOtherPage.data_hits) do
+                                    if v.id == findData.id then
+                                        v.modelUrl = data.modelUrl
+                                        v.needDownload = true
+                                        v.hasLoad = false
+                                        item_data = v
+                                        break
+                                    end
+                                end
+                                if item_data then
+                                    MallUtils.LoadLiveModelXml(item_data,function (data)
+                                        item_data.xmlInfo = data.xmlInfo
+                                        item_data.tooltip = data.tooltip
+                                        item_data.hasLoad = true                                        
+                                        MallOtherPage.FlushView(true) 
+                                    end,true)
+                                    print("更新模型成功")
+                                end
+                                
+                                commonlib.TimerManager.SetTimeout(function ()
+                                    --MallOtherPage.RefreshDataSource(true)
+                                    
+                                end,1500)
+                            end
+                        end)
+                    end
+                end,_guihelper.MessageBoxButtons.OKCancel)
+            else
+                MallManager.getInstance():SyncWorldTemplate(displayName,filename,function(err,data)
+                    MallOtherPage.AddModelData(data)
+                    MallOtherPage.RefreshDataSource()                    
+                end)
+            end
+        else
+            GameLogic.AddBBS(nil, L"上传模型失败，请稍后再试！")
+        end
+    end)
+end
+
+function MallOtherPage.RefreshDataSource(bForceRefresh)
+    local isOnlyRefreshGrid = false
+    if not bForceRefresh then
+        isOnlyRefreshGrid = true
+    end
+    MallOtherPage.HandleDataSources()
+    MallOtherPage.FlushView(isOnlyRefreshGrid)  
+end
+
+function MallOtherPage.OnClickUpload(params)
+    if not MallOtherPage.UploadModelFunc then
+        MallOtherPage.UploadModelFunc = commonlib.debounce(function(params)
+            MallOtherPage.OnClickUploadImp(params)
+        end,500)
+    end
+    MallOtherPage.UploadModelFunc(params)
+    
 end
 
 function MallOtherPage.LoadElseModel(index)
@@ -423,12 +823,16 @@ function MallOtherPage.LoadMore(index)
 end
 
 function MallOtherPage.FlushView(only_refresh_grid)
+    MallOtherPage.GetMineData(true)
     if only_refresh_grid then
         local gvw_name = "item_gridview";
         local node = page:GetNode(gvw_name);
         pe_gridview.DataBind(node, gvw_name, false);
     else
         MallOtherPage.RefreshPage()
+    end
+    if page then
+        page:SetValue("search_text",MallOtherPage.SearchText)
     end
 end
 
@@ -500,10 +904,10 @@ function MallOtherPage.OnClickCollect(data)
     -- echo(data,true)
     MallManager.getInstance():CollectMallGood(data and data.id,function(result)
         if not result then
-            MallOtherPage.RefreshPage()
+            MallOtherPage.FlushView()
         end
     end)
-    MallOtherPage.RefreshPage()
+    MallOtherPage.FlushView()
 end
 
 function MallOtherPage.OnClickItem(item_data)
@@ -560,6 +964,7 @@ function MallOtherPage.OnSearchPerssonal(search_text)
         MallOtherPage.curPage = 1
         MallOtherPage.data_count = 0
         MallOtherPage.data_hits = {}
+        MallOtherPage.local_data_hits = {}
         MallOtherPage.SearchText = search_text
         MallOtherPage.LoadMallList()
     end
@@ -663,22 +1068,38 @@ function MallOtherPage.RenameModelData(data)
     end
 end
 
+function MallOtherPage.AddModelData(data)
+    if not data then
+        return
+    end
+    table.insert(MallOtherPage.data_hits,data)
+end
+
+
 function MallOtherPage.OnClickDeleteModel(data)
     if not data or next(data) == nil then
         return
     end
     MallOtherPage.HideOperateCtrl(data)
-    local model_id = data.id
-    MallManager.getInstance():DeleteModel(model_id,function(result)
-        if result then
-            MallOtherPage.data_count = MallOtherPage.data_count - 1
-            MallOtherPage.data_count = math.max(0,MallOtherPage.data_count)
-            MallOtherPage.RemoveModelData(data)
-            MallOtherPage.ShowEditData = nil
-            MallOtherPage.do_modify = false
-            MallOtherPage.FlushView(true)
-        end
-    end)
+    _guihelper.MessageBox(L"是否删除当前模型？",
+        function(res)
+            if res and res == _guihelper.DialogResult.OK then
+                local model_id = data.id
+                MallManager.getInstance():DeleteModel(model_id,function(result)
+                    if result then
+                        MallOtherPage.DeleteLocalModel(data,true)
+                        MallOtherPage.data_count = MallOtherPage.data_count - 1
+                        MallOtherPage.data_count = math.max(0,MallOtherPage.data_count)
+                        MallOtherPage.RemoveModelData(data)
+                        MallOtherPage.ShowEditData = nil
+                        MallOtherPage.do_modify = false
+                        MallOtherPage.FlushView(true)
+                    end
+                end)
+            end
+        end,
+    _guihelper.MessageBoxButtons.OKCancel)
+    
 end
 
 function MallOtherPage.GetCurEditCtrl()
@@ -743,15 +1164,40 @@ function MallOtherPage.OnRenameFocusOut()
 		-- end
         
         local model_id = MallOtherPage.ShowEditData.id
-        local name = text
-        MallManager.getInstance():UpdateModel(model_id,name,function(result)
-            if result then
-                MallOtherPage.ShowEditData.name = name
-                MallOtherPage.RenameModelData(MallOtherPage.ShowEditData)
-                MallOtherPage.ShowEditData = nil
-                MallOtherPage.FlushView(true)
+        local displayName = text
+        MallManager.getInstance():CheckUniqueName(displayName,function(err,data)
+            if err == 200 then
+                local isFind = false
+                local findData = nil
+                if data and data.count and data.count > 0 then
+                    local models = data.rows
+                    for i,v in ipairs(models) do
+                        if v.name == displayName then
+                            isFind = true
+                            findData = v
+                            break
+                        end
+                    end
+                end
+                if isFind then
+                    GameLogic.AddBBS(nil,L"该模型在服务器中有同名模型，修改失败！")
+                    MallOtherPage.ShowEditData = nil
+                    MallOtherPage.FlushView(true)
+                else
+                    MallManager.getInstance():UpdateModel(model_id,displayName,function(result)
+                        if result then
+                            MallOtherPage.ShowEditData.name = displayName
+                            MallOtherPage.RenameModelData(MallOtherPage.ShowEditData)
+                            MallOtherPage.ShowEditData = nil
+                            MallOtherPage.FlushView(true)
+                        end
+                    end)
+                end
+            else
+                GameLogic.AddBBS(nil, L"修改模型失败，请稍后再试！")
             end
         end)
+        
         
     end
 end

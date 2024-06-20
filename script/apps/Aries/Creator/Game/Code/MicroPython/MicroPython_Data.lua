@@ -70,7 +70,7 @@ NPL.export({
 		return string.format('%s = %s\n', self:getFieldAsString('left'), self:getFieldAsString('right'));
 	end,
 	ToMicroPython = function(self)
-		self:GetBlockly():AddUnqiueHeader(string.format('%s = None\n', self:getFieldAsString('left')))
+		self:GetBlockly():AddUniqueHeader(string.format('%s = None\n', self:getFieldAsString('left')))
 		return string.format('%s = %s\n', self:getFieldAsString('left'), self:getFieldAsString('right'));
 	end,
 	examples = {{desc = "", canRun = true, code = [[
@@ -263,6 +263,65 @@ button_a.event_pressed = on_button_a_pressed
 		return string.format('"%s"', self:getFieldAsString('color'));
 	end,
 	examples = {{desc = "", canRun = true, code = [[
+]]}},
+},
+
+{
+	type = "defineHeaderFunction", 
+	message0 = L"定义函数%1(%2)",
+	message1 = L"%1",
+	arg0 = {
+		{
+			name = "name",
+			type = "field_input",
+			text = "", 
+		},
+		{
+			name = "param",
+			type = "field_input",
+			text = "", 
+		},
+	},
+    arg1 = {
+        {
+			name = "input",
+			type = "input_statement",
+			text = "pass",
+		},
+    },
+	--previousStatement = true,
+	nextStatement = true,
+	hide_in_codewindow = true,
+	category = "Data", 
+	helpUrl = "", 
+	canRun = false,
+	func_description = 'def %s(%s):\\n    %s',
+    ToNPL = function(self)
+		local input = self:getFieldAsString('input')
+		if input == '' then
+			input = 'pass'
+		end
+		return string.format('def %s(%s):\n    %s\n', self:getFieldAsString('name'), self:getFieldAsString('param'), input);
+	end,
+	ToMicroPython = function(self)
+		local input = self:getFieldAsString('input')
+		if input == '' then
+			input = 'pass'
+		end
+
+		local params = self:getFieldAsString('param') or ""
+		local paramsMap;
+		for paramName in params:gmatch("[^%s,]+") do
+			paramsMap = paramsMap or {}
+			paramsMap[paramName] = true
+		end
+		local global_vars = MicroPython:GetGlobalVarsDefString(self, paramsMap)
+		local code = string.format('\ndef %s(%s):\n%s%s\n', commonlib.Encoding.toValidParamName(self:getFieldAsString('name')), params, global_vars, input);
+		self:GetBlockly():AddUniqueHeader(code, 10) -- order is 10, so that it is added after import code.
+		return "\n";
+	end,
+	examples = {{desc = "", canRun = true, code = [[
+
 ]]}},
 },
 
@@ -460,6 +519,29 @@ button_a.event_pressed = on_button_a_pressed
 	func_description = 'import %s',
 	ToNPL = function(self)
 		return string.format('import %s\n', self:getFieldAsString('filename'));
+	end,
+	examples = {{desc = "", canRun = true, code = [[
+]]}},
+},
+
+{
+	type = "code_comment", 
+	message0 = L"注释 %1",
+	arg0 = {
+		{
+			name = "value",
+			type = "field_input",
+			text = "",
+		},
+	},
+	category = "Data", 
+	helpUrl = "", 
+	canRun = false,
+	previousStatement = true,
+	nextStatement = true,
+	func_description = '# %s',
+    ToNPL = function(self)
+		return string.format('# %s\n', self:getFieldAsString('value'));
 	end,
 	examples = {{desc = "", canRun = true, code = [[
 ]]}},

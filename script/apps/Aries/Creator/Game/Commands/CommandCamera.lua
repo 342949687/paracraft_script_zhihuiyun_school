@@ -79,8 +79,10 @@ Example:
 Commands["fov"] = {
 	name="fov", 
 	quick_ref="/fov [fieldofview:1.04] [animSpeed]", 
-	desc=[[change field of view with an animation. default value is 1.04. e.g.
+	desc=[[change field of view with an animation. default value is 1.04. e.g. If value is bigger than 3.14, it is in degrees.
 /fov   default field of view
+/fov 60 
+/fov 120
 /fov 0.5		zoomin
 /fov 0.4 0.01   zoomin with animation
 ]], 
@@ -91,6 +93,9 @@ Commands["fov"] = {
 			target_fov = target_fov or GameLogic.options.normal_fov;
 
 			if(target_fov) then
+				if(target_fov > 3.15) then
+					target_fov = target_fov / 180 * math.pi;
+				end
 				speed_fov, cmd_text = CmdParser.ParseInt(cmd_text);
 
 				NPL.load("(gl)script/apps/Aries/Creator/Game/World/CameraController.lua");

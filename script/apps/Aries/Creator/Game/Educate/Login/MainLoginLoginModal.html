@@ -597,7 +597,7 @@
                         local phone_number = get_page():GetValue('phone_number')
 
                         if not Validated:Phone(phone_number) then
-                            _guihelper.MessageBox(L'*手机号格式错误')
+                            _guihelper.MessageBox(L'请输入5-11位手机号')
                             return
                         end
 

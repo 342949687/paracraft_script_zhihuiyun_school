@@ -24,6 +24,8 @@ Viewport:new():init("scene"):SetMarginBottom(100)
 ]]
 NPL.load("(gl)script/ide/System/Windows/Screen.lua");
 NPL.load("(gl)script/ide/System/Scene/Viewports/Viewport.lua");
+NPL.load("(gl)script/ide/System/Scene/Assets/ImageFile.lua");
+local ImageFile = commonlib.gettable("System.Scene.Assets.ImageFile");
 local ViewportManager = commonlib.gettable("System.Scene.Viewports.ViewportManager");
 local Screen = commonlib.gettable("System.Windows.Screen");
 local Viewport = commonlib.inherit(commonlib.gettable("System.Core.ToolBase"), commonlib.gettable("System.Scene.Viewports.Viewport"));
@@ -79,7 +81,14 @@ function Viewport:GetCameraAttrObject()
 	return self.cameraAttr
 end
 
-function Viewport:SetCameraViewParams(lookAtPos, eyePos, cameraUp)
+function Viewport:SetFarPlane(farPlane)
+	local attr = self:GetCameraAttrObject()
+	if(attr) then
+		attr:SetField("FarPlane", farPlane)
+	end
+end
+
+function Viewport:SetCameraViewParams(lookAtPos, eyePos, cameraUp, farPlane)
 	self:SetUseSceneCamera(false)
 	local attr = self:GetCameraAttrObject()
 	if(attr) then
@@ -91,6 +100,26 @@ function Viewport:SetCameraViewParams(lookAtPos, eyePos, cameraUp)
 		end
 		if(cameraUp) then
 			attr:SetField("CameraUp", cameraUp);
+		end
+		if(farPlane) then
+			attr:SetField("FarPlane", farPlane);
+		end
+	end
+end
+
+-- @param fov: default to 60/180*3.14 = 1.0472. If value is bigger than 3.15, it is in radian.
+function Viewport:SetCameraFieldOfView(fov, nearPlane, farPlane)
+	local attr = self:GetCameraAttrObject()
+	if(attr) then
+		if(fov > 3.15) then
+			fov = fov / 180 * math.pi;
+		end
+		attr:SetField("FieldOfView", fov)
+		if(nearPlane) then
+			attr:SetField("NearPlane", nearPlane)
+		end
+		if(farPlane) then
+			attr:SetField("FarPlane", farPlane)
 		end
 	end
 end
@@ -186,45 +215,35 @@ function Viewport:GetRenderTarget()
 end
 
 -- get render target image data as a table. only call this function after self:SetRenderTargetName. 
+-- @param width, height: sample at the given width and height. if nil, they will be same as the texture size.
+-- @param colorMode: "rgb" or "DWORD" or "grey", default to "rgb". if "grey", value normalized to [0,1]
 -- @return nil or {width=number, height=number, data = {r,g,b, r,g,b, ...} }
-function Viewport:GetImageData()
+function Viewport:GetImageData(width, height, colorMode)
 	local renderTarget = self:GetRenderTarget()
-	if(renderTarget) then
-		local filename = "temp/viewport.jpg"
-		local filenameWithRegion = filename;
-		if(self.renderTargetWidth) then
-			filenameWithRegion = string.format("%s;0 0 %d %d", filename, self.renderTargetWidth, self.renderTargetHeight)
-		end
-		renderTarget:SetField("SaveToFile", filenameWithRegion)
-
-		local file = ParaIO.open(filename, "image");
-		local img = self.img or {};
-		self.img = img;
+	if (renderTarget) then
+		local file = ImageFile.open(self.renderTargetName)
 		if(file:IsValid()) then
-			local ver = file:ReadInt();
-			img.width = file:ReadInt();
-			img.height = file:ReadInt();
-			img.data = img.data or {};
-			local data = img.data
-			local bytesPerPixel = file:ReadInt();
-			local pixel = {}
-			local count = 0;
-			for y=1, img.height do
-				for x=1, img.width do
-					-- array of rgba
-					pixel = file:ReadBytes(bytesPerPixel, pixel);
-					local red = pixel[1] or 0;
-					count = count + 1
-					data[count] = red;
-					count = count + 1
-					data[count] = pixel[2] or red;
-					count = count + 1
-					data[count] = pixel[3] or red;
-				end
-			end
+			local img = file:GetImageData(width, height, colorMode)
 			file:close();
 			return img;
 		end
+	end
+end
+
+-- save texture to file
+-- @param filename: should be a writable path, default to "temp/viewport.jpg"
+-- @param width, height: default to nil, if specified, it will save the texture to the given size.
+-- @return filename
+function Viewport:SaveToFile(filename, width, height)
+	local renderTarget = self:GetRenderTarget()
+	if(renderTarget) then
+		filename = filename or "temp/viewport.jpg"
+		local filenameWithRegion = filename;
+		if(self.renderTargetWidth) then
+			filenameWithRegion = string.format("%s;0 0 %d %d", filename, width or self.renderTargetWidth, height or self.renderTargetHeight)
+		end
+		renderTarget:SetField("SaveToFile", filenameWithRegion)
+		return filename;
 	end
 end
 

@@ -111,3 +111,15 @@ function ValueList:GetValueAsString()
     
     return table.concat(list, option.separator or ",");
 end
+
+function ValueList:DisableRun()
+    for _, inputValue in ipairs(inputValues) do
+        inputValue:DisableRun();
+    end
+end
+
+function ValueList:EnableRun()
+    for _, inputValue in ipairs(inputValues) do
+        inputValue:EnableRun();
+    end
+end

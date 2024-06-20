@@ -181,7 +181,7 @@ function TextArea:handleRedo()
 end
 
 function TextArea:handleSelectAll()
-    self.selectStartAt, self.selectEndAt = 1, self.text:length() + 1;
+    self.selectStartAt, self.selectEndAt = 0, self.text:length() + 1;
     TextAreaDebug.Format("handleSelectAll selectStartAt = %s, selectEndAt = %s", self.selectStartAt, self.selectEndAt);
 end
 
@@ -205,9 +205,36 @@ function TextArea:handlePaste()
     self:InsertTextCmd(clip)
 end
 
-function TextArea:handleHome()
+function TextArea:handleHome(event, bselected)
+    if (bselected) then
+        local cursorLine = self:GetCursorLine();
+        self.selectStartAt = cursorLine.startAt;
+        self.selectEndAt = self.cursorAt;
+    else
+        local cursorLine = self:GetCursorLine();
+        local offset = self.cursorAt - cursorLine.startAt + 1;
+        self:AdjustCursorAt(-offset);
+    end
 end
-function TextArea:handleEnd()
+
+function TextArea:handPageUp(event)
+    self:AdjustCursorAt(-self.cursorAt);
+end
+
+function TextArea:handPageDown(event)
+    self:AdjustCursorAt(self.text:length() + 1 - self.cursorAt);
+end
+
+function TextArea:handleEnd(event, bselected)
+    if (bselected) then
+        local cursorLine = self:GetCursorLine();
+        self.selectStartAt = self.cursorAt;
+        self.selectEndAt = cursorLine.endAt - 1;
+    else
+        local cursorLine = self:GetCursorLine();
+        local offset = cursorLine.endAt - 1 - self.cursorAt;
+        self:AdjustCursorAt(offset);
+    end
 end
 
 function TextArea:handleMoveToPrevLine()
@@ -241,11 +268,31 @@ function TextArea:handleMoveToNextChar()
 end
 
 function TextArea:handleSelectToPrevLine()
-    
+    self.selectStartAt = self.selectStartAt or self.cursorAt;
+    self.selectEndAt = self.selectEndAt or self.cursorAt;
+    self:handleMoveToPrevLine();
+    if(self.cursorAt < self.selectStartAt) then
+        self.selectStartAt = self.cursorAt;
+    else 
+        self.selectEndAt = self.cursorAt;
+    end
+    if (self.selectStartAt > self.selectEndAt) then
+        self.selectStartAt, self.selectEndAt = self.selectEndAt, self.selectStartAt;
+    end
 end
 
 function TextArea:handleSelectToNextLine()
-    
+    self.selectStartAt = self.selectStartAt or self.cursorAt;
+    self.selectEndAt = self.selectEndAt or self.cursorAt;
+    self:handleMoveToNextLine();
+    if(self.cursorAt > self.selectEndAt) then
+        self.selectEndAt = self.cursorAt;
+    else
+        self.selectStartAt = self.cursorAt;
+    end
+    if (self.selectStartAt > self.selectEndAt) then
+        self.selectStartAt, self.selectEndAt = self.selectEndAt, self.selectStartAt;
+    end
 end
 
 -- 左开右闭
@@ -292,6 +339,8 @@ function TextArea:OnKeyDown(event)
 	elseif (event:IsKeySequence("Copy")) then self:handleCopy(event)
 	elseif (event:IsKeySequence("Paste")) then self:handlePaste(event, "Clipboard");
 	elseif (event:IsKeySequence("Cut")) then self:handleCut(event)
+    elseif (event:IsKeySequence("MoveToStart")) then return self:handPageUp(event)
+    elseif (event:IsKeySequence("MoveToEnd")) then return self:handPageDown(event)
 	elseif (event:IsKeySequence("MoveToStartOfLine") or event:IsKeySequence("MoveToStartOfBlock")) then self:handleHome(event, false)
     elseif (event:IsKeySequence("MoveToEndOfLine") or event:IsKeySequence("MoveToEndOfBlock")) then self:handleEnd(event, false)
     elseif (event:IsKeySequence("SelectStartOfLine") or event:IsKeySequence("SelectStartOfBlock")) then self:handleHome(event, true)
@@ -596,12 +645,14 @@ function TextArea:GetAtByPos(x, y)
         lineNo = lineNo + 1;
     end
     local startAt = self.text:length();
+    if (startAt == 0) then startAt = 1 end
     if (self.lines[lineNo]) then startAt = self.lines[lineNo].startAt end
     local text = _guihelper.AutoTrimTextByWidth(self:GetLineText(lineNo):GetText(), x, self:GetFont());
     local textlen = ParaMisc.GetUnicodeCharNum(text);
     local textWidth = _guihelper.GetTextWidth(text, self:GetFont());
     
-    if (x > textWidth) then return startAt + textlen end
+    if (textlen == 0) then textlen = 1 end
+    if (x > textWidth) then return startAt + textlen - 1 end
 
     while (textWidth > x and textlen > 0) do
         textlen = textlen - 1;
@@ -611,6 +662,7 @@ function TextArea:GetAtByPos(x, y)
 
     TextAreaDebug.Format("GetAtByPos, lineNo = %s, x = %s, textWidth = %s textlen = %s, cursorAt = %s", lineNo, x, textWidth, textlen, startAt + textlen);
 
+    if (textlen == 0) then textlen = 1 end
     return startAt + textlen - 1;
 end
 

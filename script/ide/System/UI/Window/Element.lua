@@ -465,7 +465,8 @@ function Element:UpdateLayout(bApplyElementStyle)
     -- 是否正在更新布局
     if (self.isUpdateLayout) then return end
     self.isUpdateLayout = true;
-    
+    self:Refresh();
+
     -- ElementDebug.If(self:GetAttrValue("id") == "debug", "Update Layout", bApplyElementStyle);
     -- 生成元素样式
     if (bApplyElementStyle) then self:ApplyElementStyle() end

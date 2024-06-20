@@ -147,7 +147,7 @@ function Entity:GetFullFilePath(filename)
 	local bExist
 	local old_filename = filename;
 	if(filename and filename~="") then
-		if(filename:match("^https?://") or filename:match("^_miniscenegraph")) then
+		if(filename:match("^https?://") or filename:match("^_miniscenegraph") or filename:match("^_texture")) then
 			bExist = true;
 		else
 			filename = filename:gsub("[;:].*$", "")
@@ -715,7 +715,10 @@ function Entity:UpdateImageModel(filename, isSingle)
 				if(self.bFileExist) then
 					Image3DDisplay.ShowHeadonDisplay(true, obj, self.headon_filename, self.headon_width, self.headon_height, nil, self.text_offset, -1.57);
 				else
-					LOG.std(nil, "debug", "EntityImage", "file not exist: %s", self.headon_filename);
+					Image3DDisplay.ShowHeadonDisplay(true, obj, nil, self.headon_width, self.headon_height, nil, self.text_offset, -1.57);
+					if(self.headon_filename ~= "") then
+						LOG.std(nil, "debug", "EntityImage", "file not exist: %s", self.headon_filename);
+					end
 				end
 			else
 				local imageScale = imageRadius*2;
@@ -727,13 +730,16 @@ function Entity:UpdateImageModel(filename, isSingle)
 					end
 				end
 				local text_offset = {x = (self.text_offset.x + gridWidth*0.5-0.5)  / imageScale, y = (0.5+imageRadius) / imageScale, z = self.text_offset.z / imageScale}
-				self.headon_filename = filename
+				self.headon_filename = filename or ""
 				self.headon_width = 100/imageScale * gridWidth
 				self.headon_height = 100/imageScale*gridHeight
 				if(self.bFileExist) then
 					Image3DDisplay.ShowHeadonDisplay(true, obj, self.headon_filename, self.headon_width, self.headon_height, nil, text_offset, -1.57);
 				else
-					LOG.std(nil, "debug", "EntityImage", "file not exist: %s", self.headon_filename);
+					Image3DDisplay.ShowHeadonDisplay(true, obj, nil, self.headon_width, self.headon_height, nil, text_offset, -1.57);
+					if(self.headon_filename ~= "") then
+						LOG.std(nil, "debug", "EntityImage", "file not exist: %s", self.headon_filename);
+					end
 				end
 			end
 		end

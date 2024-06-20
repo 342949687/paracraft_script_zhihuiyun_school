@@ -41,6 +41,7 @@ local Component = NPL.load("../Vue/Component.lua");
 local Slot = NPL.load("../Vue/Slot.lua");
 
 local Blockly = NPL.load("../Blockly/Blockly.lua");
+local BlocklyBlock = NPL.load("../Blockly/BlocklyBlock.lua");
 
 local Canvas3D = NPL.load("./Controls/Canvas3D.lua");
 
@@ -83,6 +84,7 @@ function ElementManager:ctor()
     ElementManager:RegisterByTagName("Slot", Slot);
 
     ElementManager:RegisterByTagName("Blockly", Blockly);
+    ElementManager:RegisterByTagName("BlocklyBlock", BlocklyBlock);
 
     -- 控件元素
     ElementManager:RegisterByTagName("Canvas3D", Canvas3D);

@@ -1093,7 +1093,6 @@ local internalValues = {
 	["opacity"] = {setter = Actor.SetOpacity, getter = Actor.GetOpacity, isVariable = false}, 
 	["selectionEffect"] = {setter = Actor.SetSelectionEffect, getter = Actor.GetSelectionEffect, isVariable = false}, 
 	["isAgent"] = {setter = function() end, getter = Actor.IsAgent, isVariable = false}, 
-	
 	--["isPersistent"] = {setter = Actor.SetPersistent, getter = Actor.IsPersistent, isVariable = false}, 
 	["isRelativePlay"] = {setter = Actor.SetRelativePlay, getter = Actor.IsRelativePlay, isVariable = false}, 
 	["isIgnoreSkinAnim"] = {setter = Actor.SetIgnoreSkinAnim, getter = Actor.IsIgnoreSkinAnim, isVariable = false}, 

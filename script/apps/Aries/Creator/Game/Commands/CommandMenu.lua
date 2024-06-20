@@ -107,14 +107,20 @@ Commands["menu"] = {
 				-- NPL.load("(gl)script/apps/Aries/Creator/Game/Login/InternetLoadWorld.lua");
 				-- local InternetLoadWorld = commonlib.gettable("MyCompany.Aries.Creator.Game.Login.InternetLoadWorld");
 				-- InternetLoadWorld.ShowPage(true);
-				if System.options.channelId_431 then
+				if System.options.isEducatePlatform then
 					local EducateProjectList = NPL.load("(gl)script/apps/Aries/Creator/Game/Educate/Project/EducateProjectList.lua")
         			EducateProjectList.ShowPage()
 					return
-				elseif System.options.isPapaAdventure then
+				end
+				if System.options.isPapaAdventure then
 					NPL.load("(gl)script/apps/Aries/Creator/Game/PapaAdventures/PapaAPI.lua");
 					local PapaAPI = commonlib.gettable("MyCompany.Aries.Creator.Game.PapaAdventures.PapaAPI");
 					PapaAPI:OpenMyWorks()
+					return
+				end
+				if System.options.isCommunity then
+					local CommunityMainPage = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/Community/CommunityMainPage.lua")
+        			CommunityMainPage.Show()
 					return
 				end
 				GameLogic.GetFilters():apply_filters("cellar.opus.show");
@@ -200,7 +206,7 @@ Commands["menu"] = {
 			end
 		elseif(name:match("^window")) then
 			if(name == "window.texturepack") then
-				if System.options.channelId_431 then
+				if System.options.isEducatePlatform then
 					GameLogic.CheckSignedIn(L"此功能需要登陆后才能使用",
 						function(result)
 							if (result) then
@@ -267,6 +273,10 @@ Commands["menu"] = {
 				local UserBagPage = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/User/UserBagPage.lua");
 				UserBagPage.ShowPage();
 			elseif(name == "window.mqtt") then
+				if (System.os.Platform() == "emscripten") then
+					_guihelper.MessageBox(L"web版本暂时不支持MQTT， 请用客户端版本。");
+					return;
+				end
 				local MqttMainPage = NPL.load('(gl)script/apps/Aries/Creator/Game/Mqtt/MqttMainPage.lua')
 				MqttMainPage.ShowPage()
 			end
@@ -318,7 +328,7 @@ Commands["menu"] = {
 			elseif(name == "help.home") then
 				GameLogic.RunCommand("/home")
 			elseif(name == "help.dailycheck" or name == "help.creativespace") then
-				if System.options.isPapaAdventure or System.options.channelId_431 then
+				if System.options.isPapaAdventure or System.options.isEducatePlatform then
 					return
 				end
 				GameLogic.CheckSignedIn(L"此功能需要登陆后才能使用",

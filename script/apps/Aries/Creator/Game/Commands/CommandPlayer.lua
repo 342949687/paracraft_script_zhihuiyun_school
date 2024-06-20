@@ -31,7 +31,7 @@ local CommandManager = commonlib.gettable("MyCompany.Aries.Game.CommandManager")
 
 Commands["clearbag"] = {
 	name="clearbag", 
-	quick_ref="/clearbag [@playername] [itemid] [count]", 
+	quick_ref="/clearbag [@playername] [itemid] [-e filter][count]", 
 	desc=[[clear all or given item in the inventory of a given player
 /clearbag @p   clear all 
 /clearbag [item_id]   clear all items with the give id
@@ -39,11 +39,15 @@ Commands["clearbag"] = {
 ]], 
 	handler = function(cmd_name, cmd_text, cmd_params)
 		if(not System.options.is_mcworld) then
-			return;
+			return ;
 		end
-		local item_id, item_count, playerEntity, hasInputName;
+		local item_id, item_count, playerEntity, hasInputName,filter,option;
 		playerEntity, cmd_text, hasInputName = CmdParser.ParsePlayer(cmd_text);
 		item_id,cmd_text  = CmdParser.ParseInt(cmd_text);
+		option,cmd_text = CmdParser.ParseOption(cmd_text)
+		if option == "e" then
+			filter,cmd_text = CmdParser.ParseString(cmd_text)
+		end
 		item_count, cmd_text = CmdParser.ParseInt(cmd_text);
 		
 		playerEntity = playerEntity or (not hasInputName and EntityManager.GetPlayer());
@@ -52,7 +56,7 @@ Commands["clearbag"] = {
 				playerEntity.inventory:ClearItems(item_id, item_count);
 			else
 				-- clear all
-				playerEntity.inventory:Clear();
+				playerEntity.inventory:Clear(nil,nil,filter);
 			end
 		end
 	end,
@@ -87,9 +91,10 @@ e.g.
 
 Commands["take"] = {
 	name="take", 
-	quick_ref="/take [@playername] [block] [count] [serverdata]", 
+	quick_ref="/take [@playername] [block] [count] [-bag][serverdata]", 
 	desc=[[set a given block to the hand of the player
 @param block : block id or name
+@param bag : will not take in hand and set item in slot from 10
 @param serverdata: server data table in {}
 e.g.
 /take 61
@@ -97,12 +102,14 @@ e.g.
 /take ColorBlock 100 {color="#ff0000"}
 /take AgentItem {name="circuit.lever"}
 /take LiveModel {tooltip="onlinestore/1.blocks.xml"}
+/take Book -bag {tooltip="blocktemplates/1.bmax"}
 ]], 
 	handler = function(cmd_name, cmd_text, cmd_params)
-		local playerEntity, blockid, count, data, method, serverdata, hasInputName;
+		local playerEntity, blockid, count, data, method, serverdata, hasInputName,options;
 		playerEntity, cmd_text, hasInputName = CmdParser.ParsePlayer(cmd_text);
 		blockid, cmd_text = CmdParser.ParseBlockId(cmd_text);
 		count, cmd_text = CmdParser.ParseInt(cmd_text);
+		options,cmd_text = CmdParser.ParseOptions(cmd_text);
 		serverdata, cmd_text = CmdParser.ParseServerData(cmd_text);
 		if(blockid) then
 			playerEntity = playerEntity or (not hasInputName and EntityManager.GetPlayer());
@@ -152,9 +159,14 @@ e.g.
 						itemStack:SetPreferredBlockData(item_data)
 					end
 				end
-				if(playerEntity.SetBlockInRightHand) then
-					playerEntity:SetBlockInRightHand(itemStack);
+				if options and options.bag then
+					playerEntity.inventory:AddItemToInventory(itemStack,10)
+				else
+					if(playerEntity.SetBlockInRightHand) then
+						playerEntity:SetBlockInRightHand(itemStack);
+					end
 				end
+				
 			end
 		end
 	end,

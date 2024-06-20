@@ -217,7 +217,7 @@ function ProjectActivationList.GetRemoteWorldList(callback)
                     item.project and
                     type(item.project) == 'table' and
                     item.project.platform and
-                    item.project.platform ~= 'paracraft_431' then
+                    not Mod.WorldShare.Utils.IsEducatePlatform(item.project.platform) then
                     filtersData[#filtersData + 1] = item
                 end
             end

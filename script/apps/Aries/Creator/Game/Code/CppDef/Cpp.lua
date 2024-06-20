@@ -66,6 +66,10 @@ function Cpp.GetCategoryButtons()
 	return default_categories;
 end
 
+function Cpp:GetFileExtension()
+	return "cpp"
+end
+
 function Cpp.OnClickLearn()
 	ParaGlobal.ShellExecute("open", L"https://keepwork.com/official/docs/tutorials/Cpp", "", "", 1);
 end
@@ -102,6 +106,7 @@ function Cpp.CompileCode(code, filename, codeblock)
 		luacode = [[local py_env, env_error_msg = NPL.load("(gl)script/apps/Aries/Creator/Game/Code/CodeBlocklyDef/polyfill.lua");local code_env = codeblock:GetCodeEnv();py_env['_set_codeblock_env'](code_env);for name, api in pairs(py_env) do code_env[name] = api;end local Cpp = NPL.load("(gl)script/apps/Aries/Creator/Game/Code/CppDef/Cpp.lua");Cpp.InstallStdLibMethods(codeblock);]]
 			..luacode..[[if(main) then 	main() end ]]
 		LOG.std(nil, "debug", "npl code:\n", luacode)
+		entity:SetIntermediateCode(luacode)
 		return compiler:Compile(luacode);
 	end
 end
@@ -113,7 +118,17 @@ function Cpp.InstallStdLibMethods(codeblock)
 	code_env.INT_MIN = (-2147483647 - 1);
 	code_env.INT_MAX = 2147483647;
 	code_env.sqrt = math.sqrt;
-	
+	code_env.int = function(value) return math.floor(value) end
+	code_env.unsignedint = function(value) return math.floor(value) end
+	code_env.short = function(value) return math.floor(value) end
+	code_env.unsignedshort = function(value) return math.floor(value) end
+	code_env.long = function(value) return math.floor(value) end
+	code_env.unsignedlong = function(value) return math.floor(value) end
+	code_env.string = function(value) return tostring(value) end
+	code_env.float = function(value) return value end
+	code_env.double = function(value) return value end
+	code_env.bool = function(value) return value end
+
 	-- for key, val in pairs(CppStd) do
 	-- 	code_env[key] = val;
 	-- end
@@ -121,20 +136,71 @@ function Cpp.InstallStdLibMethods(codeblock)
 	code_env.swap = function(a, b)
 		return b, a;
 	end
-
+	
 	code_env.cin = function(param)
-		local line = code_env.ask(L"输入窗", L"确定") or "";
+		local line = code_env.cin_lastline;
+		if(not line) then
+			line = code_env.ask(L"输入窗", L"确定") or "";
+		end
 		if(type(param) == "number") then
-			line = tonumber(line);
-		elseif(param == nil and line:match("^%d+$")) then
-			line = tonumber(line);
+			local num;
+			num, line = line:match("^%s*(%-?[%.%d]+)%s*(.*)$");
+			if(not line or line=="") then
+				code_env.cin_lastline = nil;
+			else
+				code_env.cin_lastline = line;
+			end
+			if(num) then
+				line = tonumber(num);
+			end
+		else
+			code_env.cin_lastline = nil
+			if(param == nil and line:match("^%d+$")) then
+			
+				line = tonumber(line);
+			end
 		end
 		return line;
 	end
 
-	code_env.print = function(...)
-		local text = string.format(...)
+	code_env.print = function(name, ...)
+		local n = select("#", ...);
+		if(n > 0 and type(name) == "string") then
+			name = name:gsub("(%%[%.%d]*)lf", "%1f");
+		end
+		local text = string.format(name, ...)
 		code_env.log(text);
+	end
+	code_env.printf = code_env.print
+	-- float a; double b; char s[100]; scanf("%f%lf%s", &a, &b, s);
+	code_env.scanf = function(name, ...)
+		local text =  tostring(name);
+		local arg={...}
+		line = code_env.ask(L"输入窗: "..text, L"确定") or "";
+
+		text = text:gsub("%%%w+", function(str)
+			if(str == "%lf" or str == "%d" or str == "%f") then
+				return "%s*(-?[%.%d]+)%s*"
+			elseif(str == "%s") then
+				return "%s*(.*)%s*"
+			else
+				return "";
+			end
+		end)
+		local r = {};
+		local count = 0;
+		r[1], r[2], r[3], r[4], r[5], r[6] = string.match(line, text)
+		for index, v in ipairs(arg) do
+			if(type(v) == "number" and r[index]) then
+				r[index] = tonumber(r[index]);
+			end
+			if(r[index]) then
+				count = count + 1;
+			else
+				break
+			end
+		end
+		return count, r[1], r[2], r[3], r[4], r[5], r[6];
 	end
 	
 	code_env.setw = function(width)
@@ -174,11 +240,21 @@ function Cpp.InstallStdLibMethods(codeblock)
 	code_env.InitMultiArray = function(arr, init_arr)
 		if (type(init_arr) ~= "table") then return end
 		local init_arr_size = #init_arr;
+		if (init_arr_size == 0) then return end
 		local init_arr_index = 1;
+		local default_value = type(init_arr[1]) == "string" and "" or 0;
+		local get_value = function(value, default_value)
+			if (value == nil) then 
+				return default_value;
+			else
+				return value;
+			end
+		end
+
 		arr.__size_1__ = arr.__size_1__ or init_arr_size or 1;
 		for i = 1, arr.__size_1__ do
 			if (arr.__size_2__ == nil) then
-				arr[i - 1] = init_arr[init_arr_index];
+				arr[i - 1] = get_value(init_arr[init_arr_index], default_value);
 				init_arr_index = init_arr_index + 1;
 			else
 				local arr_1 = arr[i - 1];
@@ -187,7 +263,7 @@ function Cpp.InstallStdLibMethods(codeblock)
 
 				for j = 1, arr.__size_2__ do
 					if (arr.__size_3__ == nil) then
-						arr_1[j - 1] = init_arr[init_arr_index];
+						arr_1[j - 1] = get_value(init_arr[init_arr_index], default_value);
 						init_arr_index = init_arr_index + 1;
 					else
 						local arr_2 = arr_1[j - 1];
@@ -196,7 +272,7 @@ function Cpp.InstallStdLibMethods(codeblock)
 
 						for k = 1, arr.__size_3__ do
 							if (arr.__size_4__ == nil) then
-								arr_2[k - 1] = init_arr[init_arr_index];
+								arr_2[k - 1] = get_value(init_arr[init_arr_index], default_value);
 								init_arr_index = init_arr_index + 1;
 							else
 								local arr_3 = arr_2[k - 1];
@@ -204,7 +280,7 @@ function Cpp.InstallStdLibMethods(codeblock)
 								arr_2[k - 1] = arr_3;
 
 								for l = 1, arr.__size_4__ do
-									arr_3[l - 1] = init_arr[init_arr_index];
+									arr_3[l - 1] = get_value(init_arr[init_arr_index], default_value);
 									init_arr_index = init_arr_index + 1;
 								end
 							end

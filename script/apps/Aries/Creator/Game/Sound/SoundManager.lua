@@ -122,7 +122,7 @@ function SoundManager:PlaySound(channel_name, filename, from_time, volume, pitch
 	if(filename and filename:match("^https?://")) then
 		NPL.load("(gl)script/apps/Aries/Creator/Game/Common/HttpFiles.lua");
 		local HttpFiles = commonlib.gettable("MyCompany.Aries.Game.Common.HttpFiles");
-		HttpFiles.GetHttpFilePath(filename, function(err, diskfilename)
+		HttpFiles.GetHttpFilePath(filename, function(err, diskfilename) 
 			if(diskfilename) then
 				self:PlaySound(channel_name, diskfilename, from_time, volume, pitch, play_start_cb, play_end_cb);
 			end

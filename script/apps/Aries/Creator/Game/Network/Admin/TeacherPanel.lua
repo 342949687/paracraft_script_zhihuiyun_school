@@ -27,7 +27,7 @@ function TeacherPanel.OnInit()
 end
 
 function TeacherPanel.ShowPage(bShow)
-	if System.options.channelId_431 then
+	if System.options.isEducatePlatform then
 		TeacherPanel.ShowView()
 		return
 	end

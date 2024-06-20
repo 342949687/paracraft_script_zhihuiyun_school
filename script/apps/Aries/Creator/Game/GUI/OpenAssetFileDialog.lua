@@ -66,13 +66,14 @@ function OpenAssetFileDialog.GetFilters(filterName)
 		return {
 			-- {L"全部文件(*.fbx,*.x,*.bmax,*.xml)",  "*.fbx;*.x;*.bmax;*.xml", exclude="*.blocks.xml"},
 			-- {L"全部文件(*.fbx,*.FBX,*.x,*.bmax,*.gltf,*.glb)",  "*.fbx;*.FBX;*.x;*.bmax;*.gltf;*.glb", exclude="*.blocks.xml"},
-			{L"全部文件(*.fbx,*.FBX,*.x,*.bmax,*.glb,*.gltf)",  "*.fbx;*.FBX;*.x;*.bmax;*.glb;*.gltf", exclude="*.blocks.xml"},
+			{L"全部文件(*.fbx,*.FBX,*.x,*.bmax,*.glb,*.gltf,*.ply)",  "*.fbx;*.FBX;*.x;*.bmax;*.glb;*.gltf;*.ply", exclude="*.blocks.xml"},
 			{L"FBX模型(*.fbx)",  "*.fbx"},
 			-- {L"GLTF模型(*.gltf, *.glb)",  "*.gltf;*.glb"},
 			{L"bmax模型(*.bmax)",  "*.bmax"},
 			{L"ParaX模型(*.x,*.xml)",  "*.x;*.xml", exclude="*.blocks.xml"},
 			{L"block模版(*.blocks.xml)",  "*.blocks.xml"},
 			{L"GLTF模型(*.glb,*.gltf)",  "*.glb;*.gltf"},
+			{L"ply点云(*.ply)",  "*.ply"},
 		};
 	elseif(filterName == "modelStrict") then
 		return {

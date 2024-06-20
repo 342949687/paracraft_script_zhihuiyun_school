@@ -394,6 +394,7 @@ end
 
 function PlayerController:SaveLocalData(name, value, bIsGlobal, bDeferSave)
 	LocalStorageUtil.Save_userdata(name, value, bIsGlobal, bDeferSave)
+	GameLogic.FlushDiskIO() --???????flush??
 end
 
 -- load local user data for a given world

@@ -51,6 +51,8 @@ CodeBlockWindow:Property({"BigCodeWindowSize", false, "IsBigCodeWindowSize", "Se
 
 -- when entity being edited is changed. 
 CodeBlockWindow:Signal("entityChanged", function(entity) end)
+-- code text is changed. 
+CodeBlockWindow:Signal("codeUpdatedToEntity", function(entity) end)
 
 local code_block_window_name = "code_block_window_";
 local page;
@@ -73,6 +75,9 @@ function CodeBlockWindow.Show(bShow)
 		GameLogic.GetFilters():add_filter("OnCodeBlockLineStep", CodeBlockWindow.OnCodeBlockLineStep);
 		GameLogic.GetFilters():add_filter("OnCodeBlockNplBlocklyLineStep", CodeBlockWindow.OnCodeBlockNplBlocklyLineStep);
 		GameLogic.GetFilters():add_filter("ChatLogWindowShowAndHide", CodeBlockWindow.OnChatLogWindowShowAndHide);
+		GameLogic.GetFilters():add_filter("OnPlayerRuleChange", function()
+            CodeBlockWindow.CheckCanPaste()
+        end)
 		GameLogic:desktopLayoutRequested("CodeBlockWindow");
 		GameLogic:Connect("desktopLayoutRequested", CodeBlockWindow, CodeBlockWindow.OnLayoutRequested, "UniqueConnection");
 		GameLogic.GetCodeGlobal():Connect("logAdded", CodeBlockWindow, CodeBlockWindow.AddConsoleText, "UniqueConnection");
@@ -105,6 +110,11 @@ function CodeBlockWindow.Show(bShow)
 			
 			page = System.mcml.PageCtrl:new({url=CodeBlockWindow.GetDefaultCodeUIUrl()});
 			page:Create(code_block_window_name.."page", _this, "_fi", 0, 0, 0, 0);
+			if page then
+				page.OnCreate = function()
+					CodeBlockWindow.CheckCanPaste()
+				end
+			end
 		end
 		_this.visible = true;
 		CodeBlockWindow.isTextCtrlHasFocus = false;
@@ -142,6 +152,20 @@ function CodeBlockWindow.Show(bShow)
 		if(page and CodeBlockWindow.CalculateActor()) then
 			page:Refresh(0);
 		end
+
+		CodeBlockWindow.CheckCanPaste()
+	end
+end
+
+function CodeBlockWindow.CheckCanPaste()
+	if not CodeBlockWindow.IsVisible() then return end 
+	if not GameLogic.options.CanPasteBlockly then
+		-- GameLogic.AddBBS(nil,L"当前代码方块不支持拷贝粘贴代码")
+		print("当前代码方块不支持拷贝粘贴代码")
+	end
+	local ctrl = CodeBlockWindow.GetTextControl();
+	if ctrl and type(ctrl.SetCanPaste) == "function" then
+		ctrl:SetCanPaste(GameLogic.options.CanPasteBlockly)
 	end
 end
 
@@ -686,6 +710,7 @@ function CodeBlockWindow.UpdateCodeToEntity()
 				entity:BeginEdit()
 				entity:SetNPLCode(code);
 				entity:EndEdit()
+				CodeBlockWindow:codeUpdatedToEntity(entity);
 			end
 
 			local ctl = CodeBlockWindow.GetTextControl();
@@ -1289,25 +1314,28 @@ function CodeBlockWindow.OnClickEditMode(name,bForceRefresh)
 	else
 		CodeBlockWindow.blocklyTextMode = false;
 	end
-		
-	if(isBlocklyEditMode) then
-		if(name == "codeMode" and CodeBlockWindow.CheckCanChangeMode()) then
-			CodeBlockWindow.CloseNplBlocklyEditorPage();
-			entity:SetBlocklyEditMode(false);
-			CodeBlockWindow.UpdateCodeEditorStatus();
-			isModeChanged = true;
-		end
-	else
-		if(name == "blockMode" and CodeBlockWindow.CheckCanChangeMode()) then
-			CodeBlockWindow.UpdateCodeToEntity();
-			if(GameLogic.Macros:IsRecording() or GameLogic.Macros:IsPlaying()) then
-				entity:SetUseNplBlockly(true);
+	
+	if(CodeBlockWindow.CheckCanChangeMode()) then
+		if(isBlocklyEditMode) then
+			if(name == "codeMode") then
+				CodeBlockWindow.CloseNplBlocklyEditorPage();
+				entity:SetBlocklyEditMode(false);
+				CodeBlockWindow.UpdateCodeEditorStatus();
+				isModeChanged = true;
 			end
-			entity:SetBlocklyEditMode(true);
-			CodeBlockWindow.UpdateCodeEditorStatus();
-			isModeChanged = true;
+		else
+			if(name == "blockMode") then
+				CodeBlockWindow.UpdateCodeToEntity();
+				if(GameLogic.Macros:IsRecording() or GameLogic.Macros:IsPlaying()) then
+					entity:SetUseNplBlockly(true);
+				end
+				entity:SetBlocklyEditMode(true);
+				CodeBlockWindow.UpdateCodeEditorStatus();
+				isModeChanged = true;
+			end
 		end
 	end
+
 	local IsMobileUIEnabled = GameLogic.GetFilters():apply_filters('MobileUIRegister.IsMobileUIEnabled',false)
 	if not IsMobileUIEnabled then
 		if(mouse_button == "right" and CodeBlockWindow.CheckCanChangeMode()) then
@@ -2083,6 +2111,16 @@ function CodeBlockWindow.FormatCode(spacing)
 		end
 		]]
 	end
+end
+
+function CodeBlockWindow.IsShowMqttUI()
+	local codeEntity = CodeBlockWindow.GetCodeEntity();
+	local langConfig = codeEntity and codeEntity:GetLanguageConfigFile();
+	return langConfig and langConfig == "micropython"
+end
+
+function CodeBlockWindow.OnOpenMqttPage()
+	GameLogic.RunCommand("/menu window.mqtt")
 end
 
 CodeBlockWindow:InitSingleton();

@@ -5,6 +5,7 @@
             v-bind:language="Language or 'SystemNplBlock'" 
             v-bind:LanguageType="LanguageType or 'npl'" 
             style="width: 100%; height: 100%;" 
+            CustomBlocklyFactory="true"
             onchange=OnBlocklyChange
             v-bind:OnGenerateBlockCodeBefore="OnGenerateBlockCodeBefore" 
             v-bind:OnGenerateBlockCodeAfter="OnGenerateBlockCodeAfter" 
@@ -52,7 +53,7 @@ function OnReady()
         BlocklyEl:SetToolBoxWidth(width);
     end
     BlocklyEl:SetReadOnly((ReadOnly == true or ReadOnly == "true"))
-    BlocklyEl:LoadFromXmlNodeText(_G.xmltext);
+    BlocklyEl:SetInitWorkspaceXml(_G.xmltext);
 end
 
 function OnBlocklyChange()

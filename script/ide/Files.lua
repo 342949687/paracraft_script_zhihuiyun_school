@@ -429,7 +429,7 @@ function Files.MoveFolder(src, dest)
 	ParaIO.DeleteFile(src);
 end
 
--- 获取文件内容
+-- return file text as binary string, or nil if not found
 function Files.GetFileText(filename)
 	if filename==nil or filename=="" then
 		return
@@ -444,7 +444,7 @@ function Files.GetFileText(filename)
 	end	
 end
 
--- 写文件
+-- write file content
 function Files.WriteFile(filename, text)
     if text==nil or text=="" then
         return
@@ -460,7 +460,7 @@ function Files.WriteFile(filename, text)
         end
     end
 
-    local file = ParaIO.open(filename , "wb");
+    local file = ParaIO.open(filename, "wb");
 	if(file:IsValid()) then
 		file:WriteString(text, #text);
 		file:close();
@@ -470,15 +470,14 @@ function Files.WriteFile(filename, text)
 	end	
 end
 
--- 获取文件大小
 function Files.GetFileSize(filename)
-    local file = ParaIO.open(filename , "rb");
+    local file = ParaIO.open(filename, "rb");
 	if(file:IsValid()) then
 		local size = file:GetFileSize();
 		file:close();
 		return size;
     else
-        print("------不可用",filename)
+        log("can not get file size: "..filename)
         file:close();
 	end	
     return 0
@@ -555,7 +554,7 @@ function Files.GetRemoteFileText(url,filepath,callback,tokenRequired)
 		if ParaIO.DoesFileExist(_cachedFilepath) then
 			eTag = item.payload:GetHeader("ETag")
 			local expireTime = item.payload.creation_date;
-			if(not cp:IsExpired(expireTime)) then --没过期直接用
+			if(not cp:IsExpired(expireTime)) then
 				local data = Files.GetFileText(_cachedFilepath)
 				if data then
 					onComplete(data,_cachedFilepath)

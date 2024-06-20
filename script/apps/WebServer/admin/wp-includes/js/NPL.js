@@ -1,57 +1,48 @@
-<html>
-<header>
-    <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Paracraft WebPage</title>
-</header>
-
-<body>
-    <script>
 const GetQueryString = (key, decode) => {
-	var value = "";                  // 查询值
-	//取得查询字符串并去掉开头问号       
-	var qs = location.search.length > 0 ? location.search.substring(1) : "";
-	// 取得每一项     
-	var items = qs.length ? qs.split('&') : [];
-	//逐个将每一项添加到args对象中       
-	for (var i = 0; i < items.length; i++) {
-		var item = items[i].split('=');
-		var name = decodeURIComponent(item[0]);
-		if (name == key) {
-			value = decode ? decodeURIComponent(item[1]) : item[1];
-			break;
-		}
-	}
-	return value;
+    var value = "";                  // 查询值
+    //取得查询字符串并去掉开头问号       
+    var qs = location.search.length > 0 ? location.search.substring(1) : "";
+    // 取得每一项     
+    var items = qs.length ? qs.split('&') : [];
+    //逐个将每一项添加到args对象中       
+    for (var i = 0; i < items.length; i++) {
+        var item = items[i].split('=');
+        var name = decodeURIComponent(item[0]);
+        if (name == key) {
+            value = decode ? decodeURIComponent(item[1]) : item[1];
+            break;
+        }
+    }
+    return value;
 };
 
 const GetSystem = () => {
-	if (window.paracraft_platform) return window.paracraft_platform;
+    if (window.paracraft_platform) return window.paracraft_platform;
 
-	const platform = GetQueryString("platform", true);
-	if (platform != "") return platform;
+    const platform = GetQueryString("platform", true);
+    if (platform != "") return platform;
 
-	// window webview2
-	if (window.chrome && window.chrome.webview) return "windows";
+    // window webview2
+    if (window.chrome && window.chrome.webview) return "windows";
 
-	const { userAgent } = navigator;
+    const { userAgent } = navigator;
 
-	if (userAgent.match('Macintosh')) {
-		return 'macos';
-	}
-	if (userAgent.match('Windows')) {
-		return 'windows';
-	}
-	if (userAgent.match('Android')) {
-		return 'android';
-	}
-	if (userAgent.match('iPhone')) {
-		return 'iPhone';
-	}
-	if (userAgent.match('iPad')) {
-		return 'iPad';
-	}
-	return 'unknown';
+    if (userAgent.match('Macintosh')) {
+        return 'macos';
+    }
+    if (userAgent.match('Windows')) {
+        return 'windows';
+    }
+    if (userAgent.match('Android')) {
+        return 'android';
+    }
+    if (userAgent.match('iPhone')) {
+        return 'iPhone';
+    }
+    if (userAgent.match('iPad')) {
+        return 'iPad';
+    }
+    return 'unknown';
 };
 
 const allMsg = {};
@@ -145,9 +136,9 @@ class NPLJS {
         if (this.m_loaded) return;
         const self = this;
         self.SendMsg("load");
-        // self.m_onload_timerid = setInterval(function () {
-        //     self.SendMsg("load");
-        // }, 200);
+        self.m_onload_timerid = setInterval(function () {
+            self.SendMsg("load");
+        }, 200);
     }
 
     HandleLoadMsg() {
@@ -198,7 +189,7 @@ class NPLJS {
             delete (this.m_msgid_callbacks[msgid]);
         }
 
-        if (msg.request_reply && Object.keys(this.m_msg_callbacks).length !== 0) {
+        if (msg.request_reply && (msgid_callback || this.m_msg_callbacks[msgname])) {
             msg.response_reply = true;
             this.Send(msg);
         }
@@ -237,9 +228,11 @@ window.local_debug = window.location.hostname == "127.0.0.1" || window.location.
 window.paracraft_platform = GetSystem();
 window.is_edge_browser = navigator.userAgent.includes('Edg');
 
+// DEBUG
+// if (window.local_debug && !window.is_edge_browser) window.NPLJSInstance = undefined;
+
 let is_received = false;
 NPL.this(function (msg) {
-	alert(msg);
     is_received = true;
     try {
         msg = JSON.parse(msg);
@@ -256,113 +249,23 @@ NPL.this(function (msg) {
     window.NPLJSInstance.RecvMsg(msg);
 }, { filename: "NPLJS" });
 
-let video = undefined;
-let canvas = undefined;
-let context = undefined;
-let image_width = 400;
-let image_height = 300;
-let image_url = "";  // "https://qiniu-public.keepwork.com/official-home-page/2-1.1.mp4";
-let current_base64_image_data = undefined;
-let current_msgid = undefined;
-let camera_device_id = undefined;
-function StartWebPageSnap(width, height, url) {
-    image_width = width || image_width;
-    image_height = height || image_height;
-    image_url = url || image_url;
-
-    if (video != undefined) {
-        video.width = image_width;
-        video.height = image_height;
-        video.src = image_url;
-        canvas.width = image_width;
-        canvas.height = image_height;
-        return;
-    }
-
-    video = document.createElement("video");
-    video.style.position = "absolute";
-    video.style.left = "0px";
-    video.style.top = "0px";
-    video.style.visibility = "visible";
-    video.width = image_width;
-    video.height = image_height;
-    video.src = image_url;
-    video.loop = true;
-    video.autoplay = true;
-    video.crossOrigin = "anonymous";
-    document.body.appendChild(video);
-
-    canvas = document.createElement("canvas");
-    canvas.style.position = "absolute";
-    canvas.style.left = "0px";
-    canvas.style.top = "0px";
-    canvas.style.visibility = "hidden";
-    canvas.width = image_width;
-    canvas.height = image_height;
-    context = canvas.getContext('2d');
-    document.body.appendChild(canvas);
-
-    NPLJSInstance.SendMsg("WebPageSnapReply", {}, current_msgid);
-}
-
 window.addEventListener("load", function () {
     console.log("============================platform==========================", window.paracraft_platform, window.chrome && window.chrome.webview);
-    // if (window.paracraft_platform == "windows" && window.is_edge_browser && window.chrome && window.chrome.webview == undefined && window.chrome.app !== undefined && window.chrome.csi !== undefined) {
-    //     window.sessionStorage.setItem("refresh_count", parseInt(window.sessionStorage.getItem("refresh_count") || "0") + 1);
-    //     window.location.reload();
-    // }
+    if (window.paracraft_platform == "windows" && window.is_edge_browser && window.chrome && window.chrome.webview == undefined && window.chrome.app !== undefined && window.chrome.csi !== undefined) {
+        window.sessionStorage.setItem("refresh_count", parseInt(window.sessionStorage.getItem("refresh_count") || "0") + 1);
+        window.location.reload();
+    }
 
-    // if (window.paracraft_platform == "windows" && window.is_edge_browser) {
-    //     setTimeout(function () {
-    //         if (!is_received) {
-    //             console.log("NPLJS not received");
-    //             window.location.reload();
-    //         }
-    //     }, 3000);
-    // }
-	// 重新加载
-	// window.location.reload();
-	// alert("yangtest_start3")
-    window.NPLJSInstance.Load();
+    if (window.paracraft_platform == "windows" && window.is_edge_browser) {
+        setTimeout(function () {
+            if (!is_received) {
+                console.log("NPLJS not received");
+                window.location.reload();
+            }
+        }, 3000);
+    }
 
-	NPLJSInstance.OnMsg("WebPageSnap", (msgdata, msgid) => {
-		console.log("==========================yangtest_success=========================");
-		alert("yangtestWebPageSnap" + msgdata.width)
-	});
+    if (window.NPLJSInstance) {
+        window.NPLJSInstance.Load();
+    }
 });
-
-	</script>
-
-	<style>
-	.fullscreen {
-	position: fixed;
-	top: 0;left: 0;bottom: 0;right: 0;
-	overflow: auto;
-	z-index: 10;
-	background-color:#e3e3e4;
-	}
-	</style>
-
-	<div class="fullscreen">
-	<div style="margin-top:0px;margin-left:0px">
-		<video id="myPlayer" style="width:100%;height:100%;object-fit:fill"
-			controls controlslist="nodownload nofullscreen noremoteplayback"
-			autoplay 
-			playsinline 
-			disablePictureInPicture>
-		</video>
-	</div>
-	<div id="video_url" />
-	</div>
-
-    
-	<script>
-		const queryString = window.location.search;
-		const urlParams = new URLSearchParams(queryString);
-		const video_url = urlParams.get('video_url')
-		document.getElementById("myPlayer").src = "https://qiniu-public.jisiyun.net/qiukuicuizhong.webm";
-	</script>
-
-</body>
-
-</html>

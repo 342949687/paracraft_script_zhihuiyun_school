@@ -388,6 +388,10 @@ function Map3DSystem.App.WebBrowser.OnExec(app, commandName, params)
 						end);
 					else
 						_guihelper.MessageBox(string.format(L"您确定要使用文件浏览器打开文件 %s?", commonlib.Encoding.DefaultToUtf8(absPath)), function()
+							if (System.os.GetPlatform() == "emscripten") then
+								_guihelper.MessageBox(L"Web端暂时不支持此功能，请安装客户端");
+								return;
+							end
 							ParaGlobal.ShellExecute("open", "explorer.exe", absPath, "", 1); 
 						end);
 					end

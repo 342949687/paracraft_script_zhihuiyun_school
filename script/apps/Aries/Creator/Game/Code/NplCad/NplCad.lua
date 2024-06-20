@@ -285,7 +285,7 @@ function NplCad.GetCode(code, filename, relativePath)
     end
 	NplCad.StopCodeBlock(codeblock)
 ]]
-		NplCad.templateCode = NplCad.templateCode:gsub("(\r?\n)", ""):gsub("<code>", "%%s")
+		NplCad.templateCode = NplCad.templateCode:gsub("(\r?\n)", ""):gsub("<code>", "%%s\n")
 	end
     local s = string.format(NplCad.templateCode, code or "", filename, filename, filename, relativePath or filename, relativePath or filename);
     return s

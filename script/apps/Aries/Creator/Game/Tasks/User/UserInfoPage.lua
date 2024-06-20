@@ -13,6 +13,8 @@ NPL.load("(gl)script/ide/Json.lua");
 NPL.load("(gl)script/apps/Aries/Chat/BadWordFilter.lua");
 NPL.load("(gl)script/apps/Aries/Creator/Game/Movie/CustomSkinPage.lua");
 NPL.load("(gl)script/apps/Aries/Creator/Game/Entity/CustomCharItems.lua");
+NPL.load("(gl)script/apps/Aries/Creator/Game/Entity/PlayerAssetFile.lua");
+local PlayerAssetFile = commonlib.gettable("MyCompany.Aries.Game.EntityManager.PlayerAssetFile")
 local CustomCharItems = commonlib.gettable("MyCompany.Aries.Game.EntityManager.CustomCharItems");
 local CustomSkinPage = commonlib.gettable("MyCompany.Aries.Game.Movie.CustomSkinPage");
 local Encoding = commonlib.gettable("System.Encoding");
@@ -69,9 +71,10 @@ UserInfoPage.IsFriend = false
 UserInfoPage.isExpland_Follow = false
 local SKIN_ITEM_TYPE = {
 	FREE = "0",
-	VIP = "1",
+	SVIP = "1",
 	ONLY_BEANS_CAN_PURCHASE = "2",
 	ACTIVITY_GOOD = "3",
+	VIP = "4",
 	-- 套装部件
 	SUIT_PART = "5"
 }
@@ -93,6 +96,12 @@ function UserInfoPage.OnInit()
 end
 
 function UserInfoPage.ShowPage(username,category_name,userId)
+	if System.options.isCommunity then
+		local CommunityUserInfo = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/Community/CommunityUserInfo.lua")
+		CommunityUserInfo.ShowPage(username,category_name,userId)
+		return
+	end
+
 	local category_name = category_name or "works"
 	if System.options.isHideVip then
 		UserInfoPage.MenuItem_DS = {
@@ -645,7 +654,8 @@ function UserInfoPage.FinishEdit()
 			return;
 		end
 
-		if BadWordFilter.HasBadWorld(name) then
+		local filterName = BadWordFilter.FilterString2(name);
+		if name ~= filterName then
 			_guihelper.MessageBox(L"包含敏感词，请重新修改");
 			return 
 		end
@@ -1087,7 +1097,7 @@ end
 function UserInfoPage.OnClickGotoBind()
 	local token = commonlib.getfield("System.User.keepworktoken")
 	local urlbase = GameLogic.GetFilters():apply_filters("get_keepwork_url");
-	local method = '/u/p/thirdPartyAccountBinding'
+	local method = '/u/p/userData'
 	local url = string.format('%s/p?url=%s&token=%s',urlbase,Mod.WorldShare.Utils.EncodeURIComponent(method),token) 
 	GameLogic.RunCommand("/open "..url)
 end
@@ -1674,29 +1684,46 @@ function UserInfoPage.CheckUserSkin()
 	if not user_skin or user_skin == "" then
 		return
 	end
-
+	
 	-- 默认裸装的皮肤的话不检查
 	local default_skin = CustomCharItems:SkinStringToItemIds(CustomCharItems.defaultSkinString);
 	if user_skin == default_skin then
 		return
 	end
 
-	local newSkin = UserInfoPage.RemoveAllUnvalidItems(user_skin)
-	if user_skin == newSkin then
-		return
+	--验证无效的皮肤,纠正主角的形象
+	local default_kaka_skin = "80001;84129;81112;88042;"
+	local asset = MyCompany.Aries.Game.PlayerController:GetMainAssetPath() or ""
+	if not System.options.isEducatePlatform then
+		if asset:find("actor_kaka.x") or 
+		   user_skin == default_kaka_skin or 
+		   not PlayerAssetFile:CheckDefaultSkinValid(user_skin) then
+			asset = "character/CC/02human/CustomGeoset/actor.x"
+			user_skin = CustomCharItems.defaultSkinString
+		else
+			local newSkin = UserInfoPage.RemoveAllUnvalidItems(user_skin)
+			if user_skin == newSkin then
+				return
+			end	
+		end
+	else
+		asset = "character/CC/02human/CustomGeoset/actor_kaka.x"
+		user_skin = default_kaka_skin
 	end
+	
 	local playerEntity = GameLogic.GetPlayerController():GetPlayer();
 	if playerEntity then
 		playerEntity:SetSkin(user_skin); 
+		playerEntity:SetMainAssetPath(asset)
 	end	
+	GameLogic.options:SetMainPlayerAssetName(asset);
 	GameLogic.options:SetMainPlayerSkins(user_skin);
 	GameLogic.GetFilters():apply_filters("user_skin_change", user_skin);
-	local asset = MyCompany.Aries.Game.PlayerController:GetMainAssetPath()
-    local skin = MyCompany.Aries.Game.PlayerController:GetSkinTexture()
+    
 	local Keepwork = NPL.load("(gl)script/apps/Aries/Creator/HttpAPI/Keepwork.lua");
 	local userinfo = Keepwork:GetUserInfo();
     local AuthUserId = userinfo.id;
-
+	local skin = MyCompany.Aries.Game.PlayerController:GetSkinTexture() or ""
     local extra = userinfo.extra or {};
     extra.ParacraftPlayerEntityInfo = extra.ParacraftPlayerEntityInfo or {};
     extra.ParacraftPlayerEntityInfo.asset = asset;

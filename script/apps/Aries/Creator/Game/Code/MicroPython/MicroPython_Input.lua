@@ -273,7 +273,7 @@ button_a.event_pressed = on_button_a_pressed
 	ToMicroPython = function(self)
 		local pin = self:getFieldAsString('PIN');
 		local analogIn = string.gsub("pXX = MPythonPin(XX, PinMode.IN)\n", "XX", pin);
-		self:GetBlockly():AddUnqiueHeader(analogIn);
+		self:GetBlockly():AddUniqueHeader(analogIn);
 		return string.format('p%s.read_digital()', pin);
 	end,
 	examples = {{desc = "", canRun = true, code = [[
@@ -319,7 +319,7 @@ button_a.event_pressed = on_button_a_pressed
 	ToMicroPython = function(self)
 		local pin = self:getFieldAsString('PIN');
 		local analogIn = string.gsub("pXX = MPythonPin(XX, PinMode.ANALOG)\n", "XX", pin);
-		self:GetBlockly():AddUnqiueHeader(analogIn);
+		self:GetBlockly():AddUniqueHeader(analogIn);
 		return string.format('p%s.read_analog()', pin);
 	end,
 	examples = {{desc = "", canRun = true, code = [[
@@ -353,10 +353,10 @@ button_a.event_pressed = on_button_a_pressed
 	ToMicroPython = function(self)
 		local pin = self:getFieldAsString('PIN');
 		local analogIn = string.gsub("pXX = MPythonPin(XX, PinMode.ANALOG)\n", "XX", pin);
-		self:GetBlockly():AddUnqiueHeader(analogIn);
+		self:GetBlockly():AddUniqueHeader(analogIn);
 		local precode = string.gsub("def pXX_Soil_Humidity():\n    global pXX_soil_humidity\n    pXX_soil_humidity = pXX.read_analog()\n    if pXX_soil_humidity > 2700:\n        pXX_soil_humidity = 2700\n        return numberMap(pXX_soil_humidity,1500,2700,100,0)\n    elif pXX_soil_humidity < 1500:\n        pXX_soil_humidity = 1500\n        return numberMap(pXX_soil_humidity,1500,2700,100,0)\n    else:\n        return numberMap(pXX_soil_humidity,1500,2700,100,0)\n\n",
 			"XX", pin);
-		self:GetBlockly():AddUnqiueHeader(precode);
+		self:GetBlockly():AddUniqueHeader(precode);
 
 		return string.format('p%s_Soil_Humidity()', pin);
 	end,
@@ -409,10 +409,10 @@ button_a.event_pressed = on_button_a_pressed
 	ToMicroPython = function(self)
 		local pin = self:getFieldAsString('PIN');
 		local precode = string.gsub("dht11 = dht.DHT11(Pin(Pin.PXX))\n", "XX", pin);
-		self:GetBlockly():AddUnqiueHeader(precode);
+		self:GetBlockly():AddUniqueHeader(precode);
 		local measureCode = string.gsub('timerDHT = Timer(701)\ndef timerDHT_tick(_):\n    try: dht11.measure()\n    except: pass\ntimerDHT.init(period=1000, mode=Timer.PERIODIC, callback=timerDHT_tick)\n\n',
 			"XX", pin);
-		self:GetBlockly():AddUnqiueHeader(measureCode);
+		self:GetBlockly():AddUniqueHeader(measureCode);
 
 		return string.format('dht11.%s', self:getFieldAsString('mode'));
 	end,
@@ -455,7 +455,7 @@ button_a.event_pressed = on_button_a_pressed
 	ToMicroPython = function(self)
 		local Device = self:getFieldAsString('Device');
 		if(Device == "BME280") then
-			self:GetBlockly():AddUnqiueHeader("bme280=BME280()\n");
+			self:GetBlockly():AddUniqueHeader("bme280=BME280()\n");
 			return string.format('bme280.%s', self:getFieldAsString('mode'));
 		end
 	end,
@@ -553,7 +553,7 @@ def timerAccelerometerTick(_):
         if '' != _dir:_dir = '';on_tilt_none()
 timerAccelerometer.init(period=150, mode=Timer.PERIODIC, callback=timerAccelerometerTick)
 ]]
-		self:GetBlockly():AddUnqiueHeader(precode);
+		self:GetBlockly():AddUniqueHeader(precode);
 
 		local global_vars = MicroPython:GetGlobalVarsDefString(self)
 
@@ -648,7 +648,7 @@ timerAccelerometer.init(period=150, mode=Timer.PERIODIC, callback=timerAccelerom
 		return string.format('get_tilt_angle(%s)', self:getFieldAsString('axis'));
 	end,
 	ToMicroPython = function(self)
-		self:GetBlockly():AddUnqiueHeader([[
+		self:GetBlockly():AddUniqueHeader([[
 def get_tilt_angle(_axis):
     _Ax = accelerometer.get_x()
     _Ay = accelerometer.get_y()

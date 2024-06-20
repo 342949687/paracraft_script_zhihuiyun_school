@@ -19,7 +19,7 @@ local page = document:GetPageCtrl();
 function ClosePage()
     local pageCtrl = document:GetPageCtrl();
     pageCtrl:CloseWindow(true)
-    --[[RedSummerCampMainPage.OnClose()
+    RedSummerCampMainPage.OnClose()
 
     local is_enter_world = GameLogic.GetFilters():apply_filters('store_get', 'world/isEnterWorld');
 
@@ -36,7 +36,7 @@ function ClosePage()
         MyCompany.Aries.Game.MainLogin:next_step({IsLoginModeSelected = false})
     end
 
-    RedSummerCampPPtPage.PPtCacheData = {}]]
+    RedSummerCampPPtPage.PPtCacheData = {}
 end
 function OnOpen(name)
     RedSummerCampMainPage.OpenPage(name)    

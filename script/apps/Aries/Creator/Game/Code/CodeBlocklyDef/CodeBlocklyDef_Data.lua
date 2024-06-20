@@ -1937,17 +1937,29 @@ echo(data)
 
 {
 	type = "mqtt_connect", 
-	message0 = L"连接MQTT %1", 
+	message0 = L"连接MQTT %1 端口 %2", 
 	arg0 = {
 		{
 			name = "server",
 			type = "input_value",
-			text = "iot.keepwork.com", 
-			shadow = { type = "text", value = "iot.keepwork.com",},
+			text = "mqtt.keepwork.com", 
+			shadow = { type = "text", value = "mqtt.keepwork.com",},
+		},
+		{
+			name = "port",
+			type = "input_value",
+			text = "18883", 
+			shadow = { type = "text", value = "18883",},
 		},
 	},
-	message1 = "user=%1, password=%2, %3", 
+	message1 = "clientid=%1, user=%2, password=%3, %4", 
 	arg1 = {
+		{
+			name = "clientid",
+			type = "input_value",
+			text = "", 
+			shadow = { type = "text", value = "",},
+		},
 		{
 			name = "user",
 			type = "input_value",
@@ -1961,9 +1973,11 @@ echo(data)
 			shadow = { type = "text", value = "",},
 		},
 		{
-			name = "additionalParams",
-			type = "field_input",
-			text = "", 
+			-- name = "additionalParams",
+			name = "keepalive",
+			type = "input_value",
+            shadow = { type = "math_number", value = 30,},
+			text = 30, 
 		},
 	},
 	category = "Data", 
@@ -1972,15 +1986,18 @@ echo(data)
 	previousStatement = true,
 	nextStatement = true,
 	funcName = "mqtt_connect",
-	func_description = 'mqtt_connect({server=%s,\\n    user=%s, \\n    password=%s, %s\\n})',
+	func_description = 'mqtt_connect({server=%s,\\n    port=%s,\\n    clientid=%s,\\n    user=%s,\\n    password=%s,\\n    keep_alive=%s\\n})',
 	ToNPL = function(self)
-		return string.format('mqtt_connect({server="%s",\n    user="%s",\n    password="%s",\n%s})\n', self:getFieldAsString('server'), self:getFieldAsString('user'), self:getFieldAsString('password'), self:getFieldAsString('additionalParams'));
+		return string.format('mqtt_connect({server="%s",\n    port="%s",\n    clientid="%s",\n    user="%s",\n    password="%s",\n    keep_alive=%s\n})\n', self:getFieldAsString('server'),self:getFieldAsString('port'),self:getFieldAsString('clientid'),self:getFieldAsString('user'), self:getFieldAsString('password'), self:getFieldAsString('keepalive'));
 	end,
 	examples = {{desc = "", canRun = true, code = [[
 mqtt_connect({
-    server="iot.keepwork.com", 
+    server="mqtt.keepwork.com", 
+	port="18883"
+	clientid=""
     user="", 
-    password=""
+    password="",	
+	keep_alive=30,
 })
 
 mqtt_subscribe("test/topic1", function(msg)

@@ -1140,7 +1140,6 @@ function ElementUI:HandleMouseEventAfter(event)
 end
 
 function ElementUI:Refresh()
-    for _, element in ipairs(self.childrens) do
-        element:Refresh();
-    end
+    local window = self:GetWindow();
+    if (window) then window:SetRefresh(true) end
 end

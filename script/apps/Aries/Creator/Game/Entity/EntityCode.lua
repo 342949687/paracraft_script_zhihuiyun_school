@@ -15,6 +15,8 @@ NPL.load("(gl)script/apps/Aries/Creator/Game/Code/CodeActorItemStack.lua");
 NPL.load("(gl)script/apps/Aries/Creator/Game/Physics/BoxTrigger.lua");
 NPL.load("(gl)script/apps/Aries/Creator/Game/Commands/CmdParser.lua");
 NPL.load("(gl)script/apps/Aries/Creator/Game/Entity/EntityBlockCodeBase.lua");
+NPL.load("(gl)script/apps/Aries/Creator/Game/Code/LanguageConfigurations.lua");
+local LanguageConfigurations = commonlib.gettable("MyCompany.Aries.Game.Code.LanguageConfigurations");
 local CmdParser = commonlib.gettable("MyCompany.Aries.Game.CmdParser");
 local BoxTrigger = commonlib.gettable("MyCompany.Aries.Game.PhysicsWorld.BoxTrigger")
 local CodeActorItemStack = commonlib.gettable("MyCompany.Aries.Game.Code.CodeActorItemStack");
@@ -668,24 +670,28 @@ function Entity:Stop()
 	end);
 end
 
-function Entity:AutoCreateMovieEntity()
+-- @param bForceCreate: if true, it will create a movie entity if not found even if the language config.isAutoCreateMovieEntity is false.
+function Entity:AutoCreateMovieEntity(bForceCreate)
 	local movieEntity = self:FindNearByMovieEntity();
 	if(not movieEntity) then
-		local cx, cy, cz = self:GetBlockPos();
-		local BlockEngine = self:GetBlockEngine();
+		local langConfig = self:GetLanguageConfig();
+		if(bForceCreate or not (langConfig and langConfig.isAutoCreateMovieEntity==false)) then
+			local cx, cy, cz = self:GetBlockPos();
+			local BlockEngine = self:GetBlockEngine();
 	
-		for side = 3, 0, -1 do
-			local dx, dy, dz = Direction.GetOffsetBySide(side);
-			local x,y,z = cx+dx, cy+dy, cz+dz;
-			local blockTemplate = BlockEngine:GetBlock(x,y,z);
-			if(not blockTemplate) then
-				BlockEngine:SetBlock(x,y,z, names.MovieClip, 0, 3, nil);
-				local movieEntity = BlockEngine:GetBlockEntity(x,y,z);
-				if(movieEntity) then
-					movieEntity:CreateNPC();
+			for side = 3, 0, -1 do
+				local dx, dy, dz = Direction.GetOffsetBySide(side);
+				local x,y,z = cx+dx, cy+dy, cz+dz;
+				local blockTemplate = BlockEngine:GetBlock(x,y,z);
+				if(not blockTemplate) then
+					BlockEngine:SetBlock(x,y,z, names.MovieClip, 0, 3, nil);
+					local movieEntity = BlockEngine:GetBlockEntity(x,y,z);
+					if(movieEntity) then
+						movieEntity:CreateNPC();
+					end
+					GameLogic.events:DispatchEvent({type = "CreateBlockTask" , block_id = 228, block_data = 0, x = x, y = y, z = z});
+					return true;
 				end
-				GameLogic.events:DispatchEvent({type = "CreateBlockTask" , block_id = 228, block_data = 0, x = x, y = y, z = z});
-				return true;
 			end
 		end
 	end
@@ -714,6 +720,10 @@ function Entity:SetLastCommandResult(last_result)
 		local BlockEngine = self:GetBlockEngine();
 		BlockEngine:NotifyNeighborBlocksChange(x, y, z, BlockEngine:GetBlockId(x, y, z));
 	end
+end
+
+function Entity:GetLanguageConfig()
+	return LanguageConfigurations:GetConfig(self:GetLanguageConfigFile())
 end
 
 function Entity:GetLanguageConfigFile()
@@ -1005,4 +1015,13 @@ function Entity:GetAgentInventoryView()
 		itemStack:SetDataField("name", self:GetFilename())
 	end
 	return self.agentInventoryView;
+end
+
+-- some code block like python, c++, arduino, will generate intermediate NPL code.
+function Entity:SetIntermediateCode(code)
+	self.intermediateCode = code;
+end
+
+function Entity:GetIntermediateCode()
+	return self.intermediateCode;
 end

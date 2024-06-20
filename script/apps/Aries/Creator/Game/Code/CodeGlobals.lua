@@ -45,6 +45,13 @@ local CodeGlobals = commonlib.inherit(commonlib.gettable("System.Core.ToolBase")
 
 CodeGlobals:Signal("logAdded", function(text) end)
 
+local function tostring_2f(num)
+	if type(num) ~= "number" then
+		return "0";
+	end
+	return string.format("%.2f", num);
+end
+
 function CodeGlobals:ctor()
 	-- exposing these API to globals
 	self.shared_API = {
@@ -69,7 +76,7 @@ function CodeGlobals:ctor()
 			  min = math.min, modf = math.modf, pi = math.pi, pow = math.pow, 
 			  rad = math.rad, random = math.random, sin = math.sin, sinh = math.sinh, 
 			  sqrt = math.sqrt, tan = math.tan, tanh = math.tanh, 
-			  tonumber = tonumber, tostring=tostring, degrees=mathlib.degrees},
+			  tonumber = tonumber, tostring=tostring, tostring_2f = tostring_2f,degrees=mathlib.degrees},
 		bit = mathlib.bit,
 		mathlib = mathlib,
 		string = { byte = string.byte, char = string.char, find = string.find, 
@@ -210,6 +217,7 @@ function CodeGlobals:ctor()
 		Game = MyCompany.Aries.Game,
 		setmetatable = setmetatable,
 		setfenv = setfenv,
+		LOG = LOG,
 	};
 	self:Reset();
 
@@ -307,11 +315,9 @@ function CodeGlobals:log(obj, ...)
 	local bPrintArgs = #args > 0;
 	if(type(obj) == "string") then
 		text = obj;
-		if(obj:match("%%")) then
-			if(bPrintArgs) then
-				text = string.format(obj, ...);
-				bPrintArgs = false;
-			end
+		if(bPrintArgs and obj:match("%%")) then
+			text = string.format(obj, ...);
+			bPrintArgs = false;
 		end
 	else
 		text = commonlib.serialize_in_length(obj, 100);
@@ -433,11 +439,15 @@ function CodeGlobals:LoadWorldData(name, value, filename)
 		data = data or {};
 		self.worldData[filename] = data;
 	end
-	return data[name or ""];
+	return data[name or ""] or value;
 end
 
 function CodeGlobals:SetCurrentCoroutine(co)
 	self.cur_co = co;
+end
+
+function CodeGlobals:GetCurrentCoroutine()
+	return self.cur_co;
 end
 
 function CodeGlobals:GetCurrentCodeBlock()
@@ -758,6 +768,14 @@ function CodeGlobals:RegisterNetworkEvent(event_name, callbackFunc)
 			-- if server is already started when registering this event
 			callbackFunc(_, {type="net", msg={username = "admin", entityId = EntityManager.GetPlayer().entityId, displayname=EntityManager.GetPlayer():GetDisplayName(), isServer = true}});
 		end
+	elseif(event_name:match("^ble:.+")) then
+		-- for bluetooth low energy event
+		self:RegisterTextEvent(event_name, callbackFunc);
+		local bleEventName = event_name:match("^ble:(.+)");
+		GameLogic.All.BlueTooth:StartBluetooth()
+		GameLogic.All.BlueTooth:RegisterEvent(bleEventName, function(msg)
+			self:BroadcastTextEvent(event_name, msg);
+		end)
 	else
 		local event = self:CreateGetTextEvent(event_name);
 		event:AddEventListener("net", callbackFunc);
@@ -781,6 +799,10 @@ end
 function CodeGlobals:UnregisterNetworkEvent(text, callbackFunc, codeblock)
 	if(text:match("^ps_")) then
 		self:UnregisterTextEvent(text, callbackFunc);
+	elseif(text:match("^ble:.+")) then
+		local bleEventName = text:match("^ble:(.+)");
+		self:UnregisterTextEvent(text, callbackFunc);
+		GameLogic.All.BlueTooth:UnRegisterEvent(bleEventName)
 	else
 		local event = self:GetTextEvent(text);
 		if(event) then
@@ -795,12 +817,16 @@ function CodeGlobals:UnregisterNetworkEvent(text, callbackFunc, codeblock)
 end
 
 -- send a named message to one computer in the network
--- @param username: entity id or player name
+-- @param username: entity id or player name or "ble" for bluetooth low energy
 -- @param event_name: if nil, we will send an binary stream (msg) to keepworkUsername, 
 -- @param msg: msg.from will be the sender username if not filled. 
 -- which needs to be nid/ip:port (*8099, \\\\10.27.3.5 8099)
 function CodeGlobals:SendNetworkEvent(username, event_name, msg)
-	if(GameLogic.isRemote) then
+	if(username == "ble") then
+		-- for bluetooth low energy event
+		GameLogic.All.BlueTooth:StartBluetooth()
+		GameLogic.All.BlueTooth:SendEvent(event_name, msg)
+	elseif(GameLogic.isRemote) then
 		if(type(msg) == "table") then
 			msg.from = msg.from or EntityManager.GetPlayer():GetUserName();
 		end
@@ -871,8 +897,13 @@ function CodeGlobals:SendNetworkEvent(username, event_name, msg)
 end
 
 -- send a named message to all computers in the network
+-- @param event_name: if start with "ble:" it is a bluetooth low energy event
 function CodeGlobals:BroadcastNetworkEvent(event_name, msg)
-	if(GameLogic.isRemote or GameLogic.isServer) then
+	if(event_name:match("^ble:.+")) then
+		local bleEventName = event_name:match("^ble:(.+)");
+		GameLogic.All.BlueTooth:StartBluetooth()
+		GameLogic.All.BlueTooth:SendEvent(bleEventName, msg)
+	elseif(GameLogic.isRemote or GameLogic.isServer) then
 		self:SendNetworkEvent("@all", event_name, msg)
 	elseif(self:CheckLobbyServer()) then
 		if LobbyServer.GetSingleton():IsStarted() then

@@ -580,6 +580,7 @@ function EditModelTask.OnChangeModel()
 			OpenAssetFileDialog.ShowPage(L"请输入bmax, x或fbx文件的相对路径, <br/>你也可以随时将外部文件拖入窗口中", function(result)
 				if(result and result~="" and result~=old_value) then
 					entity:SetModelFile(commonlib.Encoding.DefaultToUtf8(result))
+					self:RefreshPage()
 				end
 			end, old_value, L"选择模型文件", "model")
 		end

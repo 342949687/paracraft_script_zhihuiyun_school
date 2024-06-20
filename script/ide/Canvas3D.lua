@@ -147,11 +147,11 @@ function Canvas3D:Show(bShow)
 	if(_this:IsValid() == false) then
 	
 		_this=ParaUI.CreateUIObject("container",self.name,self.alignment,self.left,self.top,self.width,self.height);
-		-- if(self.background == nil) then
-		-- 	_this.background="";
-		-- else
-		-- 	_this.background=self.background;
-		-- end	
+		if(self.background == nil) then
+			_this.background="";
+		else
+			_this.background=self.background;
+		end	
 		
 		if(self.ExternalSceneName) then
 			self.miniscenegraphname = self.miniscenegraphname or self.ExternalSceneName;

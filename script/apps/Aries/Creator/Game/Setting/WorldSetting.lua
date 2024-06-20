@@ -115,7 +115,6 @@ function WorldSetting.GetWorldData(params)
 
                 elseif data.visibility == 1 then
                     -- private
-                    -- params._page:GetNode('431_private'):SetAttribute('checked', true)
                     params._page:SetValue('public', false)
                     params._page:GetNode('private'):SetAttribute('checked', 'checked')
                 end

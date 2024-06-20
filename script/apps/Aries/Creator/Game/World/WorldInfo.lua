@@ -70,7 +70,13 @@ function WorldInfo:LoadFromXMLNode(node)
 		self.materialName = self.materialName or ""
 		self.classroomId = self.classroomId or ""
 		self.sectionContentId = self.sectionContentId or ""
-		-- web课程相关 end		
+		-- web课程相关 end	
+		
+		--世界类型
+		--类型 '来源标识: 自主创建.0 (默认), edu课程-创作模板.1, 赛事系统.2, 帕帕奇遇记课程-创作模板.3',
+		self.channel = self.channel or 0
+		self.visibility = self.visibility or 0 --是否私有
+		
 		GameLogic.GetFilters():apply_filters("load_world_info", self, node);
 
 		--世界冻结
@@ -136,6 +142,11 @@ function WorldInfo:SaveToXMLNode(node, bSort)
 		materialName = self.materialName or "",
 		classroomId = self.classroomId or "",
 		sectionContentId = self.sectionContentId or "",
+
+		--世界类型
+		--类型 '来源标识: 自主创建.0 (默认), edu课程-创作模板.1, 赛事系统.2, 帕帕奇遇记课程-创作模板.3',
+		channel = self.channel or 0, 
+		visibility = self.visibility or 0, --是否私有
 
 		player_skin = self.player_skin or "",
 		platform = self.platform or "paracraft", -- from which client.

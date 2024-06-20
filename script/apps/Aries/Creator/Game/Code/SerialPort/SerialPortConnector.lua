@@ -88,6 +88,8 @@ local SerialPortConnector = commonlib.inherit(commonlib.gettable("System.Core.To
 SerialPortConnector:Signal("dataReceived", function(data) end)
 SerialPortConnector:Signal("lineReceived", function(line) end)
 
+SerialPortConnector.driverUrl = "https://keepwork.com/official/open/download/serialportdriver";
+
 local page;
 local currentPort;
 local currentBLEPortName;
@@ -107,9 +109,6 @@ end
 function SerialPortConnector.Show()
     if (page and page:IsVisible()) then
         return;
-    end
-    if (not SerialPortConnector.IsConnected()) then
-        SerialPortConnector.SearchPortNames();
     end
     
     local width, height = 230, 32;
@@ -168,7 +167,8 @@ function SerialPortConnector.OnTick(timer)
 end
 
 local portNames = {}
-local portNamesDS = {}
+local portNamesDS = {{value="", text=L"自动", selected=true}};
+
 function SerialPortConnector.GetPortNames()
     return portNames;
 end
@@ -185,8 +185,8 @@ function SerialPortConnector.GetCurrentPortName()
 end
 
 function SerialPortConnector.GetCurrentFilename()
-    if (platform == "ios" or currentBLEPortName == "BLE") then
-        return "BLE";
+    if (platform == "ios" or currentBLEPortName == L"蓝牙") then
+        return L"蓝牙";
     else
         if (currentPort) then
             return currentPort:GetFilename();
@@ -213,12 +213,15 @@ function SerialPortConnector.UpdatePortList()
     for _, option in ipairs(portNamesDS) do
         option.selected = selectedPortName == option.value;
     end
+    if(platform == "win32") then
+        portNamesDS[#portNamesDS+1] = {value="installDriver", text=L"安装驱动"};
+    end
 end
 
 -- this function is slow, call it sparingly
 function SerialPortConnector.FetchPortNames()
     if (platform == "ios") then
-        portNames = { "BLE" };
+        portNames = { L"蓝牙" };
     else
         portNames = Serial:GetPortNames() or {};
         for name, _ in pairs(virtualPorts) do
@@ -226,7 +229,7 @@ function SerialPortConnector.FetchPortNames()
         end
 
         if (platform == "android" or platform == "win32") then
-            portNames[#portNames + 1] = "BLE";
+            portNames[#portNames + 1] = L"蓝牙";
         end
     end
 
@@ -244,7 +247,7 @@ function SerialPortConnector.SearchPortNames()
 end
 
 function SerialPortConnector.IsConnected()
-    if (platform == "ios" or currentBLEPortName == "BLE") then
+    if (platform == "ios" or currentBLEPortName == L"蓝牙") then
         if (SerialPortConnector.mode == "connected") then
             return true;
         else
@@ -260,7 +263,7 @@ function SerialPortConnector.GetCurrentPort()
 end
 
 function SerialPortConnector.Disconnect()
-    if (platform == "ios" or currentBLEPortName == "BLE") then
+    if (platform == "ios" or currentBLEPortName == L"蓝牙") then
         BlueTooth:disconnectBlueTooth();
         currentBLEPortName = nil;
     else
@@ -273,30 +276,43 @@ function SerialPortConnector.Disconnect()
 end
 
 function SerialPortConnector.DisconnectAll()
-    if (platform == "ios" or currentBLEPortName == "BLE") then
+    if (platform == "ios" or currentBLEPortName == L"蓝牙") then
 		BlueTooth:disconnectBlueTooth();
 		currentBLEPortName = nil;
 	else
-		local count = SerialPortConnector.GetActivePortCount()
-		if(count > 0) then
-			for i = 1, count do
-				local port = allPorts:at(i)
-				if(port) then
-					port:close();
-					SerialPortConnector.RemovePort(port);
-				end
-			end
-			SerialPortConnector.SearchPortNames();
+        local hasClosedPort;
+		while(true) do
+            local count = SerialPortConnector.GetActivePortCount()
+            if(count > 0) then
+    		    local port = allPorts:at(count)
+			    if(port) then
+				    port:close();
+				    SerialPortConnector.RemovePort(port);
+                    hasClosedPort = true;
+                else
+                    break;
+			    end
+            else
+                break;
+            end
 		end
+        if(hasClosedPort) then
+            SerialPortConnector.SearchPortNames();
+        end
 	end
 end
 
-function SerialPortConnector.OnSelectPort(name)
-    if (SerialPortConnector.GetCurrentPortName() ~= name) then
-        if (name ~= "") then
-            SerialPortConnector.Close();
-            SerialPortConnector.Connect();
+function SerialPortConnector.InstallDriver()
+	ParaGlobal.ShellExecute("open", SerialPortConnector.driverUrl, "", "", 1);
+end
+
+function SerialPortConnector.OnSelectPort(name, value)
+    if(value == "installDriver") then
+        SerialPortConnector.InstallDriver()
+        if(page) then
+            page:SetValue(name, "");
         end
+        return;
     end
 end
 
@@ -336,6 +352,13 @@ function SerialPortConnector.SetCurrentPortByName(portName, isVirtualPortOnly)
 			    break
 		    end
         end
+    end
+    if(isVirtualPortOnly and (not portName or not virtualPorts[portName])) then
+        -- for virtual port, always use one even if name does not match. 
+        for name, port in pairs(virtualPorts) do
+			portName = name;
+            break;
+		end
     end
     
     if (allPorts:contains(portName)) then
@@ -382,23 +405,31 @@ end
 -- @param isVirtualPortOnly: true we will not connect to real port.
 function SerialPortConnector.Connect(isVirtualPortOnly)
     if (SerialPortConnector.GetCurrentPortName() ~= "") then
-        if (page) then
-            local portName = page:GetUIValue("portName")
-            if ((not portName or portName == "") or allPorts:contains(portName)) then
-                local port = allPorts:get(portName)
-                if (port) then
-                    SerialPortConnector.SetCurrentPort(port)
-                    SerialPortConnector.mode = "connected";
-                    SerialPortConnector.RefreshPage();
-                    return true;
-                end
+        local portName = page and page:GetUIValue("portName") or "";
+        if ((not portName or portName == "") or allPorts:contains(portName)) then
+            local port = allPorts:get(portName)
+            if (port) then
+                SerialPortConnector.SetCurrentPort(port)
+                SerialPortConnector.mode = "connected";
+                SerialPortConnector.RefreshPage();
+                return true;
             end
         end
     end
-    if (page) then
-        local portName = page:GetUIValue("portName");
+    
+    local portName = page and page:GetUIValue("portName") or "";
 
-        if (platform == "ios" or portName == "BLE") then
+    if (platform == "ios" or portName == L"蓝牙") then
+        if (platform == "win32") then
+            BlueTooth:init(function()
+                BlueTooth:setDeviceName("paracraft_ble");
+                BlueTooth:setupBluetoothDelegate();
+                BlueTooth:reconnectBlueTooth();
+                GameLogic.AddBBS("SerialPortConnector", L"正在连接蓝牙设备...", 5000, "0 0 255");
+                currentBLEPortName = portName;
+                BlueTooth:Connect("setBlueStatus", SerialPortConnector, SerialPortConnector.OnSetBlueStatus, "UniqueConnection")
+            end);
+        else
             BlueTooth:init();
             BlueTooth:setDeviceName("paracraft_ble");
             BlueTooth:setupBluetoothDelegate();
@@ -406,8 +437,10 @@ function SerialPortConnector.Connect(isVirtualPortOnly)
             GameLogic.AddBBS("SerialPortConnector", L"正在连接蓝牙设备...", 5000, "0 0 255");
             currentBLEPortName = portName;
             BlueTooth:Connect("setBlueStatus", SerialPortConnector, SerialPortConnector.OnSetBlueStatus, "UniqueConnection")
-            return;
         end
+        
+        return;
+    end
 
         if (portName and portName ~= "") then
             local file = SerialPortConnector.OpenPort(portName)
@@ -456,21 +489,23 @@ function SerialPortConnector.Connect(isVirtualPortOnly)
             GameLogic.AddBBS("SerialPortConnector", L"无法连接串口", 5000, "255 0 0");
         end
     end
+function SerialPortConnector.onBeforeClickDropDownButton()
+    SerialPortConnector.FetchPortNames();
+    SerialPortConnector.UpdatePortList();
 end
 
 function SerialPortConnector.OnDataReceived(data)
-    echo("data:" .. data)
+    -- echo("data:" .. data)
     SerialPortConnector:dataReceived(data)
 end
 
 function SerialPortConnector.OnLineReceived(line)
-    if(line:match("^/%w+")) then
-        if string.find(line, "zhy") then
-            local machine_id = string.match(line, ":(%w+)")
-            GameLogic.GetFilters():apply_filters("zhihuiyun.school.report", {key="micropython_machine_id", value=machine_id})
-        else
-            GameLogic.RunCommand(line);
-        end
+    if(line:match("^>?O?K???>?raw REPL; CTRL%-B to exit")) then
+		-- ignore raw REPL prefix
+    elseif(line:match("^>?O?K???>?>?%s?/%w+")) then
+        -- escape ">>> " and ">OK>" for raw and normal REPL prefix
+        line = line:gsub("^[^/]+", "")
+        GameLogic.RunCommand(line);
     else
         SerialPortConnector:lineReceived(line)
         if(#line > 100) then
@@ -482,6 +517,11 @@ end
 
 function SerialPortConnector.SwitchBLEMode()
     local port;
+    
+    if (not CodeBlockWindow or not CodeBlockWindow.IsVisible) then
+        return;
+    end
+
     if (not CodeBlockWindow.IsVisible() and preferredPortNameOrIndex and preferredPortNameOrIndex ~= "") then
         port = SerialPortConnector.GetPort(preferredPortNameOrIndex)
     end
@@ -500,8 +540,10 @@ from mpython_ble.characteristics import Characteristic
 
 import binascii
 
-def _ble_peripheral_connection_callback(_1, _2, _3):pass
-def _ble_peripheral_write_callback(_1, _2, _3):pass
+def _ble_peripheral_connection_callback(_1, _2, _3):
+    pass
+def _ble_peripheral_write_callback(_1, _2, _3):
+    pass
 
 def _ble_peripheral_connection_callback(_conn_handle, _addr_type, _addr):
     _addr = binascii.hexlify(_addr).decode('UTF-8','ignore')
@@ -545,6 +587,7 @@ _ble_peripheral.advertise(True)
         code = code:gsub("\n", "\\n")
         code = code:gsub("\"", "\\\"")
         local result = string.format("\003\005f = open('%s','w')\r\nf.write(\"%s\")\r\nf.close()\r\n\004", filename, code)
+        LOG.std(nil, "info", "SerialPortConnector", "upload file: %s", filename);
         port:send(result)
     
         if(filename == "main.py") then
@@ -595,7 +638,7 @@ end
 -- @param filename: if filename does not end with .py, we will write to main.py by default.
 -- @param code: code string
 function SerialPortConnector.SetRunMicroPythonMainCode(code, filename, preferredPortNameOrIndex)
-    if (platform == "ios" or currentBLEPortName == "BLE") then
+    if (platform == "ios" or currentBLEPortName == L"蓝牙") then
         if (SerialPortConnector.IsConnected() and code) then
             if (not filename or not filename:match("%.py$")) then
                 filename = "main.py"
@@ -611,8 +654,10 @@ from mpython_ble.characteristics import Characteristic
 
 import binascii
 
-def _ble_peripheral_connection_callback(_1, _2, _3):pass
-def _ble_peripheral_write_callback(_1, _2, _3):pass
+def _ble_peripheral_connection_callback(_1, _2, _3):
+    pass
+def _ble_peripheral_write_callback(_1, _2, _3):
+    pass
 
 def _ble_peripheral_connection_callback(_conn_handle, _addr_type, _addr):
     _addr = binascii.hexlify(_addr).decode('UTF-8','ignore')
@@ -652,10 +697,17 @@ _ble_peripheral.advertise(True)
 ]]
             code = string.format(template, code);
 
-            code = code:gsub("\\", "\\\\")
-            code = code:gsub("\r", "\\r")
-            code = code:gsub("\n", "\\n")
-            code = code:gsub("\"", "\\\"")
+            if (System.os.GetPlatform() == "win32") then
+                code = code:gsub("\\", "\\\\\\");
+                code = code:gsub("\r", "\\\\r");
+                code = code:gsub("\n", "\\\\n");
+                code = code:gsub("\"", "\\\\\"");
+            else
+                code = code:gsub("\\", "\\\\");
+                code = code:gsub("\r", "\\r");
+                code = code:gsub("\n", "\\n");
+                code = code:gsub("\"", "\\\"");
+            end
 
             local result = string.format("f = open('%s','w')\r\nf.write(\"%s\")\r\nf.close()\r\nmachine.reset()", filename, code);
             BlueTooth:writeToCharacteristic(BlueTooth.serUUID, BlueTooth.chaUUID, result, true);
@@ -663,6 +715,16 @@ _ble_peripheral.advertise(True)
             GameLogic.AddBBS(nil, "正在执行中，请稍候...", 10000, "47 247 110");
 
             if (platform == "ios") then
+                SerialPortConnector.mode = nil;
+                SerialPortConnector.RefreshPage();
+                
+                commonlib.TimerManager.SetTimeout(function()
+                    SerialPortConnector.Connect();
+                end, 15000)
+            elseif (platform == "win32") then
+                BlueTooth.isWin32Connected = false;
+                BlueTooth.isFoundDevice = false;
+
                 SerialPortConnector.mode = nil;
                 SerialPortConnector.RefreshPage();
                 
@@ -689,6 +751,7 @@ _ble_peripheral.advertise(True)
             code = code:gsub("\"", "\\\"")
             local result = string.format("\003\005f = open('%s','w')\r\nf.write(\"%s\")\r\nf.close()\r\n\004", filename, code)
             port:send(result)
+            LOG.std(nil, "info", "SerialPortConnector", "upload file: %s size:%d", filename, #result);
             if(filename == "main.py") then
                 port:send('\004') -- soft reboot to run main.py
             end
@@ -739,7 +802,7 @@ end
 -- send raw command like "help()\r\n", "\004" Ctrl+D soft reboot. 
 -- @param nIndexOrName: if nil, use current port; if number, use the port at index; if -1, send to all ports
 function SerialPortConnector.Send(cmd, nIndexOrName)
-    if (platform == "ios" or currentBLEPortName == "BLE") then
+    if (platform == "ios" or currentBLEPortName == L"蓝牙") then
     else
         local count = SerialPortConnector.GetActivePortCount()
         if(cmd and count > 0) then

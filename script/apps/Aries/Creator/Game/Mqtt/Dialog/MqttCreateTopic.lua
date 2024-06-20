@@ -51,7 +51,7 @@ function MqttCreateTopic.OnClickAddTopic()
     local desc = page:GetValue("text_mqtt_desc_create") or ""
     page:CloseWindow()
     MqttManager.getInstance():AddTopic(MqttCreateTopic.iotProjectId,desc,function(success,data)
-        echo(data,true)
+        -- echo(data,true)
         if success then
             GameLogic.AddBBS(nil,L"创建成功")
             MqttMainPage.LoadProjectList()

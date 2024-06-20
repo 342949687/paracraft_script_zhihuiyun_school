@@ -32,17 +32,29 @@ Or run application with command line: bootstrapper = "script/apps/Aries/bootstra
 NPL.load("(gl)script/mainstate.lua"); 
 NPL.load("(gl)script/ide/commonlib.lua"); 
 
--- let us see replace im server if command line contains imserver="game"
-local imserver = ParaEngine.GetAppCommandLineByParam("imserver", "game");
+local commandLine = ParaEngine.GetAppCommandLine();
+local isParacraftMC = (ParaEngine.GetAppCommandLineByParam("mc", "false") == "true");
+if (not isParacraftMC and commandLine and commandLine:match("mc=true")) then
+	-- just in case it is comming from the website url. 
+	isParacraftMC = true;
+end
 
-if (imserver == "game") then
-	NPL.load("(gl)script/apps/IMServer/IMserver_client.lua");
-	-- this will replace the default(real) jabber client with the one implemented by our own game server based IM server. Make sure this is done before you use it in the app code.
-	JabberClientManager = commonlib.gettable("IMServer.JabberClientManager");
+if (not isParacraftMC) then
+	-- let us see replace im server if command line contains imserver="game"
+	if(ParaEngine.GetAppCommandLineByParam("imserver", "game") == "game") then
+		NPL.load("(gl)script/apps/IMServer/IMserver_client.lua");
+		-- this will replace the default(real) jabber client with the one implemented by our own game server based IM server. Make sure this is done before you use it in the app code.
+		JabberClientManager = commonlib.gettable("IMServer.JabberClientManager");
+	end
 end
 
 NPL.load("(gl)script/kids/ParaWorldCore.lua"); -- ParaWorld platform includes
 NPL.load("(gl)script/ide/app_ipc.lua");
+
+-- check a secret file for whether it is running from AB. If not, disable some log. 
+System.options.isAB_SDK = ParaIO.DoesFileExist("character/Animation/script/dance_drum.lua", false)
+System.options.isDevMode = (ParaEngine.GetAppCommandLineByParam("isDevMode", "false") == "true");
+System.options.isDevEnv = (ParaEngine.GetAppCommandLineByParam("isDevEnv","false") == "true");
 
 -- load paracraft packages if any
 if (ParaEngine.GetAppCommandLineByParam("isDevEnv", "") == "" and
@@ -58,8 +70,6 @@ end
 -- main_state="logo";
 -- whether it is server mode, such as under linux without graphics rendering. 
 System.options.servermode = ParaEngine.GetAppCommandLineByParam("servermode", "false") == "true";
--- check a secret file for whether it is running from AB. If not, disable some log. 
-System.options.isAB_SDK = ParaIO.DoesFileExist("character/Animation/script/dance_drum.lua", false)
 
 System.options.is18_SDK = ParaIO.DoesFileExist("18+.txt", false)
 
@@ -68,17 +78,9 @@ System.options.disable_trading = nil;
 
 local commandLine = ParaEngine.GetAppCommandLine();
 -- whether it is mc version
-System.options.mc = (ParaEngine.GetAppCommandLineByParam("mc", "false") == "true");
-
-if (not System.options.mc and commandLine and commandLine:match("mc=true")) then
-	-- just in case it is comming from the website url. 
-	System.options.mc = true;
-end
+System.options.mc = isParacraftMC
 
 System.options.channelId = ParaEngine.GetAppCommandLineByParam("channelId","") --特殊发行版本，如 “430”版本
-
-System.options.isDevEnv = (ParaEngine.GetAppCommandLineByParam("isDevEnv","false") == "true");
-System.options.isDevMode = (ParaEngine.GetAppCommandLineByParam("isDevMode", "false") == "true");
 
 System.options.open_resolution = ParaEngine.GetAppCommandLineByParam("resolution",nil);
 
@@ -107,14 +109,19 @@ else
 	ParaUI.GetUIObject("root"):GetField("UIScale", System.options.default_ui_scaling);
 end
 
+--是否内部用户
+System.options.isInternal = ParaEngine.GetAppCommandLineByParam("isInternal", "false") == "true"
+
 --430开关
 System.options.isChannel_430 = (System.options.channelId=="430");
 System.options.channelId_tutorial = System.options.channelId =="tutorial";
 System.options.channelId_431 = System.options.channelId =="431";
 System.options.isPapaAdventure = (System.options.channelId_tutorial and System.options.isDevMode) or System.options.channelId =="papa";
-
+System.options.isEducatePlatform = System.options.channelId =="431" or System.options.channelId =="shenzhen_ai5"
+System.options.isShenzhenAi5 = System.options.channelId =="shenzhen_ai5"
+System.options.isCommunity = System.options.channelId =="" and (System.os.GetPlatform() == "mac" or System.os.GetPlatform() == "win32") and System.options.isInternal
 if (System.options.isChannel_430 
-	or System.options.channelId_431 
+	or System.options.isEducatePlatform 
 	or System.options.isPapaAdventure
 	or System.options.channelId_tutorial) then
 	System.options.isHideVip = true;
@@ -128,9 +135,6 @@ end
 if (System.os.GetPlatform() == "ios" and System.os.CompareParaEngineVersion('1.6.1.0')) then
 	IDFA.requestTrackingAuthorization();
 end
-
---是否内部用户
-System.options.isInternal = ParaEngine.GetAppCommandLineByParam("isInternal", "false") == "true"
 
 --是否智慧云学校用户
 System.options.isZhihuiyunDebug = ParaEngine.GetAppCommandLineByParam("isZhihuiyunDebug", "false") == "true"
@@ -463,9 +467,13 @@ local function Aries_load_config(filename)
 	node = commonlib.XPath.selectNodes(xmlRoot, "/GameClient/asset_server_addresses/address")[1];
 
 	if (node and node.attr) then
+		LOG.std("", "info", "aries", "Asset server: %s", node.attr.host)	
+		if(System.os.IsEmscripten()) then
+			-- replace http:// with https:// in emscripten
+			node.attr.host = string.gsub(node.attr.host, "^http://", "https://");
+		end	
 		-- if asset is not found locally, we will look in this place
 		ParaAsset.SetAssetServerUrl(node.attr.host);
-		LOG.std("", "system", "aries", "Asset server: %s", node.attr.host)
 	end
 	
 	local chat_domain
@@ -858,6 +866,9 @@ local function Aries_Init()
 		if channelId and channelId~= "" then
 			System.options.appId = System.options.appId.."_"..channelId
 			System.options.channelId = channelId --channelId <----- config.txt
+		end
+		if System.options.isDevMode then
+			print("config========",System.options.channelId,System.options.appId)
 		end
 	end
 end

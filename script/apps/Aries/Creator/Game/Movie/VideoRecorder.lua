@@ -43,6 +43,12 @@ local before_widthPerDegree;
 local before_stereoMode;
 -- automatically download and install the plugin
 function VideoRecorder.InstallPlugin(callbackFunc)
+	if System.os.GetPlatform() ~= "win32" then
+		if(callbackFunc) then
+			callbackFunc(false);
+		end
+		return
+	end
 	-- GameLogic.RunCommand("/install -mod https://keepwork.com/wiki/mod/packages/packages_install/paracraft?id=12")
 	
 	NPL.load("(gl)script/apps/Aries/Creator/Game/Mod/ModManager.lua");
