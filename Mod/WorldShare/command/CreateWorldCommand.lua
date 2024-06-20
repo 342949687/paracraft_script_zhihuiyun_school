@@ -60,6 +60,7 @@ e.g.
             local isRedirectLoadWorld = false
             local redirectLoadWorld = ''
             local forkType
+            local mode
             local beforeCmdText = ''
 
             beforeCmdText = cmd_text
@@ -117,12 +118,27 @@ e.g.
                 isRedirectLoadWorld = true
                 redirectLoadWorld = cmd_text
                 redirectLoadWorld = string.match(redirectLoadWorld, '^"(.+)"')
+            else
+                cmd_text = beforeCmdText
             end
 
+            beforeCmdText = cmd_text
+            option, cmd_text = CmdParser.ParseOption(cmd_text)
             if option == 'forkType' then
-                forkType = cmd_text
+                forkType, cmd_text = CmdParser.ParseString(cmd_text)
+            else
+                cmd_text = beforeCmdText
             end
             
+            beforeCmdText = cmd_text
+            option, cmd_text = CmdParser.ParseOption(cmd_text)
+            if option == 'mode' then
+                mode, cmd_text = CmdParser.ParseString(cmd_text)
+            else
+                cmd_text = beforeCmdText
+                mode = 'user'
+            end
+
             if forkType and forkType == 'keepwork' then
                 if not KeepworkServiceSession:IsSignedIn() then
                     GameLogic.AddBBS(nil,"请先登录")
@@ -245,14 +261,12 @@ e.g.
                 GameLogic.RunCommand('/sendevent createworld_callback '..worldPath)
                 return
             end
-
             KeepworkServiceWorld:GetMyWorldByWorldName(name, function(data)
                 local isRemoteWorldExisted = false
 
                 if data then
                     isRemoteWorldExisted = true
                 end
-
                 if not isLocalWorldExisted and isRemoteWorldExisted then
                     LocalServiceWorld:DownLoadZipWorld(
                         data.worldName,
@@ -301,13 +315,27 @@ e.g.
                                not data.world.commitId then
                                 return
                             end
-                    
+
+                            if not System.options.ZhyChannel or System.options.ZhyChannel == "" then
+                                if mode and mode == 'user' and data.visibility and data.visibility == 1 then
+                                    GameLogic.AddBBS(nil,"你没有权限创建该项目的世界")
+                                    return
+                                end
+                            end
+
                             LocalServiceWorld:DownLoadZipWorld(
                                 data.name,
                                 data.username,
                                 data.world.commitId,
                                 worldPath,
-                                function()
+                                function(result)
+                                    if not System.options.ZhyChannel or System.options.ZhyChannel == "" then
+                                        if not result then
+                                            GameLogic.AddBBS(nil,"你没有权限创建该项目的世界")
+                                            return
+                                        end
+                                    end
+
                                     local tag = LocalService:GetTag(worldPath)
 
                                     if not tag and type(tag) ~= 'table' then
@@ -327,7 +355,7 @@ e.g.
 
                                     SetParentProjectIdAndRedirectLoadWorld()
                                     GameLogic.RunCommand('/sendevent createworld_callback '..worldPath)
-                                end
+                                end,fromProjectId,mode
                             )
                         end)
                     else

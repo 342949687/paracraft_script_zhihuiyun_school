@@ -67,6 +67,8 @@ function Compare:Init(worldPath, callback)
 
     Mod.WorldShare.Store:Set('world/currentRevision', 0)
     Mod.WorldShare.Store:Set('world/remoteRevision', 0)
+    Mod.WorldShare.Store:Set('world/remoteRevisionDatetime', 0)
+    Mod.WorldShare.Store:Set('world/remoteRevisionUsername', '')
 
     if not self:IsCompareFinish() then
         return
@@ -112,7 +114,7 @@ function Compare:CompareRevision()
         return
     end
 
-    local function HandleRevision(data, err)
+    local function HandleRevision(data, err, commitInfo)
         if err == 0 or err == 502 then
             self:SetFinish(true)
             self.callback()
@@ -123,6 +125,12 @@ function Compare:CompareRevision()
 
         Mod.WorldShare.Store:Set('world/currentRevision', localRevision)
         Mod.WorldShare.Store:Set('world/remoteRevision', remoteRevision)
+
+        if commitInfo and commitInfo.datetime and commitInfo.username then
+            -- set commit datetime and username
+            Mod.WorldShare.Store:Set('world/remoteRevisionDatetime', commitInfo.datetime)
+            Mod.WorldShare.Store:Set('world/remoteRevisionUsername', commitInfo.username)
+        end
 
         self:SetFinish(true)
 
@@ -225,7 +233,7 @@ function Compare:GetCurrentWorldInfo(callback)
                 if data and data.memberCount and data.memberCount > 1 then
                     shared = true
                 end
-
+                
                 KeepworkServiceProject:GetMembers(worldTag.kpProjectId, function(membersData, err)
                     membersData = membersData or {}
                     local members = {}
@@ -285,6 +293,7 @@ function Compare:GetCurrentWorldInfo(callback)
                         remotefile = data.world and data.world.archiveUrl,
                         level = data.level,
                         platform = data.platform,
+                        channel = data.channel,
                     })
 
                     Mod.WorldShare.Store:Set('world/currentRevision', GameLogic.options:GetRevision())
@@ -333,7 +342,6 @@ function Compare:GetCurrentWorldInfo(callback)
 
             KeepworkServiceProject:GetProject(kpProjectId, function(data, err)
                 data = data or {}
-
                 local userId = Mod.WorldShare.Store:Get('user/userId')
                 local shared = false
 
@@ -368,7 +376,6 @@ function Compare:GetCurrentWorldInfo(callback)
                             size = LocalService:GetWorldSize(worldpath),
                             platform = worldTag.platform,
                         })
-    
                         afterGetInstance()
                         return
                     end
@@ -435,8 +442,9 @@ function Compare:GetCurrentWorldInfo(callback)
                             size = LocalService:GetWorldSize(worldpath),
                             level = data.level,
                             platform = data.platform,
+                            channel = data.channel,
                         })
-
+                        currentWorld.visibility = data.visibility or 0
                         local username = Mod.WorldShare.Store:Get('user/username')
                         local bIsExisted = false
 
@@ -493,11 +501,289 @@ function Compare:GetCurrentWorldInfo(callback)
     end
 end
 
-function Compare:RefreshWorldList(callback, statusFilter)
+function Compare:CheckWorldExist(worldName,callback)
     local localWorlds = LocalServiceWorld:GetWorldList()
-
     if not KeepworkService:IsSignedIn() or System.options.isOffline then
         local currentWorldList = localWorlds
+        local isMatch = false
+        for key, item in ipairs(currentWorldList) do
+            if item and worldName and item.foldername and string.lower(item.foldername) == string.lower(worldName) then
+                isMatch = true
+                break
+            end
+            if item and worldName and item.name and string.lower(item.name) == string.lower(worldName) then
+                isMatch = true
+                break
+            end
+        end
+        Mod.WorldShare.Store:Set('world/compareFullWorldList', currentWorldList)
+        if type(callback) == 'function' then
+            callback(isMatch,currentWorldList)
+        end
+        return 
+    end
+    KeepworkServiceWorld:MergeRemoteWorldList(
+        localWorlds,
+        function(currentWorldList) 
+            if not currentWorldList then
+                if type(callback) == 'function' then
+                    callback(false)
+                end
+                return
+            end          
+            local isMatch = false
+            for key, item in ipairs(currentWorldList) do
+                if item and worldName and item.foldername and string.lower(item.foldername) == string.lower(worldName) then
+                    isMatch = true
+                    break
+                end
+                if item and worldName and item.name and string.lower(item.name) == string.lower(worldName) then
+                    isMatch = true
+                    break
+                end
+            end
+            Mod.WorldShare.Store:Set('world/compareFullWorldList', currentWorldList)
+            if type(callback) == 'function' then
+                callback(isMatch,currentWorldList)
+            end
+        end,
+        true
+    )
+end
+
+--获取所有的世界列表
+function Compare:GetFullWorldList(callback)
+    local fullWorldList = {}
+    if not KeepworkService:IsSignedIn() or System.options.isOffline then
+        local localWorlds = LocalServiceWorld:GetWorldList() or {}
+        for key,item in pairs(localWorlds) do
+            if item and not item.shared and not item.is_zip then
+                local temp = {}
+                temp.id = item.kpProjectId
+                temp.name = item.foldername
+                temp.worldTagName = item.name
+                fullWorldList[#fullWorldList + 1] = temp
+            end
+        end
+        Mod.WorldShare.Store:Set('world/fullWorldList', fullWorldList)
+        if callback and type(callback) == 'function' then
+            callback(fullWorldList)
+        end
+        return
+    end
+    self:CheckWorldExist(nil,function(isMatch,worldList)
+        local localWorlds = worldList or {}
+        for key,item in pairs(localWorlds) do
+            if item and not item.shared and not item.is_zip then
+                local temp = {}
+                temp.id = item.kpProjectId
+                temp.name = item.foldername
+                temp.worldTagName = item.name
+                fullWorldList[#fullWorldList + 1] = temp
+            end
+        end
+        KeepworkServiceProject:GetFullWorldList(function(data,err)
+            if err == 200 then
+                if System.options.isDevMode then
+                    echo(data,true)
+                    print("fullWorldList===========",err)
+                end
+                local remoteData = (data and data.projects) and data.projects or {}
+                for rKey,rItem in pairs(remoteData) do
+                    local isExist = false
+                    for key,item in pairs(localWorlds) do
+                        if item.kpProjectId ~= 0 and rItem.id == item.kpProjectId and rItem.isDeleted == 0 then
+                            isExist = true
+                            break
+                        end
+                    end
+                    if not isExist then
+                        fullWorldList[#fullWorldList + 1] = rItem
+                    end
+                end
+                Mod.WorldShare.Store:Set('world/fullWorldList', fullWorldList)
+                if callback and type(callback) == 'function' then
+                    callback(fullWorldList)
+                end
+            else
+                Mod.WorldShare.Store:Set('world/fullWorldList', fullWorldList)
+                if callback and type(callback) == 'function' then
+                    callback(fullWorldList)
+                end
+                LOG.std(nil,"info","Compare","get full world list error code is %d",err)
+            end
+        end)    
+    end)
+    
+end
+
+function Compare:MoveOlderWorldToNewFolder()
+    local folderList = {}
+
+    local files = commonlib.Files.Find({}, "worlds/DesignHouse", 0, 500, "*")
+    for _, file in ipairs(files) do
+        if file and file.fileattr == 16 then
+            if file.filename ~= '_shared' and
+               file.filename ~= '_user' and
+               file.filename ~= 'backups' and
+               file.filename ~= 'blocktemplates' and
+               file.filename ~= 'userworlds' then
+                folderList[#folderList + 1] = file.filename
+            end
+        end
+    end
+
+    for key, item in ipairs(folderList) do
+        local worldpath = 'worlds/DesignHouse/' .. item
+
+        local curWorldUsername = Mod.WorldShare:GetWorldData('username', worldpath)
+        local backUpWorldPath
+        
+        if curWorldUsername then
+            backUpWorldPath =
+                'worlds/DesignHouse/_user/' ..
+                curWorldUsername ..
+                '/' ..
+                commonlib.Encoding.Utf8ToDefault(item)
+
+            commonlib.Files.MoveFolder(worldpath, backUpWorldPath)
+            ParaIO.DeleteFile(worldpath)
+        end
+    end
+end
+
+function Compare:GetNewWorldName(oldName, callback)
+    if not oldName or oldName == "" then
+        return oldName
+    end
+    local pattern =  "[%[#&*%-%+%.%(%)%$%'%,%]]"
+    self:GetFullWorldList(function()
+        local old_world_name =   string.gsub(oldName, pattern, "")
+        local currentWorldList = Mod.WorldShare.Store:Get('world/fullWorldList') or {}
+        local mapNames = {}
+        local mapTagNames = {}
+        local mapDeleted = {}
+        local maxIndex = 0
+        local worldName = oldName
+        local regexStr = "^"..old_world_name.."_(%d+)$"
+        for _, world in ipairs(currentWorldList) do
+            
+            local world_name = string.gsub(world.name, pattern, "")
+            local worldTagName = string.gsub(world.worldTagName, pattern, "")
+            local match1 = string.match(world_name,regexStr)
+            local match2 = string.match(worldTagName,regexStr)
+            if match1 and tonumber(match1) > maxIndex and tonumber(match1) < 1000 then
+                maxIndex = tonumber(match1)
+            end
+
+            if match2 and tonumber(match2) > maxIndex and tonumber(match2) < 1000 then
+                maxIndex = tonumber(match2)
+            end
+            mapNames[world.name] = true
+            mapTagNames[world.worldTagName] = true
+            mapDeleted[world.name] = world.isDeleted == 1
+        end
+        
+        for i = 0, maxIndex + 1 do
+            local world_name = oldName.."_"..tostring(i)
+            if i == 0 then
+                world_name = oldName
+            end
+            if not mapNames[world_name] and not mapTagNames[world_name] then
+                worldName = world_name
+                break
+            end
+        end
+        local last_world_name = worldName
+        for i = 0 ,maxIndex do
+            local world_name = oldName.."_"..tostring(i)
+            if i == 0 then
+                world_name = oldName
+            end
+            if not mapDeleted[world_name] then
+                last_world_name = world_name
+                break
+            end
+        end
+        if System.options.isDevMode then
+            print("GetNewWorldName===========",old_world_name,maxIndex,worldName,mapNames[worldName] , mapTagNames[worldName])
+            echo(currentWorldList,true)
+            echo(mapNames,true)
+            echo(mapTagNames,true)
+            echo(mapDeleted,true)
+        end
+        local username = Mod.WorldShare.Store:Get("user/username");
+        local worldPath = "worlds/DesignHouse/".. worldName
+        local last_world_path = "worlds/DesignHouse/".. last_world_name
+        if username and username ~= "" then
+            worldPath = "worlds/DesignHouse/_user/" .. username .. "/" .. worldName
+            last_world_path = "worlds/DesignHouse/_user/" .. username .. "/" .. last_world_name
+        end
+        if callback and type(callback) == "function" then
+            callback(worldName,worldPath,last_world_name,last_world_path)
+        end
+    end)
+end
+
+function Compare:RefreshDeletedWorldList(callback)
+    if not KeepworkService:IsSignedIn() or System.options.isOffline then
+        if callback and type(callback) == 'function' then
+            callback(false)
+        end
+        return
+    end
+    KeepworkServiceWorld:MergeRemoteDeletedWorldList(nil,function(result)
+        if not result or type(result) ~= 'table' then
+            return
+        end
+        local currentWorldList = result
+        local searchText = Mod.WorldShare.Store:Get('world/searchText')
+
+        if type(searchText) == 'string' and searchText ~= '' then
+            local searchWorldList = {}
+
+            for key, item in ipairs(currentWorldList) do
+                if item and item.text and string.match(string.lower(item.text), string.lower(searchText))then
+                    searchWorldList[#searchWorldList + 1] = item
+                elseif item and item.kpProjectId and string.match(string.lower(item.kpProjectId), string.lower(searchText)) then
+                    searchWorldList[#searchWorldList + 1] = item
+                end
+            end
+
+            currentWorldList = searchWorldList
+        end
+
+        if not System.options.isInternal then
+            if System.options.isEducatePlatform then
+                currentWorldList = commonlib.filter(currentWorldList, function (item)
+                    local foldername = item.foldername or ""
+                    local isExamWorld =  foldername:match("^exam_world%d+_%d+_%d+_%d+") 
+                    return (item.channel and item.channel ~= 2) and not isExamWorld
+                end)
+            else
+                currentWorldList = commonlib.filter(currentWorldList, function (item)
+                    return (item.channel and item.channel == 0)
+                end)
+            end
+
+        end
+        Mod.WorldShare.Store:Set('world/compareWorldList', currentWorldList)
+        if callback and type(callback) == 'function' then
+            callback(currentWorldList)
+        end
+    end)
+end
+
+function Compare:RefreshWorldList(callback, statusFilter,worldTypeFilter)
+    if worldTypeFilter and worldTypeFilter == 'DELETED' then
+        self:RefreshDeletedWorldList(callback)
+        return
+    end
+
+    self:GetFullWorldList()
+    
+    if not KeepworkService:IsSignedIn() or System.options.isOffline then
+        local currentWorldList = LocalServiceWorld:GetWorldList(true)
 
         local searchText = Mod.WorldShare.Store:Get('world/searchText')
 
@@ -528,14 +814,27 @@ function Compare:RefreshWorldList(callback, statusFilter)
 
             currentWorldList = searchWorldList
         end
-
+        if not System.options.isInternal then --System.options.isEducatePlatform and 
+            if System.options.isEducatePlatform then
+                currentWorldList = commonlib.filter(currentWorldList, function (item)
+                    local foldername = item.foldername or ""
+                    local isExamWorld =  foldername:match("^exam_world%d+_%d+_%d+_%d+") 
+                    return (item.channel and item.channel ~= 2) and not isExamWorld
+                end)
+            else
+                currentWorldList = commonlib.filter(currentWorldList, function (item)
+                    return (item.channel and item.channel == 0)
+                end)
+            end
+        end
         self.SortWorldList(currentWorldList)
         Mod.WorldShare.Store:Set('world/compareWorldList', currentWorldList)
 
-        if type(callback) == 'function' then
+        if callback and type(callback) == 'function' then
             callback(currentWorldList)
         end
     else
+        local localWorlds = LocalServiceWorld:GetWorldList()
         KeepworkServiceWorld:MergeRemoteWorldList(
             localWorlds,
             function(currentWorldList)
@@ -598,15 +897,74 @@ function Compare:RefreshWorldList(callback, statusFilter)
 
                     currentWorldList = searchWorldList
                 end
+                for key, item in ipairs(currentWorldList) do
+                    if item and item.project and item.project.channel then
+                        item.channel = item.project.channel
+                    end
+                end
+                if System.options.isDevMode then
+                    print("currentWorldList=============")
+                    -- echo(currentWorldList,true)
+                end
+                if not System.options.isInternal then --System.options.isEducatePlatform and 
+                    if System.options.isEducatePlatform then
+                        currentWorldList = commonlib.filter(currentWorldList, function (item)
+                            local foldername = item.foldername or ""
+                            local isExamWorld =  foldername:match("^exam_world%d+_%d+_%d+_%d+") 
+                            return (item.channel and item.channel ~= 2) and not isExamWorld
+                        end)
+                    else
+                        currentWorldList = commonlib.filter(currentWorldList, function (item)
+                            return (item.channel and item.channel == 0)
+                        end)
+                    end
 
+                end
+
+               
+                
+
+                if worldTypeFilter and worldTypeFilter == 'SHARED' then
+                    currentWorldList = commonlib.filter(currentWorldList, function (item)
+                        return item.shared == true and not self:IsMineWorld(item)
+                    end)
+                elseif worldTypeFilter and worldTypeFilter == 'MINE' then
+                    currentWorldList = commonlib.filter(currentWorldList, function (item)
+                        return self:IsMineWorld(item)
+                    end)
+                end
                 self.SortWorldList(currentWorldList)
-
                 Mod.WorldShare.Store:Set('world/compareWorldList', currentWorldList)
                 if type(callback) == 'function' then
                     callback(currentWorldList)
                 end
             end
         )
+    end
+end
+
+function Compare:IsMineWorld(world)
+    if not world or type(world) ~= 'table' then
+        return false
+    end
+    if world.is_zip == true then
+        return false
+    end
+    local is_shared = world.shared
+    if is_shared then
+        local user = world.user
+        if not user or type(user) ~= 'table' or not user.username then
+            return false
+        end
+        
+        local username = Mod.WorldShare.Store:Get("user/username");
+        if username == user.username then
+            return true
+        else
+            return false
+        end
+    else
+        return true
     end
 end
 
@@ -661,4 +1019,45 @@ function Compare:CheckRevision(worldPath, callback)
     local file = ParaIO.open(revisionPath, 'w');
     file:WriteString('1')
     file:close();
+end
+
+function Compare:IgnoreFiles(worldPath, localFiles)
+    local filePath = format('%s/.paraignore', worldPath)
+    local file = ParaIO.open(filePath, 'r')
+    local content = file:GetText(0, -1)
+    file:close()
+
+    local ignoreFiles = {
+        '.git/',
+        '.codeblock/',
+        '.vscode/',
+    }
+
+    if #content > 0 then
+        for item in string.gmatch(content, '[^\r\n]+') do
+            ignoreFiles[#ignoreFiles + 1] = item
+        end
+    end
+
+    local i = 1
+    while i <= #localFiles do
+        local isIgnore = false
+        
+        for FKey, FItem in ipairs(ignoreFiles) do
+            -- use plain text find instead of using regular expression
+            if string.find(localFiles[i].filename, FItem, 1, true) then
+                isIgnore = true
+                break
+            end
+        end
+
+        if isIgnore then
+            localFiles[i] = localFiles[#localFiles]
+            localFiles[#localFiles] = nil;
+        else
+            i = i + 1
+        end
+    end
+
+    return localFiles
 end

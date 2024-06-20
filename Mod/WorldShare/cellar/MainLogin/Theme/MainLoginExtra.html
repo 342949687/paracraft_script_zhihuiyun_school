@@ -93,19 +93,7 @@
                     end
 
                     function OnClickUpdateBtn()
-                        local bNeedUpdate = GameMainLogin.m_bNeedUpdate;
-                        local latestVersion = GameMainLogin.m_latestVersion;
-                        local curVersion = GameMainLogin.m_curVersion;
-                        local bAllowSkip = GameMainLogin.m_bAllowSkip;
-                        local _updater =  GameMainLogin._updater 
-                        local UpdatePage = NPL.load("(gl)script/apps/Aries/Creator/Game/Login/ClientUpdate/UpdatePage.lua");
-        				UpdatePage.ShowPage(latestVersion,
-						curVersion,
-						"paracraft",
-						function()
-							_updater:Download(true);
-						end,
-						bAllowSkip,true)
+                        GameMainLogin:ShowUpdatePage(true)
                     end
                 ]]>
             </script>

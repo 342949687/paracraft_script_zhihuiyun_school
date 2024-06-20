@@ -119,8 +119,12 @@ function DeleteWorld:DeleteLocal(callback, isSlient)
             if GameLogic.RemoveWorldFileWatcher then
                 GameLogic.RemoveWorldFileWatcher() -- file watcher may make folder deletion of current world directory not working.
             end
-
-            if commonlib.Files.DeleteFolder(currentWorld.worldpath) then
+            local deleteResult = commonlib.Files.DeleteFolder(currentWorld.worldpath) 
+            if System.options.isDevMode then
+                print('deleteResult============', deleteResult,currentWorld.worldpath)
+                echo(currentWorld,true)
+            end
+            if deleteResult then
                 if callback and type(callback) == 'function' then
                     callback()
                 else
@@ -209,6 +213,42 @@ function DeleteWorld:DeleteRemote(pwd, callback)
     )
 end
 
+function DeleteWorld:DeleteWorldSilent(callback)
+    local currentWorld = Mod.WorldShare.Store:Get('world/currentWorld')
+    if not currentWorld or not currentWorld.kpProjectId or currentWorld.kpProjectId == 0 then
+        if callback and type(callback) == 'function' then
+            callback(false)
+        end
+        return
+    end
+    KeepworkServiceProject:RemoveProjectWithNoPWD(currentWorld.kpProjectId,function(data, err)
+        if err ~= 204 and err ~= 200 then
+            if data and type(data) == 'table' and data.message then
+                GameLogic.AddBBS(nil, format(L'删除失败，原因：%s(%s)', data.message or '' , data.code or ''), 8000, '255 0 0')
+            else
+                GameLogic.AddBBS(nil, format(L'删除失败(%s)',  err or ''), 3000, '255 0 0')
+            end
+            if callback and type(callback) == 'function' then
+                callback(false)
+            end
+            return
+        end
+
+        if currentWorld and currentWorld.worldpath and #currentWorld.worldpath > 0 then
+            local tag = LocalService:GetTag(currentWorld.worldpath)
+
+            if tag then
+                tag.kpProjectId = nil
+                LocalService:SetTag(currentWorld.worldpath, tag)
+            end
+        end
+
+        if callback and type(callback) == 'function' then
+            callback(true)
+        end
+    end)
+end
+
 function DeleteWorld:DeleteRemoteWithoutPwd(callback)
     local currentWorld = Mod.WorldShare.Store:Get('world/currentWorld')
 
@@ -280,11 +320,14 @@ end
 
 function DeleteWorld:PasswordAuthenticationOnDeletion(deleteType, callback)
     self:ClosePage()
-
+    local htmlUrl = 'Mod/WorldShare/cellar/DeleteWorld/Theme/PasswordAuthenticationOnDeletion.html'
+    if System.options.isCommunity then
+        htmlUrl = 'script/apps/Aries/Creator/Game/Tasks/Community/Project/DeleteWorldPassworldAuth.html'
+    end
     local params = Mod.WorldShare.Utils.ShowWindow(
         0,
         0,
-        'Mod/WorldShare/cellar/DeleteWorld/Theme/PasswordAuthenticationOnDeletion.xml',
+        htmlUrl,
         'Mod.WorldShare.DeleteWorld.PasswordAuthenticationOnDeletion',
         0,
         0,

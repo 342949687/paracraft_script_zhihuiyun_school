@@ -430,7 +430,6 @@
                         local user = Eval('user')
                         local isSystemGroupMember = Eval('isSystemGroupMember')
                         local isFreeWorld = Eval('isFreeWorld')
-                        local timeRules = Eval('timeRules')
                         local visibility = Eval('visibility')
                         local level = Eval('level')
                         local extra = Eval('extra')
@@ -451,11 +450,6 @@
                             return false
                         end
 
-                        if not timeRules or
-                           type(timeRules) ~= 'table' then
-                            return false
-                        end
-
                         if not visibility or
                            type(visibility) ~= 'number' then
                             return false
@@ -469,135 +463,6 @@
                         if not extra or
                            type(extra) ~= 'table' then
                             return false
-                        end
-
-                        -- free user verifed
-                        if (not username or
-                            username ~= user.username) and
-                            not isSystemGroupMember then
-
-                            if not isFreeWorld or
-                               isFreeWorld == 0 then
-                                if not MainPage.LimitUserOpenShareWorld then
-                                    return false
-                                end
-                            end
-                        end
-
-                        -- times verified
-                        if timeRules and
-                           timeRules[1] then
-                            local result, reason = KeepworkServicePermission:TimesFilter(timeRules)
-
-                            if not result then
-                                if reason ~= 'CHECK_COURSE_ID' then
-                                    return false
-                                end
-                            end
-                        end
-
-                        -- holiday times verified
-                        if timeRules and
-                           timeRules[1] then
-                            local hasLimit = nil
-                            local lastDateType = nil
-                            local curTimeRule = nil
-
-                            for _, timeRule in ipairs(timeRules) do
-                                if timeRule.courseId then
-                                    if type(timeRule.dateType) == 'number' then
-                                        if timeRule.dateType == 0 then
-                                            if not lastDateType or lastDateType > 0 then
-                                                lastDateType = 0
-                                                hasLimit = false
-                                                curTimeRule = timeRule
-
-                                                break
-                                            end
-                                        elseif timeRule.dateType == 1 then
-                                            if not lastDateType or lastDateType > 1 then
-                                                lastDateType = 1
-                                                hasLimit = true
-                                                curTimeRule = timeRule
-                                            end
-                                        elseif timeRule.dateType == 2 then
-                                            if not lastDateType then
-                                                lastDateType = 2
-                                                hasLimit = true
-                                                curTimeRule = timeRule
-                                            end
-                                        end
-                                    else
-                                        lastDateType = 0
-                                        hasLimit = false
-                                        curTimeRule = timeRule
-                            
-                                        break
-                                    end
-                                end
-                            end
-
-                            if hasLimit == true then
-                                if not curTimeRule.dateType or curTimeRule.dateType == 0 then
-                                elseif curTimeRule.dateType == 1 then
-                                    local serverTime = Mod.WorldShare.Store:Get('world/currentServerTime')
-                                    local startTimeStr = curTimeRule.startTime or '0:0'
-                                    local endTimeStr = curTimeRule.endTime or '23:59'
-                                    local timeStr = startTimeStr .. '-' .. endTimeStr
-
-                                    if MainPage.isHoliday then
-                                        return false
-                                    else
-                                        local startHour, startMin = startTimeStr:match('^(%d+)%D(%d+)')
-                                        startHour = tonumber(startHour)
-                                        startMin = tonumber(startMin)
-            
-                                        local endHour, endMin = endTimeStr:match('^(%d+)%D(%d+)')
-                                        endHour = tonumber(endHour)
-                                        endMin = tonumber(endMin)
-            
-                                        local todayWeehours = commonlib.timehelp.GetWeeHoursTimeStamp(serverTime)
-                                        local limitTimeStamp = todayWeehours + startHour * 60 * 60 + startMin * 60
-                                        local limitTimeEndStamp = todayWeehours + endHour * 60 * 60 + endMin * 60
-            
-                                        if serverTime < limitTimeStamp or serverTime > limitTimeEndStamp then
-                                            return false
-                                        else
-                                        end
-                                    end
-                                elseif curTimeRule.dateType == 2 then
-                                    local serverTime = Mod.WorldShare.Store:Get('world/currentServerTime')
-                                    local startTimeStr = curTimeRule.startTime or '0:0'
-                                    local endTimeStr = curTimeRule.endTime or '23:59'
-                                    local timeStr = startTimeStr .. '-' .. endTimeStr
-            
-                                    if not MainPage.isHoliday then
-                                        return false
-                                    else
-                                        local startHour, startMin = startTimeStr:match('^(%d+)%D(%d+)')
-                                        startHour = tonumber(startHour)
-                                        startMin = tonumber(startMin)
-            
-                                        local endHour, endMin = endTimeStr:match('^(%d+)%D(%d+)')
-                                        endHour = tonumber(endHour)
-                                        endMin = tonumber(endMin)
-            
-                                        local todayWeehours = commonlib.timehelp.GetWeeHoursTimeStamp(serverTime)
-                                        local limitTimeStamp = todayWeehours + startHour * 60 * 60 + startMin * 60
-                                        local limitTimeEndStamp = todayWeehours + endHour * 60 * 60 + endMin * 60
-
-                                        if serverTime < limitTimeStamp or serverTime > limitTimeEndStamp then
-                                            return false
-                                        else
-                                        end
-                                    end
-                                else
-                                    return false
-                                end
-                            elseif hasLimit == false then
-                            else
-                                return false
-                            end
                         end
 
                         -- private world verfied

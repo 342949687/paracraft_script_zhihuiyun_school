@@ -38,7 +38,7 @@ local Create = NPL.export()
 Create.currentMenuSelectIndex = 1
 Create.page = 1
 Create.perPage = 3
-
+Create.worldListType = "ALL"
 function Create:Show()
     if System.options.isEducatePlatform  then
         return
@@ -47,6 +47,11 @@ function Create:Show()
     if (System.options.isPapaAdventure) then
         GameLogic.GetFilters():apply_filters("EnterWorldFailed")
         return
+    end
+
+    if System.options.isCommunity then
+        GameLogic.AddBBS(nil,L"进入世界失败，请重试~~")
+        return 
     end
     Opus:Show()
 end
@@ -142,6 +147,7 @@ function Create:ShowCreateEmbed(width, height, x, y, useDesginResolution)
     self.page = 1
     self.perPage = 3
     self.worldIndex = 1
+    Compare:MoveOlderWorldToNewFolder()
     self:GetWorldList(self.statusFilter)
 end
 
@@ -246,13 +252,18 @@ function Create:SetRefreshing(status)
     CreatePage:Refresh(0.01)
 end
 
-function Create:Sync()
+function Create:Sync(callback)
     if not KeepworkServiceSession:IsSignedIn() then
         return
     end
 
     local currentWorld = Mod.WorldShare.Store:Get('world/currentWorld')
-
+    if not currentWorld or type(currentWorld) ~= 'table' then
+        if callback and type(callback) == 'function' then
+            callback(false)
+        end
+        return
+    end
     Mod.WorldShare.MsgBox:Wait()
 
     Compare:Init(currentWorld.worldpath, function(result)
@@ -265,7 +276,11 @@ function Create:Sync()
 
         if result == Compare.JUSTLOCAL then
             SyncWorld:SyncToDataSource(function()
-                self:GetWorldList(self.statusFilter)
+                self:GetWorldList(self.statusFilter,function()
+                    if callback and type(callback) == 'function' then
+                        callback(true)
+                    end
+                end)
             end)
         end
 
@@ -283,7 +298,11 @@ function Create:Sync()
                         GameLogic.AddBBS(nil, format(L'更新【%s】名称信息完成', currentWorld.foldername), 3000, '0 255 0')
                     end
 
-                    self:GetWorldList(self.statusFilter)
+                    self:GetWorldList(self.statusFilter,function()
+                        if callback and type(callback) == 'function' then
+                            callback(true)
+                        end
+                    end)
                 end)
             end)
         end
@@ -307,7 +326,11 @@ function Create:Sync()
                 Mod.WorldShare.Store:Set('world/currentWorld', currentWorld)
                 
                 SyncWorld:ShowStartSyncPage(nil, function()
-                    self:GetWorldList(self.statusFilter)
+                    self:GetWorldList(self.statusFilter,function()
+                        if callback and type(callback) == 'function' then
+                            callback(true)
+                        end
+                    end)
                 end)
             end)
         end
@@ -411,11 +434,11 @@ function Create:GetWorldList(statusFilter, callback)
         self:GetPageList()
 
         if callback and type(callback) == 'function' then
-            callback()
+            callback(currentWorldList)
         end
 
         self:OnSwitchWorld(self.worldIndex or 1)
-    end, statusFilter)
+    end, statusFilter,Create.worldListType)
 end
 
 function Create:EnterWorld(index, skip)
@@ -690,7 +713,6 @@ TileSize = 533.333313
 
     local currentWorld = Mod.WorldShare.Store:Get('world/currentWorld')
 
-
     local function DownloadWorldFunc()
         DownloadWorld.ShowPage(format(L'%s（项目ID：%d）', currentWorld.foldername, currentWorld.kpProjectId))
 
@@ -737,21 +759,20 @@ TileSize = 533.333313
         end)
     end
 
-
     if currentWorld.status == 2 then
-        if System.options.isEducatePlatform then
+        -- if System.options.isEducatePlatform then
+        --     DownloadWorldFunc()
+        -- else
+        Mod.WorldShare.MsgBox:Wait()
+        Compare:Init(currentWorld.worldpath, function(result)
+            Mod.WorldShare.MsgBox:Close()
+
+            if result ~= Compare.JUSTREMOTE then
+                return
+            end
             DownloadWorldFunc()
-        else
-            Mod.WorldShare.MsgBox:Wait()
-            Compare:Init(currentWorld.worldpath, function(result)
-                Mod.WorldShare.MsgBox:Close()
-    
-                if result ~= Compare.JUSTREMOTE then
-                    return
-                end
-                DownloadWorldFunc()
-            end)
-        end
+        end)
+        -- end
     else
         if currentWorld.status == 1 or not currentWorld.status then
             Game.Start(currentWorld.worldpath)
@@ -801,10 +822,14 @@ TileSize = 533.333313
     self.instituteVerified = false
 end
 
-function Create:DeleteWorld(worldIndex)
+function Create:DeleteWorld(worldIndex,callback)
     self:OnSwitchWorld(worldIndex)
 
     DeleteWorld:DeleteWorld(function()
+        if callback and type(callback) == 'function' then
+            callback()
+            return
+        end
         self:GetWorldList(self.statusFilter)
     end)
 end
@@ -827,7 +852,7 @@ function Create:WorldRename(currentItemIndex, tempModifyWorldname, callback)
         return
     end
 
-    if tempModifyWorldname == '' then
+    if not tempModifyWorldname or tempModifyWorldname == '' then
         return
     end
 
@@ -946,4 +971,9 @@ function Create.FormatStatus(status)
     else
         return L'获取状态中'
     end
+end
+
+--设置世界加载的类型，MINE为我的世界，SHARED为共享世界，DELETED为删除的世界，ALL为全部世界
+function Create:SetWorldListType(worldType)
+    self.worldListType = worldType
 end

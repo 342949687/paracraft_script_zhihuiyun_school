@@ -9,7 +9,7 @@ local KeepworkProjectsApi = NPL.load('(gl)Mod/WorldShare/api/Keepwork/KeepworkPr
 ------------------------------------------------------------
 ]]
 local Encoding = commonlib.gettable('commonlib.Encoding')
-
+local WorldCommon = commonlib.gettable("MyCompany.Aries.Creator.WorldCommon")
 local KeepworkBaseApi = NPL.load('./BaseApi.lua')
 local GitEncoding = NPL.load('(gl)Mod/WorldShare/helper/GitEncoding.lua')
 
@@ -29,6 +29,7 @@ function KeepworkProjectsApi:CreateProject(foldername, platform, success, error)
         platform = platform or 'paracraft',
         type = 1,
         privilege = 165,
+        channel = tonumber((WorldCommon.GetWorldTag("channel") or 0)),
     }
 
     KeepworkBaseApi:Post(url, params, nil, success, error)
@@ -230,4 +231,12 @@ function KeepworkProjectsApi:Leave(pid, success, error)
         success,
         error
     )
+end
+
+-- url: /projects/fullList
+-- method: GET
+-- params:[]
+-- return: object
+function KeepworkProjectsApi:FullList(success, errorMethod)
+    KeepworkBaseApi:Get('/projects/fullList', nil, nil, success, errorMethod,nil, nil, nil, nil, true)
 end

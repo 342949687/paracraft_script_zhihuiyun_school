@@ -90,7 +90,6 @@ function LocalServiceWorld:BuildLocalWorldList()
 
     local function Handle(path)
         local output = self:SearchFiles(nil, path, LocalLoadWorld.MaxItemPerFolder)
-
         if output and #output > 0 then
             for _, item in ipairs(output) do
                 local bLoadedWorld
@@ -118,6 +117,7 @@ function LocalServiceWorld:BuildLocalWorldList()
                                 foldername = filenameUTF8,
                                 Title = display_name,
                                 writedate = item.writedate,
+                                createdate = item.createdate,
                                 filesize = item.filesize,
                                 nid = node.attr.nid,
                                 author = item.author or 'None',
@@ -128,7 +128,8 @@ function LocalServiceWorld:BuildLocalWorldList()
                                 ip = item.ip or '127.0.0.1',
                                 order = item.order,
                                 IsFolder = true,
-                                time_text = item.time_text
+                                time_text = item.time_text,
+                                channel = item.channel or 0,
                             })
     
                             bLoadedWorld = true
@@ -152,6 +153,7 @@ function LocalServiceWorld:BuildLocalWorldList()
                         filesize = item.filesize,
                         order = item.order,
                         IsFolder=true,
+                        channel = item.channel or 0,
                     })
     
                     bLoadedWorld = true
@@ -180,7 +182,8 @@ function LocalServiceWorld:BuildLocalWorldList()
                     nid = 0,
                     order = item.order,
                     IsFolder = false,
-                    time_text = item.time_text
+                    time_text = item.time_text,
+                    channel = item.channel or 0,
                 })	
             end
         end
@@ -286,7 +289,7 @@ function LocalServiceWorld:CreateHomeWorld(myHomeWorldName)
 	return worldPath
 end
 
-function LocalServiceWorld:GetWorldList()
+function LocalServiceWorld:GetWorldList(isOffline)
     local localWorlds = self:BuildLocalWorldList()
     local filterLocalWorlds = {}
 
@@ -323,12 +326,11 @@ function LocalServiceWorld:GetWorldList()
 
     localWorlds = filterLocalWorlds
 
-    local sharedWorldList = System.options.isEducatePlatform and {} or self:GetSharedWorldList()
+    local sharedWorldList = (System.options.isEducatePlatform or isOffline) and {} or self:GetSharedWorldList()
 
     for key, item in ipairs(sharedWorldList) do
         localWorlds[#localWorlds + 1] = item
     end
-
     local worldList = {}
 
     for key, value in ipairs(localWorlds) do
@@ -344,8 +346,9 @@ function LocalServiceWorld:GetWorldList()
         local isVipWorld = false
         local instituteVipEnabled = false
         local modifyTime = Mod.WorldShare.Utils:UnifiedTimestampFormat(value.writedate)
+        local createTime = Mod.WorldShare.Utils:UnifiedTimestampFormat(value.createdate)
         local platform = 'paracraft'
-
+        local channel = 0
         if value.IsFolder then
             value.worldpath = value.worldpath .. '/'
             is_zip = false
@@ -362,6 +365,7 @@ function LocalServiceWorld:GetWorldList()
             instituteVipEnabled = tag.instituteVipEnabled
             parentProjectId = tag.parentProjectId
             platform = tag.platform
+            channel = tag.channel or 0
         else
             local zipFilename = string.match(value.worldpath, '/([^/.]+)%.zip$')
             zipFilename = commonlib.Encoding.DefaultToUtf8(zipFilename)
@@ -382,6 +386,7 @@ function LocalServiceWorld:GetWorldList()
             size = size,
             foldername = foldername,
             modifyTime = modifyTime,
+            createTime = createTime,
             worldpath = value.worldpath,
             name = name,
             revision = revision,
@@ -389,6 +394,7 @@ function LocalServiceWorld:GetWorldList()
             instituteVipEnabled = instituteVipEnabled,
             shared = value.shared or false,
             platform = platform,
+            channel = channel,
         })
     end
 
@@ -563,6 +569,7 @@ function LocalServiceWorld:SetWorldInstanceByFoldername(foldername)
         instituteVipEnabled = worldTag.instituteVipEnabled,
         shared = shared,
         platform = worldTag.platform,
+        channel = worldTag.channel or 0,
     })
 
     Mod.WorldShare.Store:Set('world/currentWorld', currentWorld)
@@ -669,6 +676,7 @@ function LocalServiceWorld:GenerateWorldInstance(params)
         size = params.size or 0,
         foldername = params.foldername or '',
         modifyTime = params.modifyTime or '',
+        createTime = params.createTime or '',
         worldpath = params.worldpath or '',
         remotefile = remotefile,
         revision = params.revision or 0,
@@ -679,10 +687,56 @@ function LocalServiceWorld:GenerateWorldInstance(params)
         name = params.name or '',
         parentProjectId = params.parentProjectId or 0,
         platform = params.platform or 'paracraft',
+        channel = tonumber(params.channel) or 0,
     }
 end
 
-function LocalServiceWorld:DownLoadZipWorld(foldername, username, lastCommitId, worldpath, callback,kpProjectId)
+function LocalServiceWorld:GetTagValue(tagPath,key)
+    if not tagPath or tagPath == '' or not key or key == '' then
+        return
+    end
+
+    if not ParaIO.DoesFileExist(tagPath) then
+        return
+    end
+
+    local xmlRoot = ParaXML.LuaXML_ParseFile(tagPath)
+    local data;
+    if(xmlRoot) then
+        for node in commonlib.XPath.eachNode(xmlRoot, "/pe:mcml/pe:world") do
+            data = node.attr
+            break
+        end
+        return data and data[key]
+    end 
+end
+
+
+function LocalServiceWorld:CheckCanForkWorld(fileList)
+    if not fileList or type(fileList) ~= 'table' or #fileList == 0 then
+        return false
+    end
+
+    local worldPath 
+    for key, item in ipairs(fileList) do
+        if item.fileattr == 32 and item.filesize > 0 and item.filename:find("/tag.xml") then
+            worldPath = item.file_path
+            break
+        end
+    end
+    if not worldPath or worldPath == '' or not ParaIO.DoesFileExist(worldPath)  then
+        return false
+    end
+
+    local hasCopyright = self:GetTagValue(worldPath,'hasCopyright')
+    if hasCopyright == 'true' or hasCopyright == true then
+        return false
+    end
+    return true
+end
+
+-- mode: user , admin
+function LocalServiceWorld:DownLoadZipWorld(foldername, username, lastCommitId, worldpath, callback,kpProjectId,mode)
     local qiniuZipArchiveUrl = GitKeepworkService:GetQiNiuArchiveUrl(foldername, username, lastCommitId)
     local cdnArchiveUrl = GitKeepworkService:GetCdnArchiveUrl(foldername, username, lastCommitId,kpProjectId)
     local tryTimes = 0
@@ -695,6 +749,14 @@ function LocalServiceWorld:DownLoadZipWorld(foldername, username, lastCommitId, 
                 return
             end
 
+            if mode == 'user' and not self:CheckCanForkWorld(fileList) then
+                if callback and type(callback) == 'function' then
+                    callback(false)
+                end
+                ParaIO.DeleteFile('temp/world_temp_download/')
+                return
+            end
+            
             local zipRootPath = ''
 
             if fileList[1] and fileList[1].filesize == 0 then

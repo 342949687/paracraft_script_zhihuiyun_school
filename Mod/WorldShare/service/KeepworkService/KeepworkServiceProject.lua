@@ -185,6 +185,17 @@ function KeepworkServiceProject:GetProjectIdByWorldName(foldername, shared, call
         else
             callback()
         end
+    end,function(data, err)
+        if err == 401 then
+            GameLogic.AddBBS(nil, L'请先登录')
+            GameLogic.GetFilters():apply_filters('logout')
+            GameLogic.GetFilters():apply_filters("OnKeepWorkLogout", true)
+            GameLogic.CheckSignedIn(desc or L"请先登录！", function(bSucceed)
+                if bSucceed then
+                    self:GetProjectIdByWorldName(foldername, shared, callback)
+                end
+            end);
+        end
     end)
 end
 
@@ -291,4 +302,8 @@ end
 -- level multi-project
 function KeepworkServiceProject:LeaveMultiProject(pid, callback)
     KeepworkProjectsApi:Leave(pid, callback, callback)
+end
+
+function KeepworkServiceProject:GetFullWorldList(callback)
+    KeepworkProjectsApi:FullList(callback,callback)
 end

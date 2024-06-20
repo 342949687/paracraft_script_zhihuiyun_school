@@ -213,7 +213,8 @@ function KeepworkServicePermission:Authentication(authName, callback)
     if (authName == "LimitWorldSize20Mb" 
         or authName == "OnlineWorldData50Mb" 
         or authName == "PythonCodeBlock" 
-        or authName == "UnlimitWorldsNumber") then
+        or authName == "UnlimitWorldsNumber"
+        or authName == "LimitUserOpenShareWorld") then
         return callback(true, self:GetLocalAuthKey(authName), self:GetLocalAuthDesc(authName));
     end
     -- check permission locally for VIP permission

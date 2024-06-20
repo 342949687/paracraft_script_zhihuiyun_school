@@ -216,29 +216,48 @@ function GitKeepworkService:GetWorldRevision(kpProjectId, isGetMine, callback)
                 end
                 return
             end
-            local folderName = data.name
-            --家园的处理
-            if data.name ~= data.world.worldName then
-                folderName = data.world.worldName
+
+            local revision = 0
+            local commitInfo = {}
+
+            if data.world and
+               data.world.extra and
+               data.world.extra.commitIds and
+               #data.world.extra.commitIds > 0 then
+                commitInfo = data.world.extra.commitIds[#data.world.extra.commitIds]
+
+                if commitInfo and commitInfo.revision then
+                    revision = tonumber(commitInfo.revision)
+                end
             end
-            KeepworkReposApi:Raw(
-                folderName,
-                data.username,
-                'revision.xml',
-                data.world.commitId,
-                function(data, err)
-                    if callback and type(callback) == 'function' then
-                        callback(tonumber(data) or 0, err)
-                    end
-                end,
-                function()
-                    if callback and type(callback) == 'function' then
-                        callback(0, err)
-                    end
-                end,
-                nil,
-                {0, 403}
-            )
+
+            if callback and type(callback) == 'function' then
+                callback(revision, err, commitInfo)
+            end
+
+            -- local folderName = data.name
+            -- --家园的处理
+            -- if data.name ~= data.world.worldName then
+            --     folderName = data.world.worldName
+            -- end
+            -- KeepworkReposApi:Raw(
+            --     folderName,
+            --     data.username,
+            --     'revision.xml',
+            --     data.world.commitId,
+            --     function(data, err)
+            --         if callback and type(callback) == 'function' then
+            --             callback(tonumber(data) or 0, err)
+            --         end
+            --     end,
+            --     function()
+            --         if callback and type(callback) == 'function' then
+            --             callback(0, err)
+            --         end
+            --     end,
+            --     nil,
+            --     {0, 403}
+            -- )
         end,
         function(_, err)
             callback(0, err)

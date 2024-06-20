@@ -182,6 +182,34 @@
                     function get_current_revision()
                         return SyncWorld.GetCurrentRevision()
                     end
+
+                    function get_remote_revision_datetime()
+                        if Mod.WorldShare.Store:Get('world/remoteRevisionDatetime') ~= 0 then
+                            return os.date('%Y.%m.%d %H:%M', Mod.WorldShare.Store:Get('world/remoteRevisionDatetime'))
+                        else
+                            return ""
+                        end
+                    end
+
+                    function get_remote_revision_username()
+                        return Mod.WorldShare.Store:Get('world/remoteRevisionUsername')
+                    end
+
+                    function get_local_revision_datetime()
+                        if Mod.WorldShare.Store:Get('world/remoteRevisionDatetime') ~= 0 then
+                            return os.date('%Y.%m.%d %H:%M', os.time())
+                        else
+                            return ""
+                        end
+                    end
+
+                    function get_local_revision_username()
+                        if Mod.WorldShare.Store:Get('world/remoteRevisionDatetime') ~= 0 then
+                            return Mod.WorldShare.Store:Get('user/username')
+                        else
+                            return ""
+                        end
+                    end
                 ]]>
             </script>
             <style type='text/mcss' src='Mod/WorldShare/cellar/Theme/Mcss/Theme1.mcss'></style>
@@ -195,7 +223,7 @@
                      style='font-size: 18px;
                             base-font-size: 18px;
                             width: 280px;
-                            padding-top: 25px;'>
+                            padding-top: 10px;'>
                     <div style='margin-top: 20px;
                                 width: 500px;'>
                         <%= L'世界名称：' %>
@@ -221,6 +249,9 @@
                                    value='<%= L"使用远程版本" %>' />
                         </pe:if>
                     </div>
+                    <div style='font-size: 14px;base-font-size: 14px;color: #7c7c7f;'>
+                        <%= get_remote_revision_datetime() %>&nbsp;&nbsp;<%= get_remote_revision_username() %>
+                    </div>
                     <div style='margin-top:20px;
                                 width: 500px;'>
                         <%= format(L'本地版本号：%s', get_current_revision()) %>
@@ -243,6 +274,9 @@
                                    type='button'
                                    value='<%= L"使用本地版本" %>' />
                         </pe:if>
+                    </div>
+                    <div style='font-size: 14px;base-font-size: 14px;color: #7c7c7f;'>
+                        <%= get_local_revision_datetime() %>&nbsp;&nbsp;<%= get_local_revision_username() %>
                     </div>
                 </div>
             </kp:window>

@@ -1079,10 +1079,12 @@ function MainPage:HandleWorldsTree(rows, callback)
             end
 
             WorldShareKeepworkServiceProject:GetStaredProjects(projectIds, function(data, err)
-                for key, item in ipairs(rows) do
-                    for dKey, dItem in ipairs(data.rows) do
-                        if tonumber(item.id) == tonumber(dItem.projectId) then
-                            item.isStar = true
+                if data and next(data) then
+                    for key, item in ipairs(rows) do
+                        for dKey, dItem in ipairs(data.rows) do
+                            if tonumber(item.id) == tonumber(dItem.projectId) then
+                                item.isStar = true
+                            end
                         end
                     end
                 end

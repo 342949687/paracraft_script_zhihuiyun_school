@@ -137,6 +137,10 @@ function KeepworkServiceSession:OnWillLeaveWorld()
 end
 
 function KeepworkServiceSession:IsSignedIn()
+    if System.User.zhy_userdata then
+        return true
+    end
+
     local token = Mod.WorldShare.Store:Get('user/token')
     local bLoginSuccessed = Mod.WorldShare.Store:Get('user/bLoginSuccessed')
 
@@ -233,10 +237,13 @@ end
 
 function KeepworkServiceSession:LoginWithToken(token, callback)
     if not token or type(token) ~= 'string' then
+        if callback and type(callback) == 'function' then
+            callback()
+        end
         return
     end
 
-    KeepworkUsersApi:Profile(token, callback, callback,true)
+    KeepworkUsersApi:Profile(token, callback, callback, true)
 end
 
 function KeepworkServiceSession:SetUserLevels(response, callback)
@@ -501,6 +508,15 @@ end
 
 function KeepworkServiceSession:RegisterWithAccount(username, password, callback, autoLogin)
     if not username or not password then
+        if callback and type(callback) == 'function' then
+            callback({ message = L'账户名密码为空', code = 400})
+        end
+        return
+    end
+    if string.find(username, "^[pP]%d+") then
+        if callback and type(callback) == 'function' then
+            callback({ message = L'账户名不合法', code = 400})
+        end
         return
     end
 

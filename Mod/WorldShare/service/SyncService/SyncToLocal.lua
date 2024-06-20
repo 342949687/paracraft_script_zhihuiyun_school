@@ -19,6 +19,7 @@ local KeepworkServiceProject = NPL.load('../KeepworkService/KeepworkServiceProje
 local LocalService = NPL.load('(gl)Mod/WorldShare/service/LocalService.lua')
 local LocalServiceWorld = NPL.load('(gl)Mod/WorldShare/service/LocalService/LocalServiceWorld.lua')
 local GitService = NPL.load('(gl)Mod/WorldShare/service/GitService.lua')
+local Compare = NPL.load('(gl)Mod/WorldShare/service/SyncService/Compare.lua')
 
 -- bottles
 local CreateWorld = NPL.load('(gl)Mod/WorldShare/cellar/CreateWorld/CreateWorld.lua')
@@ -120,7 +121,7 @@ function SyncToLocal:Start()
         self.localFiles:AddAll(LocalService:LoadFiles(self.currentWorld.worldpath))
         self.dataSourceFiles = data
 
-        self:IgnoreFiles()
+        self.localFiles = Compare:IgnoreFiles(self.currentWorld.worldpath, self.localFiles)
         self:GetCompareList()
         self:HandleCompareList()
     end
@@ -131,29 +132,6 @@ function SyncToLocal:Start()
         self.currentWorld.lastCommitId,
         Handle
     )
-end
-
-function SyncToLocal:IgnoreFiles()
-    local filePath = format('%s/.paraignore', self.currentWorld.worldpath)
-    local file = ParaIO.open(filePath, 'r')
-    local content = file:GetText(0, -1)
-    file:close()
-
-    local ignoreFiles = {}
-
-    if #content > 0 then
-        for item in string.gmatch(content, '[^\r\n]+') do
-            ignoreFiles[#ignoreFiles + 1] = item
-        end
-    end
-    
-    for LKey, LItem in ipairs(self.localFiles) do
-        for FKey, FItem in ipairs(ignoreFiles) do
-            if string.find(LItem.filename, FItem) then
-                self.localFiles:remove(LKey)
-            end
-        end
-    end
 end
 
 function SyncToLocal:GetCompareList()

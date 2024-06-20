@@ -34,9 +34,9 @@ local SessionsData = NPL.load('(gl)Mod/WorldShare/database/SessionsData.lua')
 local LoginModal = NPL.export()
 
 -- @param callback: called after successfully signed in. 
-function LoginModal:Init(callback)
+function LoginModal:Init(callback,isFromKickOut)
     Mod.WorldShare.Store:Remove('user/AfterLogined')
-
+    self.isFromKickOut = isFromKickOut == true
     if callback and type(callback) == 'function' then
         Mod.WorldShare.Store:Set('user/AfterLogined', function(bIsSucceed)
             return callback(bIsSucceed)

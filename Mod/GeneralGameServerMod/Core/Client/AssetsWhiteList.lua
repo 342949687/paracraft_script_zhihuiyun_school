@@ -16,6 +16,7 @@ local AssetsWhiteList = commonlib.gettable("Mod.GeneralGameServerMod.Core.Client
 local  allAssets = commonlib.UnorderedArraySet:new();
 
 allAssets:add("character/CC/02human/CustomGeoset/actor.x")
+allAssets:add("character/CC/02human/CustomGeoset/actor_kaka.x")
 allAssets:add("character/CC/02human/paperman/boy01.x")
 allAssets:add("character/CC/02human/paperman/boy02.x")
 allAssets:add("character/CC/02human/paperman/boy03.x")

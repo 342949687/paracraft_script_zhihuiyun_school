@@ -70,12 +70,15 @@ end
     token string 必须 token
 ]]
 -- return: object
-function KeepworkUsersApi:Profile(token, success, error,isLogin)
+function KeepworkUsersApi:Profile(token, success, error, isLogin)
     if not token or type(token) ~= "string" or #token == 0 then
+        if error and type(error) == 'function' then
+            error()
+        end
         return
     end
     if System.options.isEducatePlatform and isLogin then
-        self:ProfilePost(token,success,error)
+        self:ProfilePost(token, success, error)
         return
     end
     local headers = { Authorization = format("Bearer %s", token) }

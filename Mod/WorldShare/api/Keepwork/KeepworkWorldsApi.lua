@@ -35,48 +35,36 @@ function KeepworkWorldsApi:GetWorldList(xPerPage, xPage, success, error)
             url = url .. '&x-page=' .. xPage
         end
     end
+    --世界列表暂时不缓存数据，date:20240313,pbb
+    KeepworkBaseApi:Get(url, nil, nil, success, error,nil, nil, nil, nil, true)
+end
 
-    KeepworkBaseApi:Get(url, nil, nil, success, error)
+-- url: /worlds/%s
+-- method: GET
+-- params:
+--[[
+    x-page
+    x-per-page
+]]
+-- return: object
+function KeepworkWorldsApi:GetWorldDeletedList(xPerPage, xPage, success, error)
+    local url = '/joinedWorlds'
+
+    if type(xPerPage) == 'number' then
+        url = url .. '?x-per-page=' .. xPerPage
+
+        if type(xPerPage) == 'number' then
+            url = url .. '&x-page=' .. xPage
+        end
+    end
+    url = url.. '&isDeleted=1'
+    KeepworkBaseApi:Get(url, nil, nil, success, error,nil, nil, nil, nil, true)
 end
 
 -- 暂时先这样改，后面得后端优化
+-- v2.1.0 去掉worldTagName查询，直接通过worldName获取世界信息，防止回收站上线以后出现世界混乱的问题
 function KeepworkWorldsApi:GetWorldByName(foldername, success, error, isRefresh)
-    self.isGetData1 = false
-    self.isGetData2 = false
-    self.data1 = nil
-    self.data2 = nil
-    self.success = success
-
-    self:GetWorldByWorldName(foldername, function(data, err) 
-        self.isGetData1 = true
-        if (err == 200 and data and #data > 0) then
-            self.data1 = data
-        end
-        self:DoSuccessCall(foldername)
-    end, error, isRefresh)
-
-    self:GetWorldByExtraName(foldername, function(data, err) 
-        self.isGetData2 = true
-        if (err == 200 and data and #data > 0) then
-            self.data2 = data
-        end
-        self:DoSuccessCall(foldername)
-    end, error, isRefresh)
-end
-
-function KeepworkWorldsApi:DoSuccessCall(foldername)
-    if self.isGetData1 and self.isGetData2 then
-        if self.success and type(self.success) == "function" then
-            local data = self.data1 or self.data2
-            self.isGetData1 = false
-            self.isGetData2 = false
-            self.data1 = nil
-            self.data2 = nil
-            local success = commonlib.copy(self.success) --防止嵌套使用
-            self.success = nil
-            success(data or {},200)
-        end
-    end
+    self:GetWorldByWorldName(foldername, success, error, isRefresh)
 end
 
 -- url: /joinedWorlds?worldName=%s

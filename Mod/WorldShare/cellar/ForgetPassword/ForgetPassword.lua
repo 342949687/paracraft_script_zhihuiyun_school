@@ -25,6 +25,10 @@ function ForgetPassword:ShowPage(isKick)
     if System.options.isEducatePlatform then
         url = 'script/apps/Aries/Creator/Game/Educate/Login/ForgetPassword.html'
     end
+    if System.options.isCommunity then
+        url = 'script/apps/Aries/Creator/Game/Tasks/Community/Login/ForgetPasswordCommunity.html'
+    end
+
     local params =
         Mod.WorldShare.Utils.ShowWindow(
             0,

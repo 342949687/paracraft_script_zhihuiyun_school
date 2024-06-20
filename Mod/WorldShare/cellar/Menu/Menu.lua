@@ -272,6 +272,13 @@ function Menu:Projects(menuItems)
             projectMenu.children = commonlib.filter(projectMenu.children,function (item)
                 return item.name ~= "project.ppid" and item.name ~= "project.index" and item.name ~= "project.author" and item.name ~= "file.openworlddir" and item.name ~= "file.worldrevision"  and item.name ~= "project.member"
             end)
+            local WorldCommon = commonlib.gettable('MyCompany.Aries.Creator.WorldCommon')
+            local channel = tonumber((WorldCommon.GetWorldTag("channel") or 0))
+            if (channel == 1)then
+                projectMenu.children = commonlib.filter(projectMenu.children,function (item)
+                    return item.name ~= "project.setting" 
+                end)
+            end
         end
     end
     NPL.load('(gl)script/apps/Aries/Creator/HttpAPI/keepwork.user.lua')

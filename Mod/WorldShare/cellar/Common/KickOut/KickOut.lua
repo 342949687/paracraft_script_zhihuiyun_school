@@ -18,13 +18,12 @@ local KeepworkServiceSession = NPL.load('(gl)Mod/WorldShare/service/KeepworkServ
 
 local KickOut = NPL.export()
 
-function KickOut:ShowKickOutPage(reason)
+function KickOut:ShowKickOutPage(reason,bForced)
     -- 修改密码之后的退出 由接口返回的回调来处理
     if reason == 2 then
         return
     end
-
-    if self.isKickOutPageOpened then 
+    if self.isKickOutPageOpened and not bForced then 
         return false
     end
 
@@ -41,8 +40,12 @@ function KickOut:ShowKickOutPage(reason)
         return 
     end
     
-    Mod.WorldShare.MsgBox:Show(L'您的账号已经在其他地方登录，正在登出...', nil, nil, 460, nil, 1000)
-    Mod.WorldShare.Store:Set('user/logoutUsername', Mod.WorldShare.Store:Get('user/username'))
+    if not bForced then
+        Mod.WorldShare.MsgBox:Show(L'您的账号已经在其他地方登录，正在登出...', nil, nil, 460, nil, 1000)
+        Mod.WorldShare.Store:Set('user/logoutUsername', Mod.WorldShare.Store:Get('user/username'))
+    end
+
+    
     Mod.WorldShare.Utils.SetTimeOut(function()
         Mod.WorldShare.MsgBox:Close()
 
@@ -59,6 +62,10 @@ function KickOut:ShowKickOutPage(reason)
         if System.options.isEducatePlatform then
             url = 'script/apps/Aries/Creator/Game/Educate/Login/KickOut.html?reason='.. reason or 1
         end
+
+        if System.options.ZhyChannel == "zhy_competition_course" then
+            url = 'script/apps/Aries/Creator/Game/ZhiHuiYun/KickOut/KickOut.html?reason='.. reason or 1
+        end
         Mod.WorldShare.Utils.ShowWindow(
             0,
             0,
@@ -70,5 +77,5 @@ function KickOut:ShowKickOutPage(reason)
             false,
             10000
         )
-    end, 2000)
+    end, bForced and 10 or 2000)
 end

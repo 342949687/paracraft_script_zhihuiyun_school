@@ -20,7 +20,7 @@ NPL.load('(gl)script/apps/Aries/Creator/Game/Login/LocalLoadWorld.lua')
 local CreateNewWorld = commonlib.gettable('MyCompany.Aries.Game.MainLogin.CreateNewWorld')
 local LocalLoadWorld = commonlib.gettable('MyCompany.Aries.Game.MainLogin.LocalLoadWorld')
 local WorldCommon = commonlib.gettable('MyCompany.Aries.Creator.WorldCommon')
-
+local Compare = NPL.load('(gl)Mod/WorldShare/service/SyncService/Compare.lua')
 -- bottles
 local LoginModal = NPL.load('(gl)Mod/WorldShare/cellar/LoginModal/LoginModal.lua')
 
@@ -33,10 +33,13 @@ local CreateWorld = NPL.export()
 
 function CreateWorld:CreateNewWorld(foldername, callback,bForceCreate)
     local function Handle()
-        CreateNewWorld.ShowPage(true)
         self.bForceCreate = bForceCreate
+        CreateNewWorld.ShowPage(true,bForceCreate)
         if foldername and type(foldername) == 'string' then
             if CreateNewWorld.page then
+                if bForceCreate then
+                    CreateNewWorld.LastWorldName = foldername
+                end
                 CreateNewWorld.page:SetValue('new_world_name', foldername)
                 CreateNewWorld.page:Refresh(0.01)
             end
@@ -87,8 +90,13 @@ function CreateWorld.OnBeforeLoadWorld()
         return
     end
     local WorldCommon = commonlib.gettable("MyCompany.Aries.Creator.WorldCommon")
-    local kpProjectId = CreateWorld.currentWorld.kpProjectId or 0
-    WorldCommon.SetWorldTag("kpProjectId", kpProjectId);
+    if CreateWorld.bForceCreate then
+        local kpProjectId = CreateWorld.currentWorld.id or 0
+        WorldCommon.SetWorldTag("kpProjectId", kpProjectId);
+    end
+    if CreateWorld.currentWorld.isDeleted == 1 then
+        WorldCommon.SetWorldTag("name", CreateWorld.currentWorld.name);
+    end
     WorldCommon.SaveWorldTag()
     GameLogic.GetFilters():remove_filter("OnBeforeLoadWorld",CreateWorld.OnBeforeLoadWorld);
     CreateWorld.currentWorld = nil
@@ -97,13 +105,11 @@ end
 
 function CreateWorld:OnClickCreateWorldImp()
     local foldername = CreateNewWorld.page:GetValue('new_world_name')
-    local currentWorldList = Mod.WorldShare.Store:Get('world/compareWorldList') or {}
-
+    local currentWorldList = Mod.WorldShare.Store:Get('world/fullWorldList') or {}
     foldername = foldername:gsub('[%s/\\]', '')
-
     local isFind,currentWorld = false,nil
     for key, item in ipairs(currentWorldList) do
-        if item.foldername == foldername then
+        if item and foldername and (item.name == foldername) then
             -- _guihelper.MessageBox(L'世界名已存在，请列表中进入')
             isFind = true
             currentWorld = item
@@ -111,9 +117,12 @@ function CreateWorld:OnClickCreateWorldImp()
         end
     end
     if isFind then
-        if not self.bForceCreate then
-            _guihelper.MessageBox(L'世界名已存在，请列表中进入')
+        if not self.bForceCreate and (not currentWorld.isDeleted or currentWorld.isDeleted == 0) then
+            _guihelper.MessageBox(L'已有相同名称的世界，请重新输入世界名')
             return
+        end
+        if currentWorld.isDeleted == 1 then
+            foldername = foldername.."_"..os.time()
         end
         self.currentWorld = currentWorld
         GameLogic.GetFilters():add_filter("OnBeforeLoadWorld", CreateWorld.OnBeforeLoadWorld); 

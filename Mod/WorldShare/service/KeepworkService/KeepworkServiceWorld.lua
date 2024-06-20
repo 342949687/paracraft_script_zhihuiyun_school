@@ -196,6 +196,7 @@ function KeepworkServiceWorld:SetWorldInstanceByPid(pid, callback, worldPath)
                 members = {},
                 level = data.level,
                 platform = data.platform,
+                channel = data.channel or 0,
             })
 
             Mod.WorldShare.Store:Set('world/currentWorld', currentWorld)
@@ -209,22 +210,25 @@ end
 
 -- get world list
 function KeepworkServiceWorld:GetWorldsList(callback)
-    if not KeepworkService:IsSignedIn() or
-       not callback or
-       type(callback) ~= 'function' then
+    if not callback or type(callback) ~= 'function' then
+        return
+    end
+    if not KeepworkService:IsSignedIn() then
+        if callback and type(callback) == 'function' then
+            callback(false)
+        end
         return
     end
 
     KeepworkWorldsApi:GetWorldList(1000, 1, function(data, err)
-        if System.options.appId == 'paracraft_431' then
+        if System.options.isEducatePlatform then
             local filtersData = {}
-
             for key, item in ipairs(data) do
                 if item and
                    item.project and
                    type(item.project) == 'table' and
                    item.project.platform and
-                   item.project.platform == 'paracraft_431' then
+                   Mod.WorldShare.Utils.IsEducatePlatform(item.project.platform) then
                     filtersData[#filtersData + 1] = item
                 end
             end
@@ -233,6 +237,28 @@ function KeepworkServiceWorld:GetWorldsList(callback)
         else
             callback(data)
         end
+    end,function(data, err)
+        if err == 401 then
+            GameLogic.AddBBS(nil, L'请先登录')
+            GameLogic.GetFilters():apply_filters('logout')
+            GameLogic.GetFilters():apply_filters("OnKeepWorkLogout", true)
+            GameLogic.CheckSignedIn(desc or L"请先登录！", function(bSucceed)
+                if bSucceed then
+                    self:GetWorldsList(callback)
+                end
+            end);
+        end
+    end)
+end
+
+function KeepworkServiceWorld:GetWorldsListNoFilter(callback)
+    if not KeepworkService:IsSignedIn() or
+        not callback or
+        type(callback) ~= 'function' then
+        return
+    end
+    KeepworkWorldsApi:GetWorldList(1000, 1, function(data, err)
+        callback(data)
     end)
 end
 
@@ -260,6 +286,17 @@ function KeepworkServiceWorld:GetMyWorldByWorldName(foldername, callback)
 
         if callback and type(callback) == 'function' then
             callback(false)    
+        end
+    end,function(data, err)
+        if err == 401 then
+            GameLogic.AddBBS(nil, L'请先登录')
+            GameLogic.GetFilters():apply_filters('logout')
+            GameLogic.GetFilters():apply_filters("OnKeepWorkLogout", true)
+            GameLogic.CheckSignedIn(desc or L"请先登录！", function(bSucceed)
+                if bSucceed then
+                    self:GetMyWorldByWorldName(foldername,callback)
+                end
+            end);
         end
     end)
 end
@@ -301,7 +338,18 @@ function KeepworkServiceWorld:GetWorld(foldername, shared, worldUserId, callback
         end
 
         callback(false)
-    end, nil, isRefresh)
+    end ,function(data, err)
+        if err == 401 then
+            GameLogic.AddBBS(nil, L'请先登录')
+            GameLogic.GetFilters():apply_filters('logout')
+            GameLogic.GetFilters():apply_filters("OnKeepWorkLogout", true)
+            GameLogic.CheckSignedIn(desc or L"请先登录！", function(bSucceed)
+                if bSucceed then
+                    self:GetWorld(foldername, shared, worldUserId, callback, isRefresh)
+                end
+            end);
+        end
+    end, isRefresh)
 end
 
 -- updat world info
@@ -474,7 +522,7 @@ function KeepworkServiceWorld:UnlockWorld(callback)
     end
 end
 
-function KeepworkServiceWorld:MergeRemoteWorldList(localWorlds, callback)
+function KeepworkServiceWorld:MergeRemoteWorldList(localWorlds, callback,bNoFilter)
     if not callback and type(callback) ~= 'function' then
         return
     end
@@ -488,7 +536,7 @@ function KeepworkServiceWorld:MergeRemoteWorldList(localWorlds, callback)
         syncBackUpWorld = commonlib.Files.Find({}, 'temp/sync_backup_world', 0, 10000, '*')
     end
 
-    self:GetWorldsList(function(remoteWorldsList, err)
+    local mergeFunc = function(remoteWorldsList,err,callback)
         if not remoteWorldsList or type(remoteWorldsList) ~= 'table' then
             return
         end
@@ -543,39 +591,12 @@ function KeepworkServiceWorld:MergeRemoteWorldList(localWorlds, callback)
                         instituteVipEnabled = LItem.instituteVipEnabled
                         name = LItem.name
     
-                        -- update project for different user
+                        -- update project info.
                         if tonumber(LItem.kpProjectId) ~= tonumber(DItem.projectId) then
                             local curWorldPath = LItem.worldpath:gsub('[\\]', '/')
-
-                            if not string.match(curWorldPath, '_main$') and
-                               not string.match(curWorldPath, '/_user/') and
-                               not remoteShared then
-                                Mod.WorldShare.worldpath = nil -- force update world data.
-                                local curWorldUsername = Mod.WorldShare:GetWorldData('username', LItem.worldpath)
-                                local backUpWorldPath
- 
-                                if curWorldUsername then
-                                    backUpWorldPath =
-                                        LocalServiceWorld:GetDefaultSaveWorldPath() ..
-                                        '/_user/' ..
-                                        curWorldUsername ..
-                                        '/' ..
-                                        commonlib.Encoding.Utf8ToDefault(LItem.foldername)
-                                else
-                                    backUpWorldPath =
-                                        'temp/sync_backup_world/' ..
-                                        commonlib.Encoding.Utf8ToDefault(LItem.foldername) ..
-                                        '_' ..
-                                        ParaMisc.md5(tostring(os.time()))
-                                end
-
-                                commonlib.Files.MoveFolder(LItem.worldpath, backUpWorldPath)
-
-                                ParaIO.DeleteFile(LItem.worldpath)
-
-                                status = 2
-                                isExist = false
-                            else
+                            if string.match(curWorldPath, '_main$') or
+                               string.match(curWorldPath, '/_user/') or
+                               remoteShared then
                                 local tag = LocalService:GetTag(LItem.worldpath)
                                 tag.kpProjectId = DItem.projectId
 
@@ -688,6 +709,7 @@ function KeepworkServiceWorld:MergeRemoteWorldList(localWorlds, callback)
                 revision = revision,
                 size = DItem.fileSize,
                 modifyTime = Mod.WorldShare.Utils:UnifiedTimestampFormat(DItem.updatedAt),
+                createTime = Mod.WorldShare.Utils:UnifiedTimestampFormat(DItem.createdAt),
                 lastCommitId = DItem.commitId, 
                 worldpath = worldpath,
                 status = status,
@@ -710,6 +732,7 @@ function KeepworkServiceWorld:MergeRemoteWorldList(localWorlds, callback)
                 level = DItem.level and DItem.level or 0,
                 isSystemGroup = DItem.isSystemGroup or false,
                 platform = DItem.platform,
+                channel = (DItem.project and DItem.project.channel) and DItem.project.channel or 0,
             })
 
             currentWorldList:push_back(currentWorld)
@@ -742,13 +765,264 @@ function KeepworkServiceWorld:MergeRemoteWorldList(localWorlds, callback)
                         currentWorldList:push_back(currentWorld)
                     end
                 else
-                    if (not currentWorld.kpProjectId or currentWorld.kpProjectId == 0) and currentWorld.platform and currentWorld.platform == "paracraft_431" then
+                    if (not currentWorld.kpProjectId or currentWorld.kpProjectId == 0) and currentWorld.platform 
+                        and Mod.WorldShare.Utils.IsEducatePlatform(currentWorld.platform) then
                         currentWorldList:push_back(currentWorld)
                     end
                 end
             end
         end
         callback(currentWorldList)
+    end
+
+    if bNoFilter then
+        self:GetWorldsListNoFilter(function(remoteWorldsList, err)
+            mergeFunc(remoteWorldsList, err,callback)
+        end)
+        return 
+    end
+    self:GetWorldsList(function(remoteWorldsList, err)
+        mergeFunc(remoteWorldsList, err,callback)
+    end)
+end
+
+function KeepworkServiceWorld:MergeRemoteDeletedWorldList(localWorlds, callback)
+    if not callback or type(callback) ~= 'function' then
+        return
+    end
+
+    localWorlds = localWorlds or {}
+    local userId = Mod.WorldShare.Store:Get('user/userId')
+    local username = Mod.WorldShare.Store:Get('user/username')
+
+    local mergeFunc = function(remoteWorldsList,err,callback)
+        if not remoteWorldsList or type(remoteWorldsList) ~= 'table' then
+            return
+        end
+
+        local currentWorldList = commonlib.vector:new()
+        local currentWorld
+
+        -- handle both/network newest/local newest/network only worlds
+        for DKey, DItem in ipairs(remoteWorldsList) do
+            local isExist = false
+            local text = DItem.worldName or ''
+            local worldpath = ''
+            local revision = 0
+            local commitId = ''
+            local remoteWorldUserId = DItem.user and DItem.user.id and tonumber(DItem.user.id) or 0
+            local status
+            local remoteShared = false
+            local isVipWorld
+            local instituteVipEnabled
+            local name = ''
+
+            if DItem.extra and DItem.extra.worldTagName then
+                text = DItem.extra.worldTagName
+            end
+
+            if DItem.project.managed == 1 then
+                remoteShared = true
+            else
+                if DItem.project and DItem.project.memberCount and DItem.project.memberCount > 1 then
+                    remoteShared = true
+                end
+            end
+
+            for LKey, LItem in ipairs(localWorlds) do
+                if DItem.worldName == LItem.foldername and not LItem.is_zip then
+                    local function Handle()
+                        if tonumber(LItem.revision or 0) == tonumber(DItem.revision or 0) then
+                            status = 3 -- both
+                            revision = LItem.revision
+                        elseif tonumber(LItem.revision or 0) > tonumber(DItem.revision or 0) then
+                            status = 4 -- network newest
+                            revision = DItem.revision -- use remote revision beacause remote is newest
+                        elseif tonumber(LItem.revision or 0) < tonumber(DItem.revision or 0) then
+                            status = 5 -- local newest
+                            revision = LItem.revision or 0
+                        end
+    
+                        isExist = true
+
+                        worldpath = LItem.worldpath
+                        isVipWorld = LItem.isVipWorld
+                        instituteVipEnabled = LItem.instituteVipEnabled
+                        name = LItem.name
+    
+                        -- update project info.
+                        if tonumber(LItem.kpProjectId) ~= tonumber(DItem.projectId) then
+                            local curWorldPath = LItem.worldpath:gsub('[\\]', '/')
+                            if string.match(curWorldPath, '_main$') or
+                               string.match(curWorldPath, '/_user/') or
+                               remoteShared then
+                                local tag = LocalService:GetTag(LItem.worldpath)
+                                tag.kpProjectId = DItem.projectId
+
+                                LocalService:SetTag(LItem.worldpath, tag)
+                            end
+                        end
+                    end
+
+                    if LItem.shared then -- share folder
+                        if remoteShared == LItem.shared then
+                            -- avoid upload same name share world
+                            local sharedUsername = Mod.WorldShare:GetWorldData('username', LItem.worldpath)
+    
+                            if sharedUsername == DItem.user.username then
+                                Handle()
+                            end
+                        end
+                    else -- personal folder
+                        if remoteShared then
+                            if remoteWorldUserId == tonumber(userId) then
+                                Handle()
+                            end
+                        else
+                            Handle()
+                        end
+                    end
+                end
+            end
+
+            -- recover share remark
+            if not remoteShared then
+                if DItem.extra and DItem.extra.worldTagName and
+                   text ~= DItem.extra.worldTagName then
+                    text = DItem.extra.worldTagName
+                end
+            end
+
+            if DItem.project then
+                if DItem.project.visibility == 0 then
+                    DItem.project.visibility = 0
+                else
+                    DItem.project.visibility = 1
+                end
+            end
+
+            currentWorld = self:GenerateWorldInstance({
+                text = text,
+                foldername = DItem.worldName,
+                revision = revision,
+                size = DItem.fileSize,
+                modifyTime = Mod.WorldShare.Utils:UnifiedTimestampFormat(DItem.updatedAt),
+                createTime = Mod.WorldShare.Utils:UnifiedTimestampFormat(DItem.createdAt),
+                lastCommitId = DItem.commitId, 
+                worldpath = worldpath,
+                status = status,
+                project = DItem.project,
+                user = {
+                    id = DItem.user.userId,
+                    username = DItem.user.username,
+                },
+                kpProjectId = DItem.projectId,
+                fromProjectId = DItem.fromProjectId,
+                parentProjectId = DItem.project and DItem.project.parentProjectId or 0,
+                IsFolder = true,
+                is_zip = false,
+                shared = remoteShared,
+                isVipWorld = isVipWorld or false,
+                instituteVipEnabled = instituteVipEnabled or false,
+                memberCount = DItem.project.memberCount,
+                members = {},
+                name = name,
+                level = DItem.level and DItem.level or 0,
+                isSystemGroup = DItem.isSystemGroup or false,
+                platform = DItem.platform,
+                channel = (DItem.project and DItem.project.channel) and DItem.project.channel or 0,
+            })
+
+            currentWorldList:push_back(currentWorld)
+        end
+
+        -- handle local only world
+        for LKey, LItem in ipairs(localWorlds) do
+            local isExist = false
+
+            for DKey, DItem in ipairs(remoteWorldsList) do
+                local remoteWorldUserId = DItem.user and DItem.user.id and tonumber(DItem.user.id) or 0
+                local remoteShared = false
+
+                if remoteWorldUserId ~= 0 and tonumber(remoteWorldUserId) ~= (userId) then
+                    remoteShared = true
+                end
+
+                if LItem.foldername == DItem.worldName and
+                   LItem.shared == remoteShared and
+                   not LItem.is_zip then
+                    isExist = true
+                    break
+                end
+            end
+
+            if not isExist then
+                currentWorld = LocalServiceWorld:GenerateWorldInstance(LItem)
+                if not System.options.isEducatePlatform then
+                    if not currentWorld.kpProjectId or currentWorld.kpProjectId == 0 then
+                        currentWorldList:push_back(currentWorld)
+                    end
+                else
+                    if (not currentWorld.kpProjectId or currentWorld.kpProjectId == 0) and currentWorld.platform 
+                        and Mod.WorldShare.Utils.IsEducatePlatform(currentWorld.platform) then
+                        currentWorldList:push_back(currentWorld)
+                    end
+                end
+            end
+        end
+        --print('mergeFunc=============', currentWorldList)
+        --echo(currentWorldList,true)
+        callback(currentWorldList)
+    end
+
+    self:GetWorldsListDeleted(function(remoteWorldsList)
+        if not remoteWorldsList or type(remoteWorldsList) ~= 'table' then
+            callback(false)
+            return
+        end
+        mergeFunc(remoteWorldsList, nil,callback)
+    end)
+end
+
+function KeepworkServiceWorld:GetWorldsListDeleted(callback)
+    if not callback or type(callback) ~= 'function' then
+        return
+    end
+    if not KeepworkService:IsSignedIn() then
+        if callback and type(callback) == 'function' then
+            callback(false)
+        end
+        return
+    end
+
+    KeepworkWorldsApi:GetWorldDeletedList(1000, 1, function(data, err)
+        if System.options.isEducatePlatform then
+            local filtersData = {}
+            for key, item in ipairs(data) do
+                if item and
+                   item.project and
+                   type(item.project) == 'table' and
+                   item.project.platform and
+                   Mod.WorldShare.Utils.IsEducatePlatform(item.project.platform) then
+                    filtersData[#filtersData + 1] = item
+                end
+            end
+
+            callback(filtersData)
+        else
+            callback(data)
+        end
+    end,function(data, err)
+        if err == 401 then
+            GameLogic.AddBBS(nil, L'请先登录')
+            GameLogic.GetFilters():apply_filters('logout')
+            GameLogic.GetFilters():apply_filters("OnKeepWorkLogout", true)
+            GameLogic.CheckSignedIn(desc or L"请先登录！", function(bSucceed)
+                if bSucceed then
+                    self:GetWorldsListDeleted(callback)
+                end
+            end);
+        end
     end)
 end
 
@@ -879,6 +1153,7 @@ function KeepworkServiceWorld:GenerateWorldInstance(params)
         revision = params.revision or 0,
         size = params.size or 0,
         modifyTime = params.modifyTime or '',
+        createTime = params.createTime or '',
         lastCommitId = params.lastCommitId or '', 
         worldpath = params.worldpath or '',
         remotefile = remotefile,
@@ -900,5 +1175,6 @@ function KeepworkServiceWorld:GenerateWorldInstance(params)
         level = params.level or 0, -- Is the world readable. 1. read only, 2. read and write
         isSystemGroup = params.isSystemGroup or false, -- Is the world in system group.
         platform = params.platform or 'paracraft',
+        channel = params.channel or 0,
     }
 end

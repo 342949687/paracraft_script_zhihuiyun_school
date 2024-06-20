@@ -44,6 +44,9 @@ function SocketApi:Connect(callback)
 
         if _args[1] and type(_args[1]) == 'table' then
             _args[1].token = Mod.WorldShare.Store:Get('user/token')
+            if System.options.ZhyChannel == "zhy_competition_course" and System.User.zhy_userdata then
+                _args[1].token = System.User.zhy_userdata.token
+            end
         end
 
         if #_args == 1 then

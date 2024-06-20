@@ -64,6 +64,14 @@ function Validated:Email(str)
 end
 
 function Validated:Phone(str)
+    if System.options.isEducatePlatform then
+        local inputString = str or ""
+        local len = ParaMisc.GetUnicodeCharNum(inputString);
+        if len < 11 and len >=5 then
+            local pattern = "^%d%d%d%d%d%d?%d?%d?$"
+            return string.match(inputString, pattern) ~= nil
+        end
+    end
     if not string.find(tostring(str), '^%d%d%d%d%d%d%d%d%d%d%d$') then
         return false
     else

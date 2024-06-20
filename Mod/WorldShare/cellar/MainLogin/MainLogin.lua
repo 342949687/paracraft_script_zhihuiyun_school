@@ -55,7 +55,9 @@ function MainLogin:GetLoginBackground()
     elseif System.options.isEducatePlatform then
         return 'Texture/Aries/Creator/Paracraft/WorldShare/zhihuijiaoyu_1280x720_32bits.png'
     else
-        return 'Texture/Aries/Creator/Paracraft/WorldShare/dengluye_1280x720_32bits.png'
+        -- return 'Texture/Aries/Creator/Paracraft/WorldShare/dengluye_1280x720_32bits.png'
+        -- return 'background-color:#fff4d4';
+        return 'background-color:#333333';
     end
 end
 
@@ -99,40 +101,9 @@ function MainLogin:Show()
         if UserProtocolPre then
             UserProtocolPre.CheckShow();
         end
-        self:ShowMobile()
-        return
-    end
-
-    local localVersion = ParaEngine.GetAppCommandLineByParam('localVersion', nil)
-
-    if localVersion == 'SCHOOL' then
-        if KeepworkServiceSession:GetUserWhere() == 'LOCAL' then
-            local token = Mod.WorldShare.Store:Get('user/token')
-
-            if token and not System.options.IgnoreRememberAccount then
-                KeepworkServiceSession:LoginWithToken(token, function(data, err)
-                    data.token = token
-
-                    KeepworkServiceSession:LoginResponse(data, err, function(bSucceed)
-                        if bSucceed then
-                            SessionsData:SetUserLocation('LOCAL', Mod.WorldShare.Store:Get('user/username'))
-                            Create:Show()
-                        end
-                    end)
-
-                end)
-            else
-                Create:Show()
-            end
-
-            return
-        end
-
-        self:Show2()
-    else
-        if (System.os.IsEmscripten()) then
+        if (System.os.IsEmscripten() and not KeepworkServiceSession:IsSignedIn()) then
             MainLogin:CmdAutoLogin(function(bIsSuccessed, reason, message)
-                self:Show3();
+                self:ShowMobile()
                 if (bIsSuccessed) then
                     commonlib.TimerManager.SetTimeout(function()
                         self:Next()
@@ -141,9 +112,23 @@ function MainLogin:Show()
             end)
             return;
         end
-
-        self:Show3()
+        self:ShowMobile()
+        return
     end
+
+    if (System.os.IsEmscripten() and not KeepworkServiceSession:IsSignedIn()) then
+        MainLogin:CmdAutoLogin(function(bIsSuccessed, reason, message)
+            self:Show3();
+            if (bIsSuccessed) then
+                commonlib.TimerManager.SetTimeout(function()
+                    self:Next()
+                end, 0)
+            end
+        end)
+        return;
+    end
+
+    self:Show3()
 end
 
 -- 自动登录后行为处理可以在此处添加
@@ -219,31 +204,35 @@ function MainLogin:Show2()
 end
 
 function MainLogin:Show3()
-    local html_url = System.options.isEducatePlatform and "script/apps/Aries/Creator/Game/Educate/Login/MainLogin.html" or 'Mod/WorldShare/cellar/MainLogin/Theme/MainLogin.html'
+    local html_url = 'Mod/WorldShare/cellar/MainLogin/Theme/MainLogin.html'
     if System.options.ZhyChannel ~= "" then
         html_url = "script/apps/Aries/Creator/Game/ZhiHuiYun/Login/MainLogin.html"
+    elseif System.options.isEducatePlatform then
+    	html_url = "script/apps/Aries/Creator/Game/Educate/Login/MainLogin.html"
     end
-    Mod.WorldShare.Utils.ShowWindow({
-        url = html_url, 
-        name = 'MainLogin', 
-        isShowTitleBar = false,
-        DestroyOnClose = true,
-        style = CommonCtrl.WindowFrame.ContainerStyle,
-        zorder = -1,
-        allowDrag = false,
-        directPosition = true,
-        align = '_fi',
-        x = 0,
-        y = 0,
-        width = 0,
-        height = 0,
-        cancelShowAnimation = true,
-    })
-
-    local MainLoginPage = Mod.WorldShare.Store:Get('page/MainLogin')
-
-    if not MainLoginPage then
-        return
+    if not System.options.isCommunity then
+        Mod.WorldShare.Utils.ShowWindow({
+            url = html_url, 
+            name = 'MainLogin', 
+            isShowTitleBar = false,
+            DestroyOnClose = true,
+            style = CommonCtrl.WindowFrame.ContainerStyle,
+            zorder = -1,
+            allowDrag = false,
+            directPosition = true,
+            align = '_fi',
+            x = 0,
+            y = 0,
+            width = 0,
+            height = 0,
+            cancelShowAnimation = true,
+        })
+    
+        local MainLoginPage = Mod.WorldShare.Store:Get('page/MainLogin')
+    
+        if not MainLoginPage then
+            return
+        end
     end
 
     local paramWorld  = ParaEngine.GetAppCommandLineByParam('world', nil) 
@@ -269,21 +258,15 @@ function MainLogin:Show3()
     end, 0)
 end
 
-function MainLogin:ShowLogin(isModal, zorder)
-    if KeepworkServiceSession:IsSignedIn() and isModal then
-        return
+local function GetLoginPageUrl(isModal)
+    local htmlUrl = 'Mod/WorldShare/cellar/MainLogin/Theme/MainLoginLoginCommunity.html?is_modal=' .. (isModal and 'true' or 'false')
+    if System.options.isEducatePlatform then
+        htmlUrl = 'script/apps/Aries/Creator/Game/Educate/Login/MainLoginLogin.html?is_modal=' .. (isModal and 'true' or 'false')
     end
-
-    local MainLoginLoginPage = Mod.WorldShare.Store:Get('page/Mod.WorldShare.cellar.MainLogin.Login')
-
-    if MainLoginLoginPage then
-        MainLoginLoginPage:CloseWindow()
+    if System.options.isCommunity then
+        htmlUrl = 'script/apps/Aries/Creator/Game/Tasks/Community/Login/MainLoginLoginCommunity.html' 
     end
-    local htmlUrl =
-        System.options.isEducatePlatform and
-        'script/apps/Aries/Creator/Game/Educate/Login/MainLoginLogin.html?is_modal=' .. (isModal and 'true' or 'false') or
-        'Mod/WorldShare/cellar/MainLogin/Theme/MainLoginLoginCommunity.html?is_modal=' .. (isModal and 'true' or 'false')
-
+    
     if System.options.ZhyChannel ~= "" then
         htmlUrl = 'script/apps/Aries/Creator/Game/ZhiHuiYun/Login/MainLoginLogin.html?is_modal=' .. (isModal and 'true' or 'false')
     end
@@ -297,14 +280,30 @@ function MainLogin:ShowLogin(isModal, zorder)
                 htmlUrl = 'script/apps/Aries/Creator/Game/Educate/Login/MainLoginLoginKickOut.html'
             end
         end
+        if System.options.isCommunity then
+            htmlUrl = 'script/apps/Aries/Creator/Game/Tasks/Community/Login/MainLoginLoginCommunityModal.html' 
+            if KickOut.isKickOutPageOpened then
+                htmlUrl = 'script/apps/Aries/Creator/Game/Tasks/Community/Login/MainLoginLoginCommunityKickOut.html'
+            end
+        end
+    end
+    -- print("htmlUrl======================: ", htmlUrl)
+    return htmlUrl
+end 
 
-        -- if System.options.ZhyChannel ~= "" then
-        --     htmlUrl = 'script/apps/Aries/Creator/Game/ZhiHuiYun/Login/MainLoginLoginModal.html'
-        -- end
+function MainLogin:ShowLogin(isModal, zorder)
+    if KeepworkServiceSession:IsSignedIn() and isModal then
+        return
+    end
+
+    local MainLoginLoginPage = Mod.WorldShare.Store:Get('page/Mod.WorldShare.cellar.MainLogin.Login')
+
+    if MainLoginLoginPage then
+        MainLoginLoginPage:CloseWindow()
     end
 
     local params = {
-        url = htmlUrl,
+        url = GetLoginPageUrl(isModal),
         name = 'Mod.WorldShare.cellar.MainLogin.Login',
         isShowTitleBar = false,
         DestroyOnClose = true, -- prevent many ViewProfile pages staying in memory
@@ -349,14 +348,20 @@ function MainLogin:ShowLogin(isModal, zorder)
             MainLoginLoginPage:SetValue('password_show', PWDInfo.remember_pwd or '')
             MainLoginLoginPage:SetValue('password_hide', PWDInfo.remember_pwd or '')
             MainLoginLoginPage:SetValue('password', PWDInfo.remember_pwd or '')
-            MainLoginLoginPage:GetNode('remember_pwd'):SetAttribute('checked', true)
+            local remember_pwd = MainLoginLoginPage:GetNode('remember_pwd')
+            if remember_pwd then
+                remember_pwd:SetAttribute('checked', false)
+            end
             MainLoginLoginPage:Refresh(0.01)
         else
             MainLoginLoginPage:SetUIValue('account', '')
             MainLoginLoginPage:SetValue('password_show', '')
             MainLoginLoginPage:SetValue('password_hide', '')
             MainLoginLoginPage:SetValue('password', '')
-            MainLoginLoginPage:GetNode('remember_pwd'):SetAttribute('checked', false)
+            local remember_pwd = MainLoginLoginPage:GetNode('remember_pwd')
+            if remember_pwd then
+                remember_pwd:SetAttribute('checked', false)
+            end
             MainLoginLoginPage:Refresh(0.01)
         end
     end
@@ -629,11 +634,14 @@ end
 
 function MainLogin:ShowRegister(isModal, callback, zorder)
     self.registerCallback = callback
-
+    local htmlUrl = 'Mod/WorldShare/cellar/MainLogin/Theme/MainLoginRegister.xml?is_modal=' .. (isModal and 'true' or 'false')
+    if System.options.isCommunity then
+        htmlUrl = 'script/apps/Aries/Creator/Game/Tasks/Community/Login/MainLoginCommunityRegister.html?is_modal=' .. (isModal and 'true' or 'false')
+    end
     Mod.WorldShare.Utils.ShowWindow(
         0,
         0,
-        'Mod/WorldShare/cellar/MainLogin/Theme/MainLoginRegister.xml?is_modal=' .. (isModal and 'true' or 'false'),
+        htmlUrl,
         'Mod.WorldShare.cellar.MainLogin.Register',
         0,
         0,
@@ -644,10 +652,14 @@ function MainLogin:ShowRegister(isModal, callback, zorder)
 end
 
 function MainLogin:ShowUpdatePassword()
+    local htmlUrl = 'Mod/WorldShare/cellar/MainLogin/Theme/MainLoginUpdatePassword.xml'
+    if System.options.isCommunity then
+        htmlUrl = 'script/apps/Aries/Creator/Game/Tasks/Community/Login/MainLoginCommunityUpdatePassword.html'
+    end
     Mod.WorldShare.Utils.ShowWindow(
         0,
         0,
-        'Mod/WorldShare/cellar/MainLogin/Theme/MainLoginUpdatePassword.xml',
+        htmlUrl,
         'Mod.WorldShare.cellar.MainLogin.UpdatePassword',
         0,
         0,
@@ -853,14 +865,54 @@ function MainLogin:Close()
     end
 end
 
+function MainLogin:IsValidCmdLine()
+    local cmdline_world = System.options.cmdline_world
+    if not cmdline_world or cmdline_world == '' then
+        return false
+    end
+    if cmdline_world:match('^https?://') 
+        or cmdline_world:match("loadworld")
+        or cmdline_world:match("edu_do_works")
+        or (tonumber(cmdline_world) and tonumber(cmdline_world) > 0) then
+        return true
+    end
+    return false
+end
+
+function MainLogin:SetTokenLoginProgress(bStart)
+    if self:IsValidCmdLine() or not System.options.isEducatePlatform then
+        return
+    end
+    local userId = Mod.WorldShare.Store:Get('user/userId')
+    local userName = Mod.WorldShare.Store:Get('user/userName')
+    if bStart and userId then
+        self.preUserId = userId
+        -- self.preUserName = userName
+        print('preUserId:', self.preUserId, 'preUserName:', self.preUserName)
+        return
+    end
+    if not bStart and self.preUserId then
+        if userId and userId ~= self.preUserId then
+            --换了token，如果在世界里面需要退出
+            print('userId:', userId, 'userName:', userName,"game is started:", Game.is_started)
+            if Game.is_started then
+                local WorldExitDialog = NPL.load('Mod/WorldShare/cellar/WorldExitDialog/WorldExitDialog.lua')
+                WorldExitDialog.OnDialogResult(_guihelper.DialogResult.No)
+                return true
+            end
+        end
+    end
+end
+
 function MainLogin:LoginWithToken(token, callback)
-    if not token then
+    if not token or #token == 0 or System.options.IgnoreRememberAccount then
+        if callback and type(callback) == 'function' then
+            callback(false, 'RESPONSE', L'TOKEN已过期', 0)
+        end
         return
     end
-    if System.options.IgnoreRememberAccount then
-        return
-    end
-    Mod.WorldShare.MsgBox:Show(L'正在登录，请稍候(TOKEN登录)...', 24000, L'链接超时', 450, 120)
+    self:SetTokenLoginProgress(true)
+    Mod.WorldShare.MsgBox:Show(L'正在登录，请稍候(TOKEN登录)...', 15000, L'链接超时', 450, 120)
     KeepworkServiceSession:LoginWithToken(token, function(response, err)
         if err ~= 200 or not response then
             Mod.WorldShare.MsgBox:Close()
@@ -872,11 +924,11 @@ function MainLogin:LoginWithToken(token, callback)
             else
                 if err == 0 then
                     if callback and type(callback) == 'function' then
-                        callback(false, 'RESPONSE', format(L'*网络异常或超时，请检查网络(%d)', err))
+                        callback(false, 'RESPONSE', format(L'*网络异常或超时，请检查网络(%d)', err or 0))
                     end
                 else
                     if callback and type(callback) == 'function' then
-                        callback(false, 'RESPONSE',  format(L'*系统维护中(%d)', err))
+                        callback(false, 'RESPONSE',  format(L'*系统维护中(%d)', err or 0))
                     end
                 end
             end
@@ -884,7 +936,7 @@ function MainLogin:LoginWithToken(token, callback)
             return
         end
 
-        if type(response) ~= "table" then
+        if response and type(response) ~= "table" then
             if callback and type(callback) == 'function' then
                 callback(false, 'RESPONSE',  format(L'*数据异常(%d)', err))
             end
@@ -898,15 +950,23 @@ function MainLogin:LoginWithToken(token, callback)
 
         KeepworkServiceSession:LoginResponse(response, err, function(bSucceed, message)
             Mod.WorldShare.MsgBox:Close()
+            
             if not bSucceed then
                 if callback and type(callback) == 'function' then
                     callback(false, 'RESPONSE', format(L'*%s', message))
                 end
                 return
             end
-
-            if callback and type(callback) == 'function' then
-                callback(true)
+            if self:SetTokenLoginProgress() then
+                commonlib.TimerManager.SetTimeout(function()
+                    if callback and type(callback) == 'function' then
+                        callback(true)
+                    end
+                end, 1000)
+            else
+                if callback and type(callback) == 'function' then
+                    callback(true)
+                end
             end
         end)
     end)
@@ -931,7 +991,7 @@ function MainLogin:MobileLoginWithPhoneNumber(phoneNumber, captcha, callback)
         return
     end
 
-    Mod.WorldShare.MsgBox:Show(L'正在登录，请稍候(验证码登录)...', 24000, L'链接超时', 450, 120)
+    Mod.WorldShare.MsgBox:Show(L'正在登录，请稍候(验证码登录)...', 15000, L'链接超时', 450, 120)
 
     KeepworkServiceSession:LoginWithPhoneNumber(phoneNumber, captcha, function(response, err)
         if not response then
@@ -975,7 +1035,7 @@ function MainLogin:MobileLoginAction(account, password, callback)
         return
     end
 
-    Mod.WorldShare.MsgBox:Show(L'正在登录，请稍候...', 24000, L'链接超时', 300, 120)
+    Mod.WorldShare.MsgBox:Show(L'正在登录，请稍候...', 15000, L'链接超时', 300, 120)
 
     KeepworkServiceSession:Login(
         account,
@@ -1076,7 +1136,7 @@ function MainLogin:LoginAction(callback)
         return false
     end
 
-    Mod.WorldShare.MsgBox:Show(L'正在登录，请稍候...', 24000, L'链接超时', 320, 120, nil, nil, nil, true)
+    Mod.WorldShare.MsgBox:Show(L'正在登录，请稍候...', 15000, L'链接超时', 320, 120, nil, nil, nil, true)
 
     local function HandleLogined(bSucceed, message)
         Mod.WorldShare.MsgBox:Close()
@@ -1216,7 +1276,7 @@ function MainLogin:LoginActionNew(callback)
         return false
     end
 
-    Mod.WorldShare.MsgBox:Show(L'正在登录，请稍候...', 24000, L'链接超时', 300, 120)
+    Mod.WorldShare.MsgBox:Show(L'正在登录，请稍候...', 15000, L'链接超时', 300, 120)
 
     local function HandleLogined(bSucceed, message)
         Mod.WorldShare.MsgBox:Close()
@@ -1306,7 +1366,7 @@ function MainLogin:LoginAtSchoolAction(callback)
         return false
     end
 
-    Mod.WorldShare.MsgBox:Show(L'正在登录，请稍候...', 24000, L'链接超时', 300, 120)
+    Mod.WorldShare.MsgBox:Show(L'正在登录，请稍候...', 15000, L'链接超时', 300, 120)
 
     local function HandleLogined(bSucceed, message)
         Mod.WorldShare.MsgBox:Close()
@@ -1483,9 +1543,25 @@ function MainLogin:RegisterWithPhone(callback)
 end
 
 function MainLogin:ExecuteCmdLineCmd()
+    local isEducateCommand = System.options.cmdline_secretkey and System.options.cmdline_secretkey ~= ""
+    if System.options.isEducatePlatform and isEducateCommand then
+        local userId = Mod.WorldShare.Store:Get('user/userId') or ""
+        local token = System.options.cmdline_token or ""
+        local myKey = ParaMisc.md5(userId.."+"..token);
+        -- LOG.std(nil, 'info', 'MainLogin', "myKey:========="..myKey.."，cmdline_secretkey========="..(System.options.cmdline_secretkey or ""))
+        -- LOG.std(nil, 'info', 'MainLogin', "token=========="..(System.options.cmdline_token or ""))
+        -- LOG.std(nil, 'info', 'MainLogin', "userId=========="..userId)
+        -- LOG.std(nil, 'info', 'MainLogin', "cmdline_cmd========="..(System.options.cmdline_cmd or ""))
+        if (myKey and myKey ~= "" and myKey ~= System.options.cmdline_secretkey) or not System.options.cmdline_secretkey or System.options.cmdline_secretkey == "" then
+            System.options.cmdline_secretkey = nil
+            System.options.cmdline_token = nil
+            System.options.cmdline_world = nil
+            GameLogic.AddBBS(nil,L"功能访问码错误，稍后登录智慧教育平台")
+            return false
+        end
+    end
     local CommandManager = commonlib.gettable("MyCompany.Aries.Game.CommandManager");
-
-    if System.options.cmdline_cmd then
+    if System.options.cmdline_cmd and System.options.cmdline_cmd ~= '' then
         local cmd = System.options.cmdline_cmd or '';
         CommandManager:RunCommand(cmd);
         System.options.cmdline_cmd = nil;

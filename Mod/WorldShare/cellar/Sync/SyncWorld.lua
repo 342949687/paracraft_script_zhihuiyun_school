@@ -62,8 +62,12 @@ function SyncWorld:ShowNewVersionFoundPage(callback)
 end
 
 function SyncWorld:ShowStartSyncPage(useOffline, callback)
+    local baseUrl = 'Mod/WorldShare/cellar/Sync/Theme/StartSync.html?useOffline='
+    if System.options.isEducatePlatform then
+        baseUrl = 'script/apps/Aries/Creator/Game/Educate/Project/StartSync.431.html?useOffline='
+    end
     local params = SyncWorld:ShowDialog(
-        'Mod/WorldShare/cellar/Sync/Theme/StartSync.html?useOffline=' .. (useOffline and 'true' or 'false'),
+        baseUrl .. (useOffline and 'true' or 'false'),
         'Mod.WorldShare.Sync.StartSync'
     )
 

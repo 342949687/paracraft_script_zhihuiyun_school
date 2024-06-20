@@ -106,7 +106,7 @@ function SyncToDataSource:Init(callback)
     
                             if err ~= 200 or not data or not data.id then
                                 callback(false, L'创建项目失败')
-                                GameLogic.SendErrorLog("CreateProject","create project err",commonlib.serialize_compact({err,data}))
+                                GameLogic.SendErrorLog("CreateProject","create project err",commonlib.serialize_compact({err = err,data = data,world = self.currentWorld}))
                                 self:SetFinish(true)
                                 return false
                             end
@@ -235,7 +235,7 @@ TileSize = 533.333313
         self.localFiles = commonlib.vector:new()
         self.localFiles:AddAll(LocalService:LoadFiles(self.currentWorld.worldpath)) --get latest files content
         print("gittree===============1=")
-        self:IgnoreFiles()
+        self.localFiles = Compare:IgnoreFiles(self.currentWorld.worldpath, self.localFiles)
         self:CheckReadmeFile()
         self:GetCompareList()
         self:HandleCompareList()
@@ -247,29 +247,6 @@ TileSize = 533.333313
         self.currentWorld.lastCommitId,
         Handle
     )
-end
-
-function SyncToDataSource:IgnoreFiles()
-    local filePath = format('%s/.paraignore', self.currentWorld.worldpath)
-    local file = ParaIO.open(filePath, 'r')
-    local content = file:GetText(0, -1)
-    file:close()
-
-    local ignoreFiles = {}
-
-    if #content > 0 then
-        for item in string.gmatch(content, '[^\r\n]+') do
-            ignoreFiles[#ignoreFiles + 1] = item
-        end
-    end
-
-    for LKey, LItem in ipairs(self.localFiles) do
-        for FKey, FItem in ipairs(ignoreFiles) do
-            if string.find(LItem.filename, FItem) then
-                self.localFiles:remove(LKey)
-            end
-        end
-    end
 end
 
 function SyncToDataSource:CheckReadmeFile()
@@ -653,7 +630,9 @@ function SyncToDataSource:UpdateRecord(callback)
             commitIds[#commitIds + 1] = {
                 commitId = lastCommitSha,
                 revision = Mod.WorldShare.Store:Get('world/currentRevision'),
-                date = os.date('%Y%m%d', os.time())
+                date = os.date('%Y%m%d', os.time()),
+                datetime = os.time(),
+                username = Mod.WorldShare.Store:Get('user/username'),
             }
 
             local worldInfo = {}

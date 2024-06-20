@@ -107,10 +107,7 @@ function SessionsData:RemoveSession(username)
     sessionsData.allUsers = newAllUsers
 
     GameLogic.GetPlayerController():SaveLocalData("sessions", sessionsData, true)
-    -- emscripten 同步到磁盘
-    if (System.os.IsEmscripten()) then
-        ParaEngine.GetAttributeObject():CallField("FlushDiskIO");
-    end
+    GameLogic.FlushDiskIO()
 end
 
 function SessionsData:SaveSession(session)
@@ -156,10 +153,7 @@ function SessionsData:SaveSession(session)
     end
 
     GameLogic.GetPlayerController():SaveLocalData("sessions", sessionsData, true)
-    -- emscripten 同步到磁盘
-    if (System.os.IsEmscripten()) then
-        ParaEngine.GetAttributeObject():CallField("FlushDiskIO");
-    end
+    GameLogic.FlushDiskIO()
 end
 
 function SessionsData:GetAnonymousUser()
@@ -230,10 +224,7 @@ function SessionsData:SetAnyonymousInfo(key, value)
     end
 
     GameLogic.GetPlayerController():SaveLocalData("sessions", sessionsData, true)
-    -- emscripten 同步到磁盘
-    if (System.os.IsEmscripten()) then
-        ParaEngine.GetAttributeObject():CallField("FlushDiskIO");
-    end
+    GameLogic.FlushDiskIO()
     return true
 end
 

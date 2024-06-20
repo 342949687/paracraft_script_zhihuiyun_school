@@ -691,3 +691,12 @@ function Utils.GetTrueFilename(filename)
 
     return trueFilename
 end
+
+local educate_platforms = {
+    ["paracraft_431"] = true,
+    ["paracraft_shenzhen_ai5"] = true,
+    ["paracraft-mac_431"] = true,
+}
+function Utils.IsEducatePlatform(appId)
+    return appId and educate_platforms[appId]
+end

@@ -17,6 +17,8 @@ NPL.load("Mod/GeneralGameServerMod/Core/Client/EntityMainPlayer.lua");
 NPL.load("Mod/GeneralGameServerMod/Core/Client/EntityOtherPlayer.lua");
 NPL.load("Mod/GeneralGameServerMod/Core/Client/GeneralGameWorld.lua");
 NPL.load("Mod/GeneralGameServerMod/Core/Client/ClientDataHandler.lua");
+NPL.load("(gl)script/apps/Aries/Creator/Game/Entity/PlayerAssetFile.lua");
+local PlayerAssetFile = commonlib.gettable("MyCompany.Aries.Game.EntityManager.PlayerAssetFile")
 local BlockEngine = commonlib.gettable("MyCompany.Aries.Game.BlockEngine");
 local DataWatcher = commonlib.gettable("MyCompany.Aries.Game.Common.DataWatcher");
 local EntityManager = commonlib.gettable("MyCompany.Aries.Game.EntityManager");
@@ -29,6 +31,8 @@ local EntityMainPlayer = commonlib.gettable("Mod.GeneralGameServerMod.Core.Clien
 local EntityOtherPlayer = commonlib.gettable("Mod.GeneralGameServerMod.Core.Client.EntityOtherPlayer");
 local ClientDataHandler = commonlib.gettable("Mod.GeneralGameServerMod.Core.Client.ClientDataHandler");
 local NetClientHandler = commonlib.inherit(commonlib.gettable("System.Core.ToolBase"), commonlib.gettable("Mod.GeneralGameServerMod.Core.Client.NetClientHandler"));
+local defaultSkin = "1#201#301#401#501#801#901#@1:Texture/blocks/CustomGeoset/hair/Avatar_boy_hair_01.png;2:Texture/blocks/CustomGeoset/body/Avatar_boy_body_default.png;3:Texture/blocks/Paperman/eye/eye_boy_fps10_a001.png;4:Texture/blocks/Paperman/mouth/mouth_01.png;5:Texture/blocks/CustomGeoset/leg/Avatar_boy_leg_default.png;6:Texture/blocks/CustomGeoset/main/Avatar_tsj.png";
+
 
 NetClientHandler:Property("UserName");       -- 用户名
 NetClientHandler:Property("EntityId");       -- 实体ID
@@ -153,10 +157,15 @@ function NetClientHandler:handlePlayerLogin(packetPlayerLogin)
         if not oldMainAssetPath or oldMainAssetPath == "" then
             oldMainAssetPath = "character/CC/02human/paperman/boy01.x";
         end
+        local default_kaka_skin = "80001;84129;81112;88042;"
         local oldSkin = oldEntityPlayer:GetSkin() or ""
         if System.options.isEducatePlatform then
-            oldSkin = "80001;84129;81112;88042;"
+            oldSkin = default_kaka_skin
             oldMainAssetPath = "character/CC/02human/CustomGeoset/actor_kaka.x"
+        else
+            if oldSkin == default_kaka_skin or not PlayerAssetFile:CheckDefaultSkinValid(oldSkin) then
+                oldSkin = defaultSkin
+            end            
         end
         entityPlayer:SetMainAssetPath(oldMainAssetPath);
         entityPlayer:SetSkin(oldSkin);
@@ -177,14 +186,18 @@ function NetClientHandler:handlePlayerLogin(packetPlayerLogin)
         if System.options.isEducatePlatform then
             entityPlayer:SetSkin("80001;84129;81112;88042;")
         else
-            entityPlayer:SetSkin(self:GetClient():GetMainPlayerEntitySkin()) 
+            local skin = self:GetClient():GetMainPlayerEntitySkin()
+            if skin == default_kaka_skin or not PlayerAssetFile:CheckDefaultSkinValid(skin) then
+                skin = defaultSkin
+            end     
+            entityPlayer:SetSkin(skin) 
         end
     end
     if (self:GetClient():GetMainPlayerEntityAsset()) then
         if System.options.isEducatePlatform then
             entityPlayer:SetMainAssetPath("character/CC/02human/CustomGeoset/actor_kaka.x")
         else
-            entityPlayer:SetMainAssetPath(self:GetClient():GetMainPlayerEntityAsset()) 
+            entityPlayer:SetMainAssetPath("character/CC/02human/CustomGeoset/actor.x") 
         end 
     end
 
@@ -456,6 +469,7 @@ end
 
 -- 登录
 function NetClientHandler:Login()
+    if (self.isConnecting) then return end
     GGS.INFO("======================login ggs===================");
     local client = self:GetClient();
     local options = client:GetOptions();
@@ -494,11 +508,11 @@ function NetClientHandler:Connect()
     -- 异步链接
     self.connection:Connect(nil, function(bSuccess)
         if (bSuccess) then
-            self:Login();
             self.isConnecting = false;
             self.isReconnection = false;
             self.reconnectionDelay = 3;
             PlayerLoginLogoutDebug("与服务器成功建立链接", options);
+            self:Login();
         else
             -- 重连
             if (self.__reconnect_timer__ == nil) then

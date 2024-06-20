@@ -18,6 +18,8 @@ NPL.load("Mod/GeneralGameServerMod/App/Client/AppEntityMainPlayer.lua");
 NPL.load("Mod/GeneralGameServerMod/App/Client/AppEntityOtherPlayer.lua");
 NPL.load("Mod/GeneralGameServerMod/App/Client/EntitySync.lua");
 NPL.load("Mod/GeneralGameServerMod/Core/Client/AssetsWhiteList.lua");
+NPL.load("(gl)script/apps/Aries/Creator/Game/Entity/PlayerAssetFile.lua");
+local PlayerAssetFile = commonlib.gettable("MyCompany.Aries.Game.EntityManager.PlayerAssetFile")
 local EntitySync = commonlib.gettable("Mod.GeneralGameServerMod.App.Client.EntitySync");
 local AssetsWhiteList = commonlib.gettable("Mod.GeneralGameServerMod.Core.Client.AssetsWhiteList");
 local EntityManager = commonlib.gettable("MyCompany.Aries.Game.EntityManager");
@@ -32,6 +34,7 @@ local AppClientDataHandler = NPL.load("Mod/GeneralGameServerMod/App/Client/AppCl
 local GGS = NPL.load("Mod/GeneralGameServerMod/Core/Common/GGS.lua");
 local Keepwork = NPL.load("(gl)script/apps/Aries/Creator/HttpAPI/Keepwork.lua");
 
+local defaultSkin = "1#201#301#401#501#801#901#@1:Texture/blocks/CustomGeoset/hair/Avatar_boy_hair_01.png;2:Texture/blocks/CustomGeoset/body/Avatar_boy_body_default.png;3:Texture/blocks/Paperman/eye/eye_boy_fps10_a001.png;4:Texture/blocks/Paperman/mouth/mouth_01.png;5:Texture/blocks/CustomGeoset/leg/Avatar_boy_leg_default.png;6:Texture/blocks/CustomGeoset/main/Avatar_tsj.png";
 -- 构造函数
 function AppGeneralGameClient:ctor()
     local userinfo = KeepWorkItemManager.GetProfile();
@@ -228,13 +231,18 @@ function AppGeneralGameClient:CopyKpUserInfo(userinfo)
         if System.options.isEducatePlatform then
             oldPlayerEntity:SetMainAssetPath("character/CC/02human/CustomGeoset/actor_kaka.x") 
         else
-            oldPlayerEntity:SetMainAssetPath(self:GetMainPlayerEntityAsset()) 
+            oldPlayerEntity:SetMainAssetPath("character/CC/02human/CustomGeoset/actor.x")
         end
     end
     if (oldPlayerEntity and self:GetMainPlayerEntitySkin()) then 
+        local default_kaka_skin = "80001;84129;81112;88042;"
         if System.options.isEducatePlatform then
-            oldPlayerEntity:SetSkin("80001;84129;81112;88042;") 
+            oldPlayerEntity:SetSkin(default_kaka_skin) 
         else
+            local mainSkin = self:GetMainPlayerEntitySkin()
+            if mainSkin == default_kaka_skin or not PlayerAssetFile:CheckDefaultSkinValid(mainSkin) then
+                mainSkin = defaultSkin
+            end
             oldPlayerEntity:SetSkin(self:GetMainPlayerEntitySkin()) 
         end
     end
