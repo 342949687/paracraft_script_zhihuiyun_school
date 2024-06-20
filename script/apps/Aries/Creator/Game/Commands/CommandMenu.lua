@@ -273,7 +273,7 @@ Commands["menu"] = {
 				local UserBagPage = NPL.load("(gl)script/apps/Aries/Creator/Game/Tasks/User/UserBagPage.lua");
 				UserBagPage.ShowPage();
 			elseif(name == "window.mqtt") then
-				if (System.os.Platform() == "emscripten") then
+				if (System.os.GetPlatform() == "emscripten") then
 					_guihelper.MessageBox(L"web版本暂时不支持MQTT， 请用客户端版本。");
 					return;
 				end
